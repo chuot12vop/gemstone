@@ -1,0 +1,44 @@
+name: Gemstone CI/CD
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: 8.2
+
+    - name: Install dependencies
+      run: composer install --no-dev --prefer-dist --optimize-autoloader
+
+    - name: Run tests (optional)
+      run: php artisan test
+
+    - name: Setup SSH
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+        chmod 600 ~/.ssh/id_ed25519
+        ssh-keyscan -p 65002 -H 185.212.71.104 >> ~/.ssh/known_hosts
+
+    - name: Deploy to server
+      run: |
+        ssh -p 65002 u590569946@185.212.71.104 "
+          cd /var/www/html/gemstone &&
+          git pull origin main &&
+          composer install --no-dev --optimize-autoloader &&
+          php artisan migrate --force &&
+          php artisan config:cache &&
+          php artisan route:cache &&
+          php artisan view:cache &&
+          php artisan optimize
+        "
