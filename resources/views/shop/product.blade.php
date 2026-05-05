@@ -4,8 +4,15 @@
 <article class="product-detail" itemscope itemtype="https://schema.org/Product">
     <div class="product-detail__grid">
         <div class="product-detail__media">
-            <img itemprop="image" src="{{ $product->image ?: asset('assets/img/placeholder.svg') }}"
+            <img itemprop="image" src="{{ $product->thumbnail ?: $product->image ?: asset('assets/img/placeholder.svg') }}"
                  alt="{{ $product->name }}" width="600" height="600">
+            @if($product->productImages->isNotEmpty())
+                <div class="form-grid" style="margin-top:12px;">
+                    @foreach($product->productImages as $galleryImage)
+                        <img src="{{ $galleryImage->path }}" alt="{{ $product->name }} gallery" width="120" height="120" loading="lazy" style="object-fit:cover;border-radius:8px;">
+                    @endforeach
+                </div>
+            @endif
         </div>
         <div class="product-detail__info">
             <p class="eyebrow"><a href="{{ route('shop.catalog.category', $product->category) }}">{{ $product->category->name }}</a></p>

@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\CurrencyAdminController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\OrderAdminController;
 use App\Http\Controllers\Admin\ProductAdminController;
+use App\Http\Controllers\Admin\SettingAdminController;
 use App\Http\Controllers\Shop\Auth\GoogleAuthController;
 use App\Http\Controllers\Shop\Auth\LoginController;
 use App\Http\Controllers\Shop\CartController;
@@ -39,6 +40,9 @@ Route::get('/order/{order_number}', [CheckoutController::class, 'confirmation'])
 Route::post('/currency', [CurrencyController::class, 'set'])->name('shop.currency');
 Route::get('/about', [PageController::class, 'about'])->name('shop.about');
 Route::get('/contact', [PageController::class, 'contact'])->name('shop.contact');
+Route::get('/security-policy', [PageController::class, 'securityPolicy'])->name('shop.policy.security');
+Route::get('/privacy-policy', [PageController::class, 'privacyPolicy'])->name('shop.policy.privacy');
+Route::get('/retail-policy', [PageController::class, 'retailPolicy'])->name('shop.policy.retail');
 
 /*
 | Admin — table `admins`, session guard `admin`
@@ -69,5 +73,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/orders', [OrderAdminController::class, 'index'])->name('orders.index');
         Route::get('/orders/{order}', [OrderAdminController::class, 'show'])->name('orders.show');
         Route::post('/orders/{order}/status', [OrderAdminController::class, 'status'])->name('orders.status');
+
+        Route::get('/settings', [SettingAdminController::class, 'index'])->name('settings.index');
+        Route::post('/settings/save', [SettingAdminController::class, 'save'])->name('settings.save');
     });
 });

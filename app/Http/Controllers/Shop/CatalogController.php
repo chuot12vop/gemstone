@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Shop;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Product;
+use App\Services\CurrencyService;
 use Illuminate\Http\Request;
 
 class CatalogController extends Controller
@@ -17,13 +18,14 @@ class CatalogController extends Controller
             ->orderBy('name')
             ->paginate(12)
             ->withQueryString();
-
+        $currency = app(CurrencyService::class);
         return view('shop.catalog', [
             'title' => 'Catalog — Gemstone jewelry',
             'metaDescription' => 'Browse healing gemstones, lucky charms, and limited collections.',
             'products' => $products,
             'categories' => Category::query()->orderBy('sort_order')->get(),
             'currentCategory' => null,
+            'currency' => $currency,
         ]);
     }
 
@@ -36,7 +38,7 @@ class CatalogController extends Controller
             ->orderBy('name')
             ->paginate(12)
             ->withQueryString();
-
+        $currency = app(CurrencyService::class);
         $metaTitle = $category->meta_title ?: ($category->name.' — Gemstone');
         $metaDesc = $category->meta_description ?: (string) $category->description;
 
@@ -46,6 +48,7 @@ class CatalogController extends Controller
             'products' => $products,
             'categories' => Category::query()->orderBy('sort_order')->get(),
             'currentCategory' => $category,
+            'currency' => $currency,
         ]);
     }
 }

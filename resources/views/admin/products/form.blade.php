@@ -5,7 +5,19 @@
 @endsection
 
 @section('content')
-<form class="stack-form" method="post" action="{{ $product ? route('admin.products.update', $product) : route('admin.products.store') }}">
+@php
+    $attributeRows = old('attributes');
+    if (!is_array($attributeRows)) {
+        $attributeRows = $product ? $product->productAttributes->map(fn ($item) => [
+            'name' => $item->name,
+            'value' => $item->value,
+        ])->all() : [];
+    }
+    if (count($attributeRows) === 0) {
+        $attributeRows = [['name' => '', 'value' => '']];
+    }
+@endphp
+<form id="product-form" class="stack-form" method="post" enctype="multipart/form-data" action="{{ $product ? route('admin.products.update', $product) : route('admin.products.store') }}">
     @csrf
     @if($product)
         @method('PUT')
@@ -35,11 +47,40 @@
             Stock
             <input type="number" name="stock" min="0" value="{{ old('stock', $product ? (string) $product->stock : '0') }}">
         </label>
-        <label>
-            Image URL or path
-            <input type="text" name="image" placeholder="{{ asset('assets/img/placeholder.svg') }}" value="{{ old('image', $product->image ?? '') }}">
-        </label>
+        
     </div>
+
+    <fieldset class="form-fieldset">
+        <legend>Thumbnail upload</legend>
+        <div id="thumbnail-dropzone" style="margin-top:10px;padding:18px;border:2px dashed #c8d1dc;border-radius:10px;background:#f8fafc;text-align:center;cursor:pointer;">
+            <strong>Drop thumbnail here</strong><br>
+            <small>or click to choose 1 image</small>
+        </div>
+        <div style="margin-top:10px;">
+            <img id="thumbnail-preview" src="{{ $product->thumbnail ?? ($product->image ?? asset('assets/img/placeholder.svg')) }}" alt="Thumbnail preview" width="200" height="200" style="object-fit:cover;border:1px solid #d7dbe2;border-radius:8px;background:#fff;">
+        </div>
+        <input id="thumbnail-input" class="display-none" type="file" name="thumbnail" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp">
+    </fieldset>
+
+    <label class="display-none">
+        Product gallery images (multiple files)
+        <input id="images-input" type="file" name="images[]" multiple accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp">
+        <small>When editing: upload new files to replace existing gallery images.</small>
+    </label>
+    <div id="images-dropzone" style="padding:18px;border:2px dashed #c8d1dc;border-radius:10px;background:#f8fafc;text-align:center;cursor:pointer;">
+        <strong>Drop gallery images here</strong><br>
+        <small>or click to choose multiple files</small>
+    </div>
+    <div id="gallery-preview" class="product-images-grid"></div>
+    @if($product && $product->productImages->isNotEmpty())
+        <div class="product-images-grid">
+            @foreach($product->productImages as $galleryImage)
+                <div class="product-image-item">
+                    <img src="{{ $galleryImage->path }}" alt="Gallery" width="120" height="120" style="object-fit:scale-down;border-radius:8px;">
+                </div>
+            @endforeach
+        </div>
+    @endif
 
     <label>
         Short description
@@ -49,6 +90,28 @@
         Full description
         <textarea name="description" rows="6">{{ old('description', $product->description ?? '') }}</textarea>
     </label>
+
+    <fieldset class="form-fieldset">
+        <legend>Attributes</legend>
+        <div id="attribute-list">
+            @foreach($attributeRows as $i => $row)
+                <div class="form-grid js-attribute-row">
+                    <label>
+                        Name
+                        <input type="text" name="attributes[{{ $i }}][name]" value="{{ $row['name'] ?? '' }}" placeholder="e.g. Color">
+                    </label>
+                    <label>
+                        Value
+                        <input type="text" name="attributes[{{ $i }}][value]" value="{{ $row['value'] ?? '' }}" placeholder="e.g. Black">
+                    </label>
+                    <div class="form-actions">
+                        <button class="btn-admin" type="button" data-action="remove-attribute">Remove</button>
+                    </div>
+                </div>
+            @endforeach
+        </div>
+        <button class="btn-admin" type="button" id="add-attribute">+ Add attribute</button>
+    </fieldset>
 
     <fieldset class="form-fieldset">
         <legend>SEO</legend>
@@ -72,4 +135,194 @@
         <a class="btn-admin" href="{{ route('admin.products.index') }}">Cancel</a>
     </div>
 </form>
+<template id="attribute-row-template">
+    <div class="form-grid js-attribute-row">
+        <label>
+            Name
+            <input type="text" data-name="attribute-name" placeholder="e.g. Color">
+        </label>
+        <label>
+            Value
+            <input type="text" data-name="attribute-value" placeholder="e.g. Black">
+        </label>
+        <div class="form-actions">
+            <button class="btn-admin" type="button" data-action="remove-attribute">Remove</button>
+        </div>
+    </div>
+</template>
+<script>
+(() => {
+    const setupAttributes = () => {
+        const list = document.getElementById('attribute-list');
+        const addButton = document.getElementById('add-attribute');
+        const template = document.getElementById('attribute-row-template');
+        if (!list || !addButton || !template) return;
+
+        const updateNames = () => {
+            const rows = list.querySelectorAll('.js-attribute-row');
+            rows.forEach((row, index) => {
+                const nameInput = row.querySelector('[data-name="attribute-name"], input[name*="[name]"]');
+                const valueInput = row.querySelector('[data-name="attribute-value"], input[name*="[value]"]');
+                if (nameInput) nameInput.setAttribute('name', `attributes[${index}][name]`);
+                if (valueInput) valueInput.setAttribute('name', `attributes[${index}][value]`);
+            });
+        };
+
+        const ensureOneRow = () => {
+            if (list.querySelectorAll('.js-attribute-row').length > 0) return;
+            addButton.click();
+        };
+
+        addButton.addEventListener('click', () => {
+            const fragment = template.content.cloneNode(true);
+            list.appendChild(fragment);
+            updateNames();
+        });
+
+        list.addEventListener('click', (event) => {
+            const target = event.target;
+            if (!(target instanceof HTMLElement)) return;
+            if (target.dataset.action !== 'remove-attribute') return;
+            const row = target.closest('.js-attribute-row');
+            if (!row) return;
+            row.remove();
+            updateNames();
+            ensureOneRow();
+        });
+
+        updateNames();
+    };
+
+    const setupGalleryPreview = () => {
+        const imagesInput = document.getElementById('images-input');
+        const imagesDropzone = document.getElementById('images-dropzone');
+        const galleryPreview = document.getElementById('gallery-preview');
+        if (!(imagesInput instanceof HTMLInputElement) || !(imagesDropzone instanceof HTMLElement) || !galleryPreview) return;
+        let productImages = [];
+
+        const syncInputFiles = () => {
+            const dt = new DataTransfer();
+            productImages.forEach((file) => dt.items.add(file));
+            imagesInput.files = dt.files;
+        };
+
+        const renderPreview = () => {
+            galleryPreview.innerHTML = '';
+            productImages.forEach((file, index) => {
+                if (!file.type.startsWith('image/')) return;
+                const url = URL.createObjectURL(file);
+                const item = document.createElement('div');
+                item.className = 'product-image-item';
+
+                const img = document.createElement('img');
+                img.src = url;
+                img.alt = 'New gallery preview';
+                img.width = 120;
+                img.height = 120;
+                img.loading = 'lazy';
+                img.style.objectFit = 'cover';
+                img.style.borderRadius = '8px';
+                img.addEventListener('load', () => URL.revokeObjectURL(url), { once: true });
+
+                const removeButton = document.createElement('button');
+                removeButton.type = 'button';
+                removeButton.className = 'product-image-remove';
+                removeButton.textContent = '×';
+                removeButton.setAttribute('aria-label', `Remove image ${index + 1}`);
+                removeButton.addEventListener('click', () => {
+                    productImages.splice(index, 1);
+                    syncInputFiles();
+                    renderPreview();
+                });
+
+                item.appendChild(img);
+                item.appendChild(removeButton);
+                galleryPreview.appendChild(item);
+            });
+        };
+
+        const appendFiles = (incomingFiles) => {
+            incomingFiles
+                .filter((file) => file.type.startsWith('image/'))
+                .forEach((file) => productImages.push(file));
+            syncInputFiles();
+            renderPreview();
+        };
+
+        imagesInput.addEventListener('change', () => {
+            const files = imagesInput.files ? Array.from(imagesInput.files) : [];
+            appendFiles(files);
+        });
+
+        const preventDefaults = (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+        };
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach((eventName) => {
+            imagesDropzone.addEventListener(eventName, preventDefaults);
+        });
+        ['dragenter', 'dragover'].forEach((eventName) => {
+            imagesDropzone.addEventListener(eventName, () => imagesDropzone.style.borderColor = '#1f6feb');
+        });
+        ['dragleave', 'drop'].forEach((eventName) => {
+            imagesDropzone.addEventListener(eventName, () => imagesDropzone.style.borderColor = '#c8d1dc');
+        });
+        imagesDropzone.addEventListener('drop', (event) => {
+            const files = event.dataTransfer ? Array.from(event.dataTransfer.files).filter((file) => file.type.startsWith('image/')) : [];
+            if (files.length === 0) return;
+            appendFiles(files);
+        });
+        imagesDropzone.addEventListener('click', () => imagesInput.click());
+    };
+
+    const setupThumbnailDropzone = () => {
+        const fileInput = document.getElementById('thumbnail-input');
+        const preview = document.getElementById('thumbnail-preview');
+        const dropzone = document.getElementById('thumbnail-dropzone');
+        if (!(fileInput instanceof HTMLInputElement) || !(preview instanceof HTMLImageElement) || !(dropzone instanceof HTMLElement)) {
+            return;
+        }
+
+        const setFile = (file) => {
+            if (!file || !file.type.startsWith('image/')) return;
+            const dt = new DataTransfer();
+            dt.items.add(file);
+            fileInput.files = dt.files;
+            const url = URL.createObjectURL(file);
+            preview.src = url;
+            preview.addEventListener('load', () => URL.revokeObjectURL(url), { once: true });
+        };
+
+        fileInput.addEventListener('change', () => {
+            const file = fileInput.files && fileInput.files[0] ? fileInput.files[0] : null;
+            setFile(file);
+        });
+
+        const preventDefaults = (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+        };
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach((eventName) => {
+            dropzone.addEventListener(eventName, preventDefaults);
+        });
+        ['dragenter', 'dragover'].forEach((eventName) => {
+            dropzone.addEventListener(eventName, () => dropzone.style.borderColor = '#1f6feb');
+        });
+        ['dragleave', 'drop'].forEach((eventName) => {
+            dropzone.addEventListener(eventName, () => dropzone.style.borderColor = '#c8d1dc');
+        });
+        dropzone.addEventListener('drop', (event) => {
+            const files = event.dataTransfer ? Array.from(event.dataTransfer.files).filter((file) => file.type.startsWith('image/')) : [];
+            if (files.length === 0) return;
+            setFile(files[0]);
+        });
+        dropzone.addEventListener('click', () => fileInput.click());
+
+    };
+
+    setupAttributes();
+    setupGalleryPreview();
+    setupThumbnailDropzone();
+})();
+</script>
 @endsection

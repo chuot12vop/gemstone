@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{ $title ?? config('app.name') }}</title>
+    <title>{{ $title ?? ($siteSettings['site_name'] ?? config('app.name')) }}</title>
     @if(!empty($metaDescription))
         <meta name="description" content="{{ $metaDescription }}">
     @endif
@@ -17,7 +17,13 @@
     <a class="skip-link" href="#main">Skip to content</a>
     <header class="site-header">
         <div class="site-header__inner">
-            <a class="logo" href="{{ route('shop.home') }}">{{ config('app.name') }}</a>
+            <a class="logo" href="{{ route('shop.home') }}">
+                @if(!empty($siteSettings['site_logo']))
+                    <img src="{{ $siteSettings['site_logo'] }}" alt="{{ $siteSettings['site_name'] ?? config('app.name') }}" style="height:40px;width:auto;display:block;">
+                @else
+                    {{ $siteSettings['site_name'] ?? config('app.name') }}
+                @endif
+            </a>
             <button type="button" class="nav-toggle" aria-expanded="false" aria-controls="site-nav" data-nav-toggle>Menu</button>
             <nav class="site-nav" id="site-nav" data-nav-panel>
                 <ul class="site-nav__list">
@@ -58,14 +64,14 @@
         <p class="banner banner--err" role="alert">{{ session('error') }}</p>
     @endif
 
-    <main id="main" class="site-main">
+    <main id="main" class="site-main @yield('mainClass')">
         @yield('content')
     </main>
 
     <footer class="site-footer">
         <div class="site-footer__grid">
             <div>
-                <strong>{{ config('app.name') }}</strong>
+                <strong>{{ $siteSettings['site_name'] ?? config('app.name') }}</strong>
                 <p>Gemstone jewelry &amp; feng shui pieces for balance and intention — crafted for US customers.</p>
             </div>
             <div>
@@ -78,11 +84,14 @@
             <div>
                 <h3 class="site-footer__heading">Policies</h3>
                 <ul class="site-footer__links">
+                    <li><a href="{{ route('shop.policy.security') }}">Security policy</a></li>
+                    <li><a href="{{ route('shop.policy.privacy') }}">Privacy policy</a></li>
+                    <li><a href="{{ route('shop.policy.retail') }}">Retail policy</a></li>
                     <li><a href="{{ route('shop.contact') }}">Contact</a></li>
                 </ul>
             </div>
         </div>
-        <p class="site-footer__copy">&copy; {{ date('Y') }} {{ config('app.name') }}. All rights reserved.</p>
+        <p class="site-footer__copy">&copy; {{ date('Y') }} {{ $siteSettings['site_name'] ?? config('app.name') }}. All rights reserved.</p>
     </footer>
     <script src="{{ asset('assets/js/shop.js') }}" defer></script>
     @stack('scripts')

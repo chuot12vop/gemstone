@@ -4,12 +4,14 @@ namespace App\Http\Controllers\Shop;
 
 use App\Http\Controllers\Controller;
 use App\Models\Product;
+use App\Services\CurrencyService;
 use Illuminate\Http\Request;
 
 class CartController extends Controller
 {
     public function index()
     {
+        $currency = app(CurrencyService::class);
         $lines = [];
         $subtotalUsd = 0.0;
         foreach ($this->cartItems() as $pid => $qty) {
@@ -31,6 +33,7 @@ class CartController extends Controller
             'metaDescription' => 'Review your gemstone selections.',
             'lines' => $lines,
             'subtotalUsd' => $subtotalUsd,
+            'currency' => $currency,
         ]);
     }
 
