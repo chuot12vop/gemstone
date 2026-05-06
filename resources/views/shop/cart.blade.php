@@ -6,7 +6,7 @@
 </header>
 
 @if(count($lines) === 0)
-    <p class="empty-state">Your cart is empty. <a href="{{ route('shop.catalog') }}">Continue shopping</a></p>
+    <p class="empty-state">Your cart is empty. <a href="{{ route('shop.products.index') }}">Continue shopping</a></p>
 @else
     <ul class="cart-list">
         @foreach($lines as $row)

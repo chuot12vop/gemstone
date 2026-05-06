@@ -2,7 +2,7 @@
 
 @section('content')
 <header class="page-head">
-    <h1 class="page-head__title">{{ $currentCategory ? $currentCategory->name : 'Catalog' }}</h1>
+    <h1 class="page-head__title">{{ $currentCategory ? $currentCategory->name : 'Products' }}</h1>
     @if($currentCategory && $currentCategory->description)
         <p class="page-head__summary">{{ $currentCategory->description }}</p>
     @else
@@ -10,25 +10,33 @@
     @endif
 </header>
 
-<nav class="subnav" aria-label="Categories">
-    <a class="subnav__link {{ $currentCategory === null ? 'is-active' : '' }}" href="{{ route('shop.catalog') }}">All</a>
-    @foreach($categories as $c)
-        <a class="subnav__link {{ $currentCategory && $currentCategory->id === $c->id ? 'is-active' : '' }}"
-           href="{{ route('shop.catalog.category', $c) }}">{{ $c->name }}</a>
-    @endforeach
-</nav>
+<form class="catalog-filters" method="get" action="{{ route('shop.products.index') }}">
+    <label>
+        Category
+        <select name="category_id">
+            <option value="">All categories</option>
+            @foreach($categories as $c)
+                <option value="{{ $c->id }}" @selected((int) ($filters['category_id'] ?? 0) === $c->id)>{{ $c->name }}</option>
+            @endforeach
+        </select>
+    </label>
+    <label>
+        Min price (USD)
+        <input type="number" step="0.01" min="0" name="min_price" value="{{ $filters['min_price'] }}">
+    </label>
+    <label>
+        Max price (USD)
+        <input type="number" step="0.01" min="0" name="max_price" value="{{ $filters['max_price'] }}">
+    </label>
+    <div class="catalog-filters__actions">
+        <button class="btn btn--primary btn--small" type="submit">Apply</button>
+        <a class="btn btn--ghost btn--small" href="{{ route('shop.products.index') }}">Reset</a>
+    </div>
+</form>
 
-<div class="product-grid">
+<div class="shop-product-grid">
     @foreach($products as $p)
-        <article class="product-card">
-            <a href="{{ route('shop.product', $p) }}" class="product-card__link">
-                <div class="product-card__img-wrap">
-                    <img src="{{ $p->image ?: asset('assets/img/placeholder.svg') }}" alt="" width="400" height="400" loading="lazy">
-                </div>
-                <h2 class="product-card__title">{{ $p->name }}</h2>
-                <p class="product-card__price">{{ $currency->formatUsd((float) $p->price_usd) }}</p>
-            </a>
-        </article>
+        @include('shop.partials.product-card', ['product' => $p, 'currency' => $currency])
     @endforeach
 </div>
 

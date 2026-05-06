@@ -2,6 +2,9 @@
 
 @php
     $mainImage = $product->image ?: ($product->thumbnail ?: asset('assets/img/placeholder.svg'));
+    $attributeMap = $product->productAttributes
+        ->pluck('value', 'name')
+        ->mapWithKeys(fn ($value, $name) => [strtolower((string) $name) => $value]);
     $galleryImages = collect();
     if ($mainImage) {
         $galleryImages->push($mainImage);
@@ -83,37 +86,34 @@
                     {!! nl2br(e($product->description)) !!}
                 </div>
             @endif
+
+            <section class="product-attributes" data-pd-attributes>
+                <h2 class="product-detail__section-title">Product Attribute</h2>
+
+                @foreach($product->productAttributes as $attribute)
+                    <article class="pd-attribute-item">
+                        <button type="button" class="pd-attribute-item__btn" data-pd-attr-btn aria-expanded="false">
+                            <span>{{ $attribute->name }}</span>
+                            <span class="pd-attribute-item__icon" aria-hidden="true"></span>
+                        </button>
+                        <div class="pd-attribute-item__panel" data-pd-attr-panel hidden>
+                            <p>{{ $attribute->value }}</p>
+                        </div>
+                    </article>
+                @endforeach
+                
+            </section>
         </div>
     </div>
 
     @if($relatedProducts->isNotEmpty())
         <section class="product-related">
             <h2 class="section__title section__title--center">You may also like</h2>
-            <ul class="spotlight-grid">
+            <div class="shop-product-grid">
                 @foreach($relatedProducts as $rp)
-                    <li>
-                        <article class="spotlight-card">
-                            <a href="{{ route('shop.product', $rp) }}" class="spotlight-card__media">
-                                <img src="{{ $rp->image ?: asset('assets/img/placeholder.svg') }}" alt="{{ $rp->name }}" width="400" height="400" loading="lazy">
-                            </a>
-                            <div class="spotlight-card__body">
-                                <h3 class="spotlight-card__title">
-                                    <a href="{{ route('shop.product', $rp) }}">{{ $rp->name }}</a>
-                                </h3>
-                                <p class="spotlight-card__price">{{ $currency->formatUsd((float) $rp->price_usd) }}</p>
-                                <form class="spotlight-card__cart" method="post" action="{{ route('shop.cart.add') }}">
-                                    @csrf
-                                    <input type="hidden" name="product_id" value="{{ $rp->id }}">
-                                    <input type="hidden" name="quantity" value="1">
-                                    <button class="btn btn--primary btn--small spotlight-card__add" type="submit" {{ $rp->stock < 1 ? 'disabled' : '' }}>
-                                        {{ $rp->stock < 1 ? 'Out of stock' : 'Add to cart' }}
-                                    </button>
-                                </form>
-                            </div>
-                        </article>
-                    </li>
+                    @include('shop.partials.product-card', ['product' => $rp, 'currency' => $currency])
                 @endforeach
-            </ul>
+            </div>
         </section>
     @endif
 </article>

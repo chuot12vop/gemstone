@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\CategoryAdminController;
 use App\Http\Controllers\Admin\CurrencyAdminController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\OrderAdminController;
+use App\Http\Controllers\Admin\PaymentAdminController;
 use App\Http\Controllers\Admin\ProductAdminController;
 use App\Http\Controllers\Admin\SettingAdminController;
 use App\Http\Controllers\Shop\Auth\GoogleAuthController;
@@ -29,6 +30,7 @@ Route::get('/auth/google/callback', [GoogleAuthController::class, 'callback'])->
 
 Route::get('/catalog', [CatalogController::class, 'index'])->name('shop.catalog');
 Route::get('/catalog/{category}', [CatalogController::class, 'category'])->name('shop.catalog.category');
+Route::get('/product', [CatalogController::class, 'products'])->name('shop.products.index');
 Route::get('/product/{product}', [ProductController::class, 'show'])->name('shop.product');
 Route::get('/cart', [CartController::class, 'index'])->name('shop.cart');
 Route::post('/cart/add', [CartController::class, 'add'])->name('shop.cart.add');
@@ -73,6 +75,9 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/orders', [OrderAdminController::class, 'index'])->name('orders.index');
         Route::get('/orders/{order}', [OrderAdminController::class, 'show'])->name('orders.show');
         Route::post('/orders/{order}/status', [OrderAdminController::class, 'status'])->name('orders.status');
+
+        Route::get('/payments', [PaymentAdminController::class, 'index'])->name('payments.index');
+        Route::post('/payments/settings', [PaymentAdminController::class, 'saveSettings'])->name('payments.settings');
 
         Route::get('/settings', [SettingAdminController::class, 'index'])->name('settings.index');
         Route::post('/settings/save', [SettingAdminController::class, 'save'])->name('settings.save');

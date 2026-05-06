@@ -9,37 +9,17 @@
         <p class="eyebrow">Revitalize your being</p>
         <h1 class="home-hero__title">Vitality &amp; Balance</h1>
         <p class="home-hero__lede">Elevate your energy with naturally selected gemstone bracelets and handcrafted feng shui pieces.</p>
-        <a class="btn btn--primary" style="max-width:200px;" href="{{ route('shop.catalog') }}">Shop the collection</a>
+        <a class="btn btn--primary" style="max-width:200px;" href="{{ route('shop.products.index') }}">Shop the collection</a>
     </div>
 </section>
 
 <section class="home-section home-section--spotlight reveal-on-scroll">
     <h2 class="section__title section__title--center">Featured products</h2>
-    <ul class="spotlight-grid">
+    <div class="shop-product-grid">
         @foreach($spotlightProducts as $p)
-            <li>
-                <article class="spotlight-card">
-                    <a href="{{ route('shop.product', $p) }}" class="spotlight-card__media">
-                        <img src="{{ $p->image ?: asset('assets/img/placeholder.svg') }}" alt="{{ $p->name }}" width="400" height="400" loading="lazy">
-                    </a>
-                    <div class="spotlight-card__body">
-                        <h3 class="spotlight-card__title">
-                            <a href="{{ route('shop.product', $p) }}">{{ $p->name }}</a>
-                        </h3>
-                        <p class="spotlight-card__price">{{ $currency->formatUsd((float) $p->price_usd) }}</p>
-                        <form class="spotlight-card__cart" method="post" action="{{ route('shop.cart.add') }}">
-                            @csrf
-                            <input type="hidden" name="product_id" value="{{ $p->id }}">
-                            <input type="hidden" name="quantity" value="1">
-                            <button class="btn btn--primary btn--small spotlight-card__add" type="submit" {{ $p->stock < 1 ? 'disabled' : '' }}>
-                                {{ $p->stock < 1 ? 'Out of stock' : 'Add to cart' }}
-                            </button>
-                        </form>
-                    </div>
-                </article>
-            </li>
+            @include('shop.partials.product-card', ['product' => $p, 'currency' => $currency])
         @endforeach
-    </ul>
+    </div>
 </section>
 
 <section class="home-section features-strip reveal-on-scroll">
@@ -59,16 +39,9 @@
 
 <section class="home-section home-section--featured reveal-on-scroll">
     <h2 class="section__title">Featured Collection</h2>
-    <div class="featured-grid">
+    <div class="shop-product-grid">
         @foreach($featured as $p)
-            <article class="featured-card">
-                <a href="{{ route('shop.product', $p) }}" class="featured-card__link">
-                    <div class="featured-card__img-wrap">
-                        <img src="{{ $p->image ?: asset('assets/img/placeholder.svg') }}" alt="{{ $p->name }}" width="400" height="400" loading="lazy">
-                    </div>
-                    <h3 class="featured-card__title">{{ $p->name }}</h3>
-                </a>
-            </article>
+            @include('shop.partials.product-card', ['product' => $p, 'currency' => $currency])
         @endforeach
     </div>
 </section>

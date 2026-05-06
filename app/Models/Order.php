@@ -22,4 +22,10 @@ class Order extends Model
     {
         return $this->hasMany(OrderItem::class);
     }
+
+    /** @return HasMany<PaymentTransaction> */
+    public function paymentTransactions(): HasMany
+    {
+        return $this->hasMany(PaymentTransaction::class)->latest();
+    }
 }

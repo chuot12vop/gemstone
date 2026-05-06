@@ -15,6 +15,6 @@
         @endforeach
     </ul>
     <p>Total (display currency at checkout): {{ $order->currency_code }} {{ number_format((float) $order->total_display, 2) }}</p>
-    <p><a href="{{ route('shop.catalog') }}">Continue shopping</a></p>
+    <p><a href="{{ route('shop.products.index') }}">Continue shopping</a></p>
 </div>
 @endsection

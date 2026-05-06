@@ -45,6 +45,34 @@
     </table>
 </div>
 
+<h2 class="admin-h2">Payment transactions</h2>
+<div class="table-wrap">
+    <table class="data-table">
+        <thead>
+        <tr>
+            <th>Created at</th>
+            <th>Method</th>
+            <th>Txn ID</th>
+            <th>Amount</th>
+            <th>Status</th>
+        </tr>
+        </thead>
+        <tbody>
+        @forelse($order->paymentTransactions as $txn)
+            <tr>
+                <td>{{ $txn->created_at?->format('Y-m-d H:i') }}</td>
+                <td>{{ ucfirst(str_replace('_', ' ', $txn->payment_method)) }}</td>
+                <td>{{ $txn->gateway_transaction_id ?: '-' }}</td>
+                <td>{{ strtoupper($txn->currency_code) }} {{ number_format((float) $txn->amount, 2) }}</td>
+                <td><span class="badge badge--{{ $txn->status }}">{{ $txn->status }}</span></td>
+            </tr>
+        @empty
+            <tr><td colspan="5" class="data-table__empty">No payment transactions for this order.</td></tr>
+        @endforelse
+        </tbody>
+    </table>
+</div>
+
 <form class="stack-form form-inline" method="post" action="{{ route('admin.orders.status', $order) }}">
     @csrf
     <label class="form-inline__field">

@@ -14,7 +14,7 @@ class ProductController extends Controller
             abort(404);
         }
 
-        $product->load('category', 'productImages');
+        $product->load('category', 'productImages', 'productAttributes');
         $currency = app(CurrencyService::class);
 
         $relatedProducts = Product::query()

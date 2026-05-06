@@ -12,43 +12,74 @@ class CatalogController extends Controller
 {
     public function index(Request $request)
     {
-        $products = Product::query()
-            ->where('is_active', true)
-            ->with('category')
-            ->orderBy('name')
-            ->paginate(12)
-            ->withQueryString();
-        $currency = app(CurrencyService::class);
-        return view('shop.catalog', [
-            'title' => 'Catalog — Gemstone jewelry',
-            'metaDescription' => 'Browse healing gemstones, lucky charms, and limited collections.',
-            'products' => $products,
-            'categories' => Category::query()->orderBy('sort_order')->get(),
-            'currentCategory' => null,
-            'currency' => $currency,
-        ]);
+        return $this->renderProductList($request, null);
+    }
+
+    public function products(Request $request)
+    {
+        return $this->renderProductList($request, null);
     }
 
     public function category(Request $request, Category $category)
     {
-        $products = Product::query()
+        return $this->renderProductList($request, $category);
+    }
+
+    private function renderProductList(Request $request, ?Category $category)
+    {
+        $categories = Category::query()->orderBy('sort_order')->get();
+
+        $selectedCategoryId = $category?->id;
+        if ($selectedCategoryId === null) {
+            $selectedCategoryId = $request->filled('category_id') ? (int) $request->query('category_id') : null;
+            if ($selectedCategoryId !== null && ! $categories->contains('id', $selectedCategoryId)) {
+                $selectedCategoryId = null;
+            }
+        }
+
+        $minPrice = $request->filled('min_price') ? max(0.0, (float) $request->query('min_price')) : null;
+        $maxPrice = $request->filled('max_price') ? max(0.0, (float) $request->query('max_price')) : null;
+        if ($minPrice !== null && $maxPrice !== null && $maxPrice < $minPrice) {
+            [$minPrice, $maxPrice] = [$maxPrice, $minPrice];
+        }
+
+        $productsQuery = Product::query()
             ->where('is_active', true)
-            ->where('category_id', $category->id)
             ->with('category')
-            ->orderBy('name')
-            ->paginate(12)
-            ->withQueryString();
+            ->orderBy('name');
+
+        if ($selectedCategoryId !== null) {
+            $productsQuery->where('category_id', $selectedCategoryId);
+        }
+        if ($minPrice !== null) {
+            $productsQuery->where('price_usd', '>=', $minPrice);
+        }
+        if ($maxPrice !== null) {
+            $productsQuery->where('price_usd', '<=', $maxPrice);
+        }
+
+        $products = $productsQuery->paginate(12)->withQueryString();
         $currency = app(CurrencyService::class);
-        $metaTitle = $category->meta_title ?: ($category->name.' — Gemstone');
-        $metaDesc = $category->meta_description ?: (string) $category->description;
+        $currentCategory = $selectedCategoryId !== null ? $categories->firstWhere('id', $selectedCategoryId) : null;
+        $metaTitle = $currentCategory
+            ? ($currentCategory->meta_title ?: ($currentCategory->name.' — Gemstone'))
+            : 'Products — Gemstone jewelry';
+        $metaDesc = $currentCategory
+            ? ($currentCategory->meta_description ?: (string) $currentCategory->description)
+            : 'Browse healing gemstones, lucky charms, and limited collections.';
 
         return view('shop.catalog', [
             'title' => $metaTitle,
             'metaDescription' => $metaDesc,
             'products' => $products,
-            'categories' => Category::query()->orderBy('sort_order')->get(),
-            'currentCategory' => $category,
+            'categories' => $categories,
+            'currentCategory' => $currentCategory,
             'currency' => $currency,
+            'filters' => [
+                'category_id' => $selectedCategoryId,
+                'min_price' => $minPrice,
+                'max_price' => $maxPrice,
+            ],
         ]);
     }
 }

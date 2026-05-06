@@ -28,7 +28,7 @@
             <nav class="site-nav" id="site-nav" data-nav-panel>
                 <ul class="site-nav__list">
                     <li><a href="{{ route('shop.home') }}">Home</a></li>
-                    <li><a href="{{ route('shop.catalog') }}">Catalog</a></li>
+                    <li><a href="{{ route('shop.products.index') }}">Catalog</a></li>
                     <li><a href="{{ route('shop.about') }}">About</a></li>
                     <li><a href="{{ route('shop.contact') }}">Contact</a></li>
                 </ul>
@@ -52,7 +52,15 @@
                 @else
                     <a class="cart-link" href="{{ route('login') }}">Sign in</a>
                 @endauth
-                <a class="cart-link" href="{{ route('shop.cart') }}">Cart</a>
+                @php($cartCount = (int) array_sum((array) session('cart', [])))
+                <a class="cart-link cart-link--icon" href="{{ route('shop.cart') }}" aria-label="Cart ({{ $cartCount }} items)">
+                    <svg class="cart-link__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M3 4h2l2.2 10.2a2 2 0 0 0 2 1.6h8.7a2 2 0 0 0 1.9-1.4l1.7-5.6a1 1 0 0 0-.9-1.3H8.2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                        <circle cx="10" cy="19" r="1.6" fill="currentColor"/>
+                        <circle cx="18" cy="19" r="1.6" fill="currentColor"/>
+                    </svg>
+                    <span class="cart-link__count" aria-hidden="true">{{ $cartCount }}</span>
+                </a>
             </nav>
         </div>
     </header>
@@ -77,7 +85,7 @@
             <div>
                 <h3 class="site-footer__heading">Shop</h3>
                 <ul class="site-footer__links">
-                    <li><a href="{{ route('shop.catalog') }}">Catalog</a></li>
+                    <li><a href="{{ route('shop.products.index') }}">Catalog</a></li>
                     <li><a href="{{ route('shop.cart') }}">Cart</a></li>
                 </ul>
             </div>

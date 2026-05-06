@@ -32,7 +32,7 @@ class OrderAdminController extends Controller
 
     public function show(Order $order)
     {
-        $order->load('items');
+        $order->load(['items', 'paymentTransactions']);
 
         return view('admin.orders.show', [
             'title' => 'Order '.$order->order_number,

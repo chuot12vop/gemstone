@@ -27,6 +27,7 @@ class CheckoutController extends Controller
             $line = (float) $p->price_usd * $q;
             $subtotalUsd += $line;
             $lines[] = ['product' => $p, 'quantity' => $q, 'line_usd' => $line];
+            $currency = app(CurrencyService::class);
         }
 
         if ($lines === []) {
@@ -38,6 +39,7 @@ class CheckoutController extends Controller
             'metaDescription' => 'Complete your order securely.',
             'lines' => $lines,
             'subtotalUsd' => $subtotalUsd,
+            'currency' => $currency,
         ]);
     }
 
