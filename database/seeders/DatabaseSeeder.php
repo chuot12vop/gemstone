@@ -11,10 +11,6 @@ use App\Models\ProductImage;
 use App\Models\Setting;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
-
 class DatabaseSeeder extends Seeder
 {
 
@@ -107,13 +103,13 @@ class DatabaseSeeder extends Seeder
                 'meta_description' => 'Premium agate necklace for harmony and style.',
                 'main' => 'product_necklace_main',
                 'gallery' => [
-                    '/storage/products/gallery/vang-1.webp',
-                    '/storage/products/gallery/vang-2.webp',
-                    '/storage/products/gallery/vang-3.webp',
-                    '/storage/products/gallery/vang-4.avif',
-                    '/storage/products/gallery/vang-5.webp',
+                    env('APP_URL', '').'/storage/products/gallery/vang-1.webp',
+                    env('APP_URL', '').'/storage/products/gallery/vang-2.webp',
+                    env('APP_URL', '').'/storage/products/gallery/vang-3.webp',
+                    env('APP_URL', '').'/storage/products/gallery/vang-4.avif',
+                    env('APP_URL', '').'/storage/products/gallery/vang-5.webp',
                 ],
-                'thumbnail' => '/storage/products/thumbnails/vang-1.webp',
+                'thumbnail' => env('APP_URL', '').'/storage/products/thumbnails/vang-1.webp',
                 'attributes' => [
                     'color' => 'Yellow',
                     'size' => '18k',
@@ -134,13 +130,13 @@ class DatabaseSeeder extends Seeder
                 'meta_description' => 'Obsidian bracelet with Pixiu for wealth energy.',
                 'main' => 'product_bracelet_main',
                 'gallery' => [
-                    '/storage/products/gallery/xanh-1.webp',
-                    '/storage/products/gallery/xanh-2.webp',
-                    '/storage/products/gallery/xanh-3.webp',
-                    '/storage/products/gallery/xanh-4.avif',
-                    '/storage/products/gallery/xanh-5.webp',
+                    env('APP_URL', '').'/storage/products/gallery/xanh-1.webp',
+                    env('APP_URL', '').'/storage/products/gallery/xanh-2.webp',
+                    env('APP_URL', '').'/storage/products/gallery/xanh-3.webp',
+                    env('APP_URL', '').'/storage/products/gallery/xanh-4.avif',
+                    env('APP_URL', '').'/storage/products/gallery/xanh-5.webp',
                 ],
-                'thumbnail' => '/storage/products/thumbnails/xanh-1.webp',
+                'thumbnail' => env('APP_URL', '').'/storage/products/thumbnails/xanh-1.webp',
                 'attributes' => [
                     'color' => 'Green',
                     'size' => '18k',
@@ -161,13 +157,13 @@ class DatabaseSeeder extends Seeder
                 'meta_description' => 'Premium agate necklace for harmony and style.',
                 'main' => 'product_necklace_main',
                 'gallery' => [
-                    '/storage/products/gallery/do-1.webp',
-                    '/storage/products/gallery/do-2.webp',
-                    '/storage/products/gallery/do-3.webp',
-                    '/storage/products/gallery/do-4.avif',
-                    '/storage/products/gallery/do-5.webp',
+                    env('APP_URL', '').'/storage/products/gallery/do-1.webp',
+                    env('APP_URL', '').'/storage/products/gallery/do-2.webp',
+                    env('APP_URL', '').'/storage/products/gallery/do-3.webp',
+                    env('APP_URL', '').'/storage/products/gallery/do-4.avif',
+                    env('APP_URL', '').'/storage/products/gallery/do-5.webp',
                 ],
-                'thumbnail' => '/storage/products/thumbnails/do-1.webp',
+                'thumbnail' => env('APP_URL', '').'/storage/products/thumbnails/do-1.webp',
                 'attributes' => [
                     'color' => 'Red',
                     'size' => '18k',
@@ -188,13 +184,13 @@ class DatabaseSeeder extends Seeder
                 'meta_description' => 'Limited jade pendant — New Era 2026.',
                 'main' => 'product_pendant_main',
                 'gallery' => [
-                    '/storage/products/gallery/trang-1.webp',
-                    '/storage/products/gallery/trang-2.webp',
-                    '/storage/products/gallery/trang-3.webp',
-                    '/storage/products/gallery/trang-4.avif',
-                    '/storage/products/gallery/trang-5.webp',
+                    env('APP_URL', '').'/storage/products/gallery/trang-1.webp',
+                    env('APP_URL', '').'/storage/products/gallery/trang-2.webp',
+                    env('APP_URL', '').'/storage/products/gallery/trang-3.webp',
+                    env('APP_URL', '').'/storage/products/gallery/trang-4.avif',
+                    env('APP_URL', '').'/storage/products/gallery/trang-5.webp',
                 ],
-                'thumbnail' => '/storage/products/thumbnails/trang-1.webp',
+                'thumbnail' => env('APP_URL', '').'/storage/products/thumbnails/trang-1.webp',
                 'attributes' => [
                     'color' => 'White',
                     'size' => '18k',
