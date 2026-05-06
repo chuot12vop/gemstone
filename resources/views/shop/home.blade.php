@@ -13,17 +13,30 @@
     </div>
 </section>
 
-<section class="home-section home-section--curated reveal-on-scroll">
-    <h2 class="section__title section__title--center">Curated for Your Intention</h2>
-    <ul class="curated-grid">
-        @foreach($categories as $cat)
+<section class="home-section home-section--spotlight reveal-on-scroll">
+    <h2 class="section__title section__title--center">Featured products</h2>
+    <ul class="spotlight-grid">
+        @foreach($spotlightProducts as $p)
             <li>
-                <a class="curated-card" href="{{ route('shop.catalog.category', $cat) }}">
-                    <div class="curated-card__media">
-                        <img src="{{ $cat->products->first()->image ?? asset('assets/img/placeholder.svg') }}" alt="{{ $cat->name }}" loading="lazy">
+                <article class="spotlight-card">
+                    <a href="{{ route('shop.product', $p) }}" class="spotlight-card__media">
+                        <img src="{{ $p->image ?: asset('assets/img/placeholder.svg') }}" alt="{{ $p->name }}" width="400" height="400" loading="lazy">
+                    </a>
+                    <div class="spotlight-card__body">
+                        <h3 class="spotlight-card__title">
+                            <a href="{{ route('shop.product', $p) }}">{{ $p->name }}</a>
+                        </h3>
+                        <p class="spotlight-card__price">{{ $currency->formatUsd((float) $p->price_usd) }}</p>
+                        <form class="spotlight-card__cart" method="post" action="{{ route('shop.cart.add') }}">
+                            @csrf
+                            <input type="hidden" name="product_id" value="{{ $p->id }}">
+                            <input type="hidden" name="quantity" value="1">
+                            <button class="btn btn--primary btn--small spotlight-card__add" type="submit" {{ $p->stock < 1 ? 'disabled' : '' }}>
+                                {{ $p->stock < 1 ? 'Out of stock' : 'Add to cart' }}
+                            </button>
+                        </form>
                     </div>
-                    <span class="curated-card__name">{{ $cat->name }}</span>
-                </a>
+                </article>
             </li>
         @endforeach
     </ul>

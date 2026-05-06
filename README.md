@@ -14,6 +14,9 @@ US-market storefront + admin: **USD base prices**, **multi-currency display**, m
 cd Gemstone
 copy .env.example .env
 php artisan key:generate
+
+# symbol link từ storage sang app/public
+php artisan storage:link
 ```
 
 Edit `.env`: `APP_URL`, `DB_*`.
