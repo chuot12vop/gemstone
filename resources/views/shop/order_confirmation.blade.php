@@ -8,13 +8,34 @@
 
 <div class="prose">
     <p>We sent a confirmation to <strong>{{ $order->customer_email }}</strong>.</p>
-    <h2>Items</h2>
-    <ul>
+    <p>Total (display currency at checkout): {{ $order->currency_code }} {{ number_format((float) $order->total_display, 2) }}</p>
+</div>
+
+<section class="order-items">
+    <h2 class="product-detail__section-title">Your items</h2>
+    <ul class="order-items__list">
         @foreach($order->items as $item)
-            <li>{{ $item->product_name }} × {{ $item->quantity }} — ${{ number_format((float) $item->line_total_usd, 2) }} USD</li>
+            <li class="order-items__row">
+                <div class="order-items__info">
+                    <strong>{{ $item->product_name }}</strong>
+                    <span class="muted">× {{ $item->quantity }} — ${{ number_format((float) $item->line_total_usd, 2) }} USD</span>
+                </div>
+                <div class="order-items__action">
+                    @if($item->review)
+                        <span class="order-items__reviewed" title="Status: {{ $item->review->status }}">
+                            ★ Reviewed
+                        </span>
+                    @elseif($item->product_id)
+                        <a class="btn btn--ghost btn--small"
+                           href="{{ route('shop.review.create', ['order_number' => $order->order_number, 'orderItem' => $item->id]) }}">
+                            Write a review
+                        </a>
+                    @endif
+                </div>
+            </li>
         @endforeach
     </ul>
-    <p>Total (display currency at checkout): {{ $order->currency_code }} {{ number_format((float) $order->total_display, 2) }}</p>
-    <p><a href="{{ route('shop.products.index') }}">Continue shopping</a></p>
-</div>
+</section>
+
+<p class="order-items__continue"><a href="{{ route('shop.products.index') }}">Continue shopping →</a></p>
 @endsection

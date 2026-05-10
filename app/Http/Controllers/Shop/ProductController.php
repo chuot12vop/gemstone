@@ -26,12 +26,23 @@ class ProductController extends Controller
             ->limit(8)
             ->get();
 
+        $reviews = $product->approvedReviews()->with('images')->get();
+        $reviewStats = [
+            'count' => $reviews->count(),
+            'average' => $reviews->isEmpty() ? 0.0 : round($reviews->avg('rating'), 2),
+            'distribution' => collect([5, 4, 3, 2, 1])
+                ->mapWithKeys(fn (int $star) => [$star => $reviews->where('rating', $star)->count()])
+                ->all(),
+        ];
+
         return view('shop.product', [
             'title' => $product->meta_title ?: $product->name,
             'metaDescription' => $product->meta_description ?: ($product->short_description ?: $product->name),
             'product' => $product,
             'currency' => $currency,
             'relatedProducts' => $relatedProducts,
+            'reviews' => $reviews,
+            'reviewStats' => $reviewStats,
         ]);
     }
 }

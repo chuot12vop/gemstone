@@ -41,4 +41,16 @@ class Product extends Model
     {
         return $this->hasMany(ProductImage::class)->orderBy('sort_order')->orderBy('id');
     }
+
+    /** @return HasMany<Review> */
+    public function reviews(): HasMany
+    {
+        return $this->hasMany(Review::class)->latest();
+    }
+
+    /** @return HasMany<Review> */
+    public function approvedReviews(): HasMany
+    {
+        return $this->hasMany(Review::class)->where('status', Review::STATUS_APPROVED)->latest();
+    }
 }

@@ -51,6 +51,15 @@ class DatabaseSeeder extends Seeder
             'security_policy' => "We apply technical and organizational controls to protect your account and order data.\nIf you notice unusual activity, contact support immediately so we can assist and secure your account.",
             'privacy_policy' => "We collect only the information necessary to process orders, support customers, and improve service quality.\nWe do not sell personal data to third parties and only share data with trusted providers for order fulfillment.",
             'retail_policy' => "Orders are processed in business hours and shipped according to the selected shipping service.\nReturn and exchange requests are supported under our eligibility conditions and required proof of purchase.",
+            'payment_paypal_enabled' => '1',
+            'payment_paypal_merchant_email' => 'sales@gemstone.local',
+            'payment_paypal_client_id' => '',
+            'payment_whatsapp_enabled' => '1',
+            'payment_whatsapp_phone' => '+849xxxxxxxx',
+            'payment_whatsapp_message_template' => 'Hello, I would like to pay for order #{order_number} (total {total}).',
+            'payment_apple_pay_enabled' => '1',
+            'payment_apple_pay_merchant_id' => '',
+            'payment_apple_pay_domain' => '',
         ] as $key => $value) {
             Setting::query()->updateOrCreate(
                 ['key' => $key],

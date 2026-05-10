@@ -57,6 +57,13 @@
             </p>
             <h1 class="product-detail__title" itemprop="name">{{ $product->name }}</h1>
 
+            @if(($reviewStats['count'] ?? 0) > 0)
+                <a class="product-detail__rating" href="#reviews">
+                    @include('shop.partials.stars', ['rating' => $reviewStats['average']])
+                    <span>{{ number_format($reviewStats['average'], 1) }} ({{ $reviewStats['count'] }} {{ Str::plural('review', $reviewStats['count']) }})</span>
+                </a>
+            @endif
+
             <p class="product-detail__price" itemprop="offers" itemscope itemtype="https://schema.org/Offer">
                 <span class="sr-only" itemprop="priceCurrency" content="USD">USD base</span>
                 <span class="sr-only" itemprop="price" content="{{ $product->price_usd }}"></span>
@@ -105,6 +112,8 @@
             </section>
         </div>
     </div>
+
+    @include('shop.partials.review-list', ['reviews' => $reviews, 'reviewStats' => $reviewStats])
 
     @if($relatedProducts->isNotEmpty())
         <section class="product-related">

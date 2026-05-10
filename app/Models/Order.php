@@ -28,4 +28,10 @@ class Order extends Model
     {
         return $this->hasMany(PaymentTransaction::class)->latest();
     }
+
+    /** @return HasMany<Review> */
+    public function reviews(): HasMany
+    {
+        return $this->hasMany(Review::class);
+    }
 }

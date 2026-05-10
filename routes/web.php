@@ -2,21 +2,25 @@
 
 use App\Http\Controllers\Admin\AuthController;
 use App\Http\Controllers\Admin\CategoryAdminController;
+use App\Http\Controllers\Admin\ContactAdminController;
 use App\Http\Controllers\Admin\CurrencyAdminController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\OrderAdminController;
 use App\Http\Controllers\Admin\PaymentAdminController;
 use App\Http\Controllers\Admin\ProductAdminController;
+use App\Http\Controllers\Admin\ReviewAdminController;
 use App\Http\Controllers\Admin\SettingAdminController;
 use App\Http\Controllers\Shop\Auth\GoogleAuthController;
 use App\Http\Controllers\Shop\Auth\LoginController;
 use App\Http\Controllers\Shop\CartController;
 use App\Http\Controllers\Shop\CatalogController;
 use App\Http\Controllers\Shop\CheckoutController;
+use App\Http\Controllers\Shop\ContactController;
 use App\Http\Controllers\Shop\CurrencyController;
 use App\Http\Controllers\Shop\HomeController;
 use App\Http\Controllers\Shop\PageController;
 use App\Http\Controllers\Shop\ProductController;
+use App\Http\Controllers\Shop\ReviewController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -37,11 +41,18 @@ Route::post('/cart/add', [CartController::class, 'add'])->name('shop.cart.add');
 Route::post('/cart/update', [CartController::class, 'update'])->name('shop.cart.update');
 Route::post('/cart/remove', [CartController::class, 'remove'])->name('shop.cart.remove');
 Route::get('/checkout', [CheckoutController::class, 'index'])->name('shop.checkout');
+Route::post('/checkout/method', [CheckoutController::class, 'chooseMethod'])->name('shop.checkout.method');
+Route::get('/checkout/details', [CheckoutController::class, 'details'])->name('shop.checkout.details');
 Route::post('/checkout/place', [CheckoutController::class, 'place'])->name('shop.checkout.place');
+Route::get('/checkout/processing/{order_number}', [CheckoutController::class, 'processing'])->name('shop.checkout.processing');
+Route::post('/checkout/confirm/{order_number}', [CheckoutController::class, 'confirm'])->name('shop.checkout.confirm');
 Route::get('/order/{order_number}', [CheckoutController::class, 'confirmation'])->name('shop.order.show');
+Route::get('/order/{order_number}/review/{orderItem}', [ReviewController::class, 'create'])->name('shop.review.create');
+Route::post('/order/{order_number}/review/{orderItem}', [ReviewController::class, 'store'])->name('shop.review.store');
 Route::post('/currency', [CurrencyController::class, 'set'])->name('shop.currency');
 Route::get('/about', [PageController::class, 'about'])->name('shop.about');
 Route::get('/contact', [PageController::class, 'contact'])->name('shop.contact');
+Route::post('/contact', [ContactController::class, 'store'])->name('shop.contact.store');
 Route::get('/security-policy', [PageController::class, 'securityPolicy'])->name('shop.policy.security');
 Route::get('/privacy-policy', [PageController::class, 'privacyPolicy'])->name('shop.policy.privacy');
 Route::get('/retail-policy', [PageController::class, 'retailPolicy'])->name('shop.policy.retail');
@@ -78,6 +89,18 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
         Route::get('/payments', [PaymentAdminController::class, 'index'])->name('payments.index');
         Route::post('/payments/settings', [PaymentAdminController::class, 'saveSettings'])->name('payments.settings');
+
+        Route::get('/contacts', [ContactAdminController::class, 'index'])->name('contacts.index');
+        Route::get('/contacts/{contact}', [ContactAdminController::class, 'show'])->name('contacts.show');
+        Route::post('/contacts/{contact}/status', [ContactAdminController::class, 'status'])->name('contacts.status');
+        Route::delete('/contacts/{contact}', [ContactAdminController::class, 'destroy'])->name('contacts.destroy');
+
+        Route::get('/reviews', [ReviewAdminController::class, 'index'])->name('reviews.index');
+        Route::get('/reviews/create', [ReviewAdminController::class, 'create'])->name('reviews.create');
+        Route::post('/reviews', [ReviewAdminController::class, 'store'])->name('reviews.store');
+        Route::get('/reviews/{review}/edit', [ReviewAdminController::class, 'edit'])->name('reviews.edit');
+        Route::put('/reviews/{review}', [ReviewAdminController::class, 'update'])->name('reviews.update');
+        Route::delete('/reviews/{review}', [ReviewAdminController::class, 'destroy'])->name('reviews.destroy');
 
         Route::get('/settings', [SettingAdminController::class, 'index'])->name('settings.index');
         Route::post('/settings/save', [SettingAdminController::class, 'save'])->name('settings.save');
