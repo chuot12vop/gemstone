@@ -30,7 +30,8 @@ class SettingAdminController extends Controller
             'site_name' => 'required|string|max:190',
             'security_policy' => 'nullable|string',
             'privacy_policy' => 'nullable|string',
-            'retail_policy' => 'nullable|string',
+            'return_policy' => 'nullable|string',
+            'terms_of_service' => 'nullable|string',
             'site_logo' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:4096',
             'home_banner' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:6144',
         ]);
@@ -52,7 +53,8 @@ class SettingAdminController extends Controller
         $settings['site_name'] = $validated['site_name'];
         $settings['security_policy'] = trim((string) ($validated['security_policy'] ?? ''));
         $settings['privacy_policy'] = trim((string) ($validated['privacy_policy'] ?? ''));
-        $settings['retail_policy'] = trim((string) ($validated['retail_policy'] ?? ''));
+        $settings['return_policy'] = trim((string) ($validated['return_policy'] ?? ''));
+        $settings['terms_of_service'] = trim((string) ($validated['terms_of_service'] ?? ''));
 
         foreach ($settings as $key => $value) {
             Setting::query()->updateOrCreate(
@@ -75,6 +77,8 @@ class SettingAdminController extends Controller
             'home_banner' => '',
             'security_policy' => '',
             'privacy_policy' => '',
+            'return_policy' => '',
+            'terms_of_service' => '',
             'retail_policy' => '',
         ];
 

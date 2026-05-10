@@ -9,6 +9,7 @@
     <table class="data-table">
         <thead>
         <tr>
+            <th></th>
             <th>Name</th>
             <th>Slug</th>
             <th>Sort</th>
@@ -18,6 +19,13 @@
         <tbody>
         @forelse($categories as $c)
             <tr>
+                <td style="width:56px;">
+                    @if(!empty($c->image))
+                        <img src="{{ \App\Support\PublicAssetUrl::to($c->image) }}" alt="" width="48" height="48" style="object-fit:cover;border-radius:8px;display:block;">
+                    @else
+                        <span class="data-table__muted">—</span>
+                    @endif
+                </td>
                 <td>{{ $c->name }}</td>
                 <td><code>{{ $c->slug }}</code></td>
                 <td>{{ $c->sort_order }}</td>
@@ -26,7 +34,7 @@
                 </td>
             </tr>
         @empty
-            <tr><td colspan="4" class="data-table__empty">No categories yet.</td></tr>
+            <tr><td colspan="5" class="data-table__empty">No categories yet.</td></tr>
         @endforelse
         </tbody>
     </table>

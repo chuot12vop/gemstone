@@ -57,8 +57,12 @@
             <textarea name="privacy_policy" rows="8">{{ old('privacy_policy', $settings['privacy_policy'] ?? '') }}</textarea>
         </label>
         <label>
-            Retail policy
-            <textarea name="retail_policy" rows="8">{{ old('retail_policy', $settings['retail_policy'] ?? '') }}</textarea>
+            Return policy
+            <textarea name="return_policy" rows="8">{{ old('return_policy', $settings['return_policy'] ?? '') }}</textarea>
+        </label>
+        <label>
+            Terms of service
+            <textarea name="terms_of_service" rows="8">{{ old('terms_of_service', $settings['terms_of_service'] ?? '') }}</textarea>
         </label>
     </fieldset>
 

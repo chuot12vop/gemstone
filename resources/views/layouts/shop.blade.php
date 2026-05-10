@@ -94,7 +94,8 @@
                 <ul class="site-footer__links">
                     <li><a href="{{ route('shop.policy.security') }}">Security policy</a></li>
                     <li><a href="{{ route('shop.policy.privacy') }}">Privacy policy</a></li>
-                    <li><a href="{{ route('shop.policy.retail') }}">Retail policy</a></li>
+                    <li><a href="{{ route('shop.policy.return') }}">Return policy</a></li>
+                    <li><a href="{{ route('shop.policy.terms') }}">Terms of service</a></li>
                     <li><a href="{{ route('shop.contact') }}">Contact</a></li>
                 </ul>
             </div>

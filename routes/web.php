@@ -55,6 +55,8 @@ Route::get('/contact', [PageController::class, 'contact'])->name('shop.contact')
 Route::post('/contact', [ContactController::class, 'store'])->name('shop.contact.store');
 Route::get('/security-policy', [PageController::class, 'securityPolicy'])->name('shop.policy.security');
 Route::get('/privacy-policy', [PageController::class, 'privacyPolicy'])->name('shop.policy.privacy');
+Route::get('/return-policy', [PageController::class, 'returnPolicy'])->name('shop.policy.return');
+Route::get('/terms-of-service', [PageController::class, 'termsOfService'])->name('shop.policy.terms');
 Route::get('/retail-policy', [PageController::class, 'retailPolicy'])->name('shop.policy.retail');
 
 /*

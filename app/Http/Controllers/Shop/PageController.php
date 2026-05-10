@@ -16,6 +16,8 @@ class PageController extends Controller
             'site_name' => config('app.name'),
             'security_policy' => '',
             'privacy_policy' => '',
+            'return_policy' => '',
+            'terms_of_service' => '',
             'retail_policy' => '',
         ];
 
@@ -71,13 +73,27 @@ class PageController extends Controller
         );
     }
 
-    public function retailPolicy()
+    public function returnPolicy()
     {
         return $this->renderPolicyPage(
-            'Retail policy',
-            'retail_policy',
-            'Order, shipping, return and retail conditions.'
+            'Return policy',
+            'return_policy',
+            'Conditions for returns, exchanges, and refunds.'
         );
+    }
+
+    public function termsOfService()
+    {
+        return $this->renderPolicyPage(
+            'Terms of service',
+            'terms_of_service',
+            'Terms that apply when you use our store.'
+        );
+    }
+
+    public function retailPolicy()
+    {
+        return redirect()->route('shop.policy.return', [], 301);
     }
 
     private function renderPolicyPage(string $heading, string $settingKey, string $fallback): \Illuminate\Contracts\View\View

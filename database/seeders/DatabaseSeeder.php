@@ -49,8 +49,9 @@ class DatabaseSeeder extends Seeder
             'site_logo' => $logoPath ?? '',
             'home_banner' => $bannerPath ?? '',
             'security_policy' => "We apply technical and organizational controls to protect your account and order data.\nIf you notice unusual activity, contact support immediately so we can assist and secure your account.",
-            'privacy_policy' => "We collect only the information necessary to process orders, support customers, and improve service quality.\nWe do not sell personal data to third parties and only share data with trusted providers for order fulfillment.",
-            'retail_policy' => "Orders are processed in business hours and shipped according to the selected shipping service.\nReturn and exchange requests are supported under our eligibility conditions and required proof of purchase.",
+            'privacy_policy' => PolicySeedBodies::privacyPolicyText(),
+            'return_policy' => PolicySeedBodies::returnPolicyText(),
+            'terms_of_service' => PolicySeedBodies::termsOfServiceText(),
             'payment_paypal_enabled' => '1',
             'payment_paypal_merchant_email' => 'sales@gemstone.local',
             'payment_paypal_client_id' => '',
@@ -67,42 +68,57 @@ class DatabaseSeeder extends Seeder
             );
         }
 
-        $c1 = Category::query()->updateOrCreate(
+        $cFox = Category::query()->updateOrCreate(
+            ['slug' => 'fox-queen-stone'],
+            [
+                'name' => 'Fox Queen Stone',
+                'description' => 'Lucky Fox Queen Stone bracelets and pieces — curated colors and intentional design.',
+                'meta_title' => 'Fox Queen Stone — Gemstone',
+                'meta_description' => 'Lucky Fox Queen Stone collection — gemstones for balance and style.',
+                'sort_order' => 1,
+                'image' => env('APP_URL', '').'/storage/products/gallery/fox-queen-stone.png',
+            ]
+        );
+
+        Category::query()->updateOrCreate(
             ['slug' => 'heal-balance'],
             [
                 'name' => 'Heal & Balance',
                 'description' => 'Pieces curated for grounding and emotional harmony.',
                 'meta_title' => 'Heal & Balance — Gemstone',
                 'meta_description' => 'Gemstone jewelry for balance and calm.',
-                'sort_order' => 1,
+                'sort_order' => 2,
+                'image' => env('APP_URL', '').'/storage/products/gallery/heal-balance.webp',
             ]
         );
 
-        $c2 = Category::query()->updateOrCreate(
+        Category::query()->updateOrCreate(
             ['slug' => 'lucky-charms'],
             [
                 'name' => 'Lucky Charms',
                 'description' => 'Symbols of fortune and protection.',
                 'meta_title' => 'Lucky Charms — Gemstone',
                 'meta_description' => 'Fortune and protection jewelry.',
-                'sort_order' => 2,
+                'sort_order' => 3,
+                'image' => env('APP_URL', '').'/storage/products/gallery/lucky-charms.webp',
             ]
         );
 
-        $c3 = Category::query()->updateOrCreate(
+        Category::query()->updateOrCreate(
             ['slug' => 'new-era-2026'],
             [
                 'name' => 'New Era Collection',
                 'description' => 'Limited designs for the new lunar cycle.',
                 'meta_title' => 'New Era 2026 — Gemstone',
                 'meta_description' => 'Limited gemstone designs for 2026.',
-                'sort_order' => 3,
+                'sort_order' => 4,
+                'image' => env('APP_URL', '').'/storage/products/gallery/new-era-2026.webp',
             ]
         );
 
         $productSpecs = [
             'agate-harmony-necklace' => [
-                'category_id' => $c1->id,
+                'category_id' => $cFox->id,
                 'name' => 'Lucky Fox Queen Stone - Yellow',
                 'short_description' => 'Hand-strung agate with gold-tone accents.',
                 'description' => 'Emperor-grade agate necklace designed for daily wear. Each bead is selected for tone and clarity.',
@@ -112,13 +128,13 @@ class DatabaseSeeder extends Seeder
                 'meta_description' => 'Premium agate necklace for harmony and style.',
                 'main' => 'product_necklace_main',
                 'gallery' => [
-                    env('APP_URL', '').'/storage/products/gallery/vang-1.webp',
-                    env('APP_URL', '').'/storage/products/gallery/vang-2.webp',
-                    env('APP_URL', '').'/storage/products/gallery/vang-3.webp',
-                    env('APP_URL', '').'/storage/products/gallery/vang-4.avif',
-                    env('APP_URL', '').'/storage/products/gallery/vang-5.webp',
+                    env('APP_URL', '').'/storage/products/gallery/vang1.png',
+                    env('APP_URL', '').'/storage/products/gallery/vang2.png',
+                    env('APP_URL', '').'/storage/products/gallery/vang3.png',
+                    env('APP_URL', '').'/storage/products/gallery/vang4.png',
+                    env('APP_URL', '').'/storage/products/gallery/vang5.png',
                 ],
-                'thumbnail' => env('APP_URL', '').'/storage/products/thumbnails/vang-1.webp',
+                'thumbnail' => env('APP_URL', '').'/storage/products/gallery/vang1.png',
                 'attributes' => [
                     'color' => 'Yellow',
                     'size' => '18k',
@@ -129,7 +145,7 @@ class DatabaseSeeder extends Seeder
                 ],
             ],
             'pixiu-wealth-bracelet' => [
-                'category_id' => $c2->id,
+                'category_id' => $cFox->id,
                 'name' => 'Lucky Fox Queen Stone - Green',
                 'short_description' => 'Pixiu charm with obsidian beads.',
                 'description' => 'Traditional Pixiu guardian paired with polished obsidian for protection and abundance energy.',
@@ -139,13 +155,13 @@ class DatabaseSeeder extends Seeder
                 'meta_description' => 'Obsidian bracelet with Pixiu for wealth energy.',
                 'main' => 'product_bracelet_main',
                 'gallery' => [
-                    env('APP_URL', '').'/storage/products/gallery/xanh-1.webp',
-                    env('APP_URL', '').'/storage/products/gallery/xanh-2.webp',
-                    env('APP_URL', '').'/storage/products/gallery/xanh-3.webp',
-                    env('APP_URL', '').'/storage/products/gallery/xanh-4.avif',
-                    env('APP_URL', '').'/storage/products/gallery/xanh-5.webp',
+                    env('APP_URL', '').'/storage/products/gallery/xanh1.png',
+                    env('APP_URL', '').'/storage/products/gallery/xanh2.png',
+                    env('APP_URL', '').'/storage/products/gallery/xanh3.png',
+                    env('APP_URL', '').'/storage/products/gallery/xanh4.png',
+                    env('APP_URL', '').'/storage/products/gallery/xanh5.jpg',
                 ],
-                'thumbnail' => env('APP_URL', '').'/storage/products/thumbnails/xanh-1.webp',
+                'thumbnail' => env('APP_URL', '').'/storage/products/gallery/xanh1.png',
                 'attributes' => [
                     'color' => 'Green',
                     'size' => '18k',
@@ -156,7 +172,7 @@ class DatabaseSeeder extends Seeder
                 ],
             ],
             'lucky-fox-queen-stone-red' => [
-                'category_id' => $c2->id,
+                'category_id' => $cFox->id,
                 'name' => 'Lucky Fox Queen Stone - Red',
                 'short_description' => 'Hand-strung agate with gold-tone accents.',
                 'description' => 'Emperor-grade agate necklace designed for daily wear. Each bead is selected for tone and clarity.',
@@ -166,13 +182,13 @@ class DatabaseSeeder extends Seeder
                 'meta_description' => 'Premium agate necklace for harmony and style.',
                 'main' => 'product_necklace_main',
                 'gallery' => [
-                    env('APP_URL', '').'/storage/products/gallery/do-1.webp',
-                    env('APP_URL', '').'/storage/products/gallery/do-2.webp',
-                    env('APP_URL', '').'/storage/products/gallery/do-3.webp',
-                    env('APP_URL', '').'/storage/products/gallery/do-4.avif',
-                    env('APP_URL', '').'/storage/products/gallery/do-5.webp',
+                    env('APP_URL', '').'/storage/products/gallery/do1.png',
+                    env('APP_URL', '').'/storage/products/gallery/do2.png',
+                    env('APP_URL', '').'/storage/products/gallery/do3.png',
+                    env('APP_URL', '').'/storage/products/gallery/do4.png',
+                    env('APP_URL', '').'/storage/products/gallery/do5.png',
                 ],
-                'thumbnail' => env('APP_URL', '').'/storage/products/thumbnails/do-1.webp',
+                'thumbnail' => env('APP_URL', '').'/storage/products/gallery/do1.png',
                 'attributes' => [
                     'color' => 'Red',
                     'size' => '18k',
@@ -183,7 +199,7 @@ class DatabaseSeeder extends Seeder
                 ],
             ],
             'fire-horse-jade-pendant' => [
-                'category_id' => $c3->id,
+                'category_id' => $cFox->id,
                 'name' => 'Lucky Fox Queen Stone - White',
                 'short_description' => 'Carved jade on silk cord.',
                 'description' => 'Celebrating the Fire Horse — jade carved pendant blessed following classical intention-setting.',
@@ -193,13 +209,13 @@ class DatabaseSeeder extends Seeder
                 'meta_description' => 'Limited jade pendant — New Era 2026.',
                 'main' => 'product_pendant_main',
                 'gallery' => [
-                    env('APP_URL', '').'/storage/products/gallery/trang-1.webp',
-                    env('APP_URL', '').'/storage/products/gallery/trang-2.webp',
-                    env('APP_URL', '').'/storage/products/gallery/trang-3.webp',
-                    env('APP_URL', '').'/storage/products/gallery/trang-4.avif',
-                    env('APP_URL', '').'/storage/products/gallery/trang-5.webp',
+                    env('APP_URL', '').'/storage/products/gallery/trang1.png',
+                    env('APP_URL', '').'/storage/products/gallery/trang2.png',
+                    env('APP_URL', '').'/storage/products/gallery/trang3.png',
+                    env('APP_URL', '').'/storage/products/gallery/trang4.png',
+                    env('APP_URL', '').'/storage/products/gallery/trang5.png',
                 ],
-                'thumbnail' => env('APP_URL', '').'/storage/products/thumbnails/trang-1.webp',
+                'thumbnail' => env('APP_URL', '').'/storage/products/gallery/trang1.png',
                 'attributes' => [
                     'color' => 'White',
                     'size' => '18k',

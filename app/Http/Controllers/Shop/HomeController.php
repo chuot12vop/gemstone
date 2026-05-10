@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Shop;
 
 use App\Http\Controllers\Controller;
+use App\Models\Category;
 use App\Models\Product;
 use App\Models\Setting;
 use App\Services\CurrencyService;
@@ -18,6 +19,8 @@ class HomeController extends Controller
             'home_banner' => '',
             'security_policy' => '',
             'privacy_policy' => '',
+            'return_policy' => '',
+            'terms_of_service' => '',
             'retail_policy' => '',
         ];
 
@@ -37,14 +40,19 @@ class HomeController extends Controller
 
         $productQuery = Product::query()->where('is_active', true)->with('category')->latest();
         $spotlightProducts = (clone $productQuery)->take(3)->get();
-        $featured = (clone $productQuery)->skip(3)->take(6)->get();
+
+        $homeCategories = Category::query()
+            ->whereNotNull('image')
+            ->where('image', '!=', '')
+            ->orderBy('sort_order')
+            ->get();
 
         return view('shop.home', [
             'siteSettings' => $defaults,
             'title' => 'Gemstone Jewelry & Feng Shui — Taichi-inspired wellness',
             'metaDescription' => 'Premium gemstone jewelry for balance, luck, and intention. Ethically sourced, handcrafted for the US market.',
             'spotlightProducts' => $spotlightProducts,
-            'featured' => $featured,
+            'homeCategories' => $homeCategories,
             'currency' => app(CurrencyService::class),
         ]);
     }

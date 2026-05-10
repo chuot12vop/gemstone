@@ -37,13 +37,28 @@
     </article>
 </section>
 
-<section class="home-section home-section--featured reveal-on-scroll">
-    <h2 class="section__title">Featured Collection</h2>
-    <div class="shop-product-grid">
-        @foreach($featured as $p)
-            @include('shop.partials.product-card', ['product' => $p, 'currency' => $currency])
-        @endforeach
-    </div>
+<section class="home-section home-section--categories reveal-on-scroll">
+    <h2 class="section__title">Categories</h2>
+    @if($homeCategories->isEmpty())
+        <p class="home-section__empty">Browse the full catalog on the <a href="{{ route('shop.catalog') }}">shop page</a>.</p>
+    @else
+        <div class="category-card-grid">
+            @foreach($homeCategories as $cat)
+                <a class="category-card" href="{{ route('shop.catalog.category', $cat) }}">
+                    <span class="category-card__media">
+                        <img src="{{ \App\Support\PublicAssetUrl::to($cat->image) }}" alt="{{ $cat->name }}" loading="lazy" width="600" height="600">
+                    </span>
+                    <span class="category-card__body">
+                        <span class="category-card__title">{{ $cat->name }}</span>
+                        @if($cat->description)
+                            <span class="category-card__desc">{{ \Illuminate\Support\Str::limit(strip_tags($cat->description), 120) }}</span>
+                        @endif
+                        <span class="category-card__cta">Shop this category →</span>
+                    </span>
+                </a>
+            @endforeach
+        </div>
+    @endif
 </section>
 
 <section class="home-section insights reveal-on-scroll">

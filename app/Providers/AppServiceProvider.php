@@ -36,6 +36,8 @@ class AppServiceProvider extends ServiceProvider
                 'home_banner' => '',
                 'security_policy' => '',
                 'privacy_policy' => '',
+                'return_policy' => '',
+                'terms_of_service' => '',
                 'retail_policy' => '',
             ];
 
