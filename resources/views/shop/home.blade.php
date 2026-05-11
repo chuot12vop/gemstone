@@ -63,19 +63,19 @@
 
 <section class="home-section insights reveal-on-scroll">
     <article class="insight-card">
-        <h3>What is Feng Shui?</h3>
-        <p>Discover how mindful gemstone placement helps invite balance and harmony.</p>
-        <a class="btn btn--primary btn--small" href="{{ route('shop.about') }}">View all</a>
+        <h3>About Our Gemstones</h3>
+        <p>More than just jewelry—each stone is a piece of a heritage story, a whispering bridge between timeless elegance and the heartbeat of contemporary life.</p>
+        <a class="btn btn--primary btn--small" href="{{ route('shop.about.gemstones') }}">View all</a>
     </article>
     <article class="insight-card">
-        <h3>The Spiritual Energy of the Five Elements</h3>
-        <p>Learn how wood, fire, earth, metal and water align with gemstone choices.</p>
-        <a class="btn btn--primary btn--small" href="{{ route('shop.about') }}">View all</a>
+        <h3>The Spiritual Energy of the Five Elements: Find Your Balance</h3>
+        <p>The universe thrives on balance, and so do we. The ancient philosophy of the Five Elements (Wu Xing)—Wood, Fire, Earth, Metal, and Water—is a profound map to understanding our inner energy. In this tradition, everything in nature is connected, and by aligning your personal energy with the right gemstone, you can invite harmony, protection, and prosperity into your modern life.</p>
+        <a class="btn btn--primary btn--small" href="{{ route('shop.about.spirituality') }}">View all</a>
     </article>
     <article class="insight-card">
         <h3>Pick the Sacred Guardian That Attracts and Protects Wealth Energy</h3>
         <p>Choose pieces crafted to support confidence and prosperity in daily life.</p>
-        <a class="btn btn--primary btn--small" href="{{ route('shop.about') }}">View all</a>
+        <a class="btn btn--primary btn--small" href="{{ route('shop.about.wealth') }}">View all</a>
     </article>
 </section>
 @endsection

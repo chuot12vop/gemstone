@@ -51,6 +51,15 @@ Route::get('/order/{order_number}/review/{orderItem}', [ReviewController::class,
 Route::post('/order/{order_number}/review/{orderItem}', [ReviewController::class, 'store'])->name('shop.review.store');
 Route::post('/currency', [CurrencyController::class, 'set'])->name('shop.currency');
 Route::get('/about', [PageController::class, 'about'])->name('shop.about');
+Route::get('/about/gemstones', function () {
+    return view('shop.about.gemstones');
+})->name('shop.about.gemstones');
+Route::get('/about/spirituality', function () {
+    return view('shop.about.spirituality');
+})->name('shop.about.spirituality');
+Route::get('/about/wealth', function () {
+    return view('shop.about.wealth');
+})->name('shop.about.wealth');
 Route::get('/contact', [PageController::class, 'contact'])->name('shop.contact');
 Route::post('/contact', [ContactController::class, 'store'])->name('shop.contact.store');
 Route::get('/security-policy', [PageController::class, 'securityPolicy'])->name('shop.policy.security');
