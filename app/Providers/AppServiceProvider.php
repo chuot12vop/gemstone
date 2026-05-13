@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Models\Category;
 use App\Models\Order;
 use App\Models\Setting;
 use App\Services\CurrencyService;
@@ -33,7 +34,6 @@ class AppServiceProvider extends ServiceProvider
             $defaults = [
                 'site_name' => config('app.name'),
                 'site_logo' => '',
-                'home_banner' => '',
                 'security_policy' => '',
                 'privacy_policy' => '',
                 'return_policy' => '',
@@ -53,9 +53,21 @@ class AppServiceProvider extends ServiceProvider
             }
 
             $defaults['site_logo'] = PublicAssetUrl::to($defaults['site_logo']);
-            $defaults['home_banner'] = PublicAssetUrl::to($defaults['home_banner']);
+
+            $catalogNavCategories = Category::query()
+                ->orderBy('sort_order')
+                ->orderBy('name')
+                ->with(['products' => function ($q) {
+                    $q->where('is_active', true)
+                        ->orderBy('name')
+                        ->limit(10)
+                        ->select('id', 'category_id', 'name', 'slug');
+                }])
+                ->get(['id', 'name', 'slug', 'sort_order']);
+
             $view->with('currency', app(CurrencyService::class))
-                ->with('siteSettings', $defaults);
+                ->with('siteSettings', $defaults)
+                ->with('catalogNavCategories', $catalogNavCategories);
         });
 
         View::composer('admin.partials.topbar', function ($view) {

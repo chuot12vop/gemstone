@@ -3,14 +3,54 @@
 @section('mainClass', 'site-main--home')
 
 @section('content')
-<section class="home-hero reveal-on-scroll">
-    <img class="home-hero__bg" src="{{ !empty($siteSettings['home_banner']) ? $siteSettings['home_banner'] : 'https://taichigemstone.com/cdn/shop/files/Gemini_Generated_Image_7ja7m27ja7m27ja7.png?v=1773133793&width=1400' }}" alt="Gemstone jewelry in natural setting" loading="eager">
-    <div class="home-hero__overlay">
-        <p class="eyebrow">Revitalize your being</p>
-        <h1 class="home-hero__title">Vitality &amp; Balance</h1>
-        <p class="home-hero__lede">Elevate your energy with naturally selected gemstone bracelets and handcrafted feng shui pieces.</p>
-        <a class="btn btn--primary" style="max-width:200px;" href="{{ route('shop.products.index') }}">Shop the collection</a>
+@php($slideCount = count($bannerSlides))
+<section class="home-hero home-hero--slider reveal-on-scroll"
+         data-home-slider
+         data-slide-interval="4000"
+         aria-roledescription="carousel"
+         aria-label="Home highlights">
+    <div class="home-hero__slides">
+        @foreach($bannerSlides as $i => $slide)
+            <div class="home-hero__slide {{ $i === 0 ? 'is-active' : '' }}"
+                 data-slide
+                 data-slide-index="{{ $i }}"
+                 aria-roledescription="slide"
+                 aria-label="Slide {{ $i + 1 }} of {{ $slideCount }}"
+                 @if($slideCount > 1) aria-hidden="{{ $i === 0 ? 'false' : 'true' }}" @endif>
+                <a class="home-hero__slide-hit" href="{{ $slide['cta_url'] }}">
+                    <img class="home-hero__bg" src="{{ $slide['image'] }}" alt="" loading="{{ $i === 0 ? 'eager' : 'lazy' }}" width="1400" height="788">
+                    <div class="home-hero__overlay">
+                        @if(($slide['title'] ?? '') !== '')
+                            <h1 class="home-hero__title">{{ $slide['title'] }}</h1>
+                        @endif
+                        @if(($slide['content'] ?? '') !== '')
+                            <p class="home-hero__lede">{{ $slide['content'] }}</p>
+                        @endif
+                        <span class="btn btn--primary home-hero__cta" style="max-width:200px;">
+                            @if(!empty($slide['category_id']))
+                                Shop this category
+                            @else
+                                Shop the collection
+                            @endif
+                        </span>
+                    </div>
+                </a>
+            </div>
+        @endforeach
     </div>
+    @if($slideCount > 1)
+        <div class="home-hero__dots" role="tablist" aria-label="Slides">
+            @foreach($bannerSlides as $i => $_slide)
+                <button type="button"
+                        class="home-hero__dot {{ $i === 0 ? 'is-active' : '' }}"
+                        data-dot
+                        data-slide-to="{{ $i }}"
+                        role="tab"
+                        aria-label="Show slide {{ $i + 1 }}"
+                        aria-selected="{{ $i === 0 ? 'true' : 'false' }}"></button>
+            @endforeach
+        </div>
+    @endif
 </section>
 
 <section class="home-section home-section--spotlight reveal-on-scroll">
@@ -78,4 +118,67 @@
         <a class="btn btn--primary btn--small" href="{{ route('shop.about.wealth') }}">View all</a>
     </article>
 </section>
+@push('scripts')
+<script>
+(() => {
+    document.querySelectorAll('[data-home-slider]').forEach((root) => {
+        const slides = Array.from(root.querySelectorAll('[data-slide]'));
+        const dots = Array.from(root.querySelectorAll('[data-dot]'));
+        if (slides.length === 0) {
+            return;
+        }
+
+        let active = 0;
+        const ms = parseInt(String(root.getAttribute('data-slide-interval') || '4000'), 10) || 4000;
+
+        let timer = null;
+        const stop = () => {
+            if (timer !== null) {
+                window.clearInterval(timer);
+                timer = null;
+            }
+        };
+        const start = () => {
+            stop();
+            if (slides.length > 1) {
+                timer = window.setInterval(() => setActive(active + 1), ms);
+            }
+        };
+
+        const setActive = (idx) => {
+            const next = (idx + slides.length) % slides.length;
+            slides.forEach((el, i) => {
+                el.classList.toggle('is-active', i === next);
+                if (slides.length > 1) {
+                    el.setAttribute('aria-hidden', i === next ? 'false' : 'true');
+                }
+            });
+            dots.forEach((d, i) => {
+                d.classList.toggle('is-active', i === next);
+                d.setAttribute('aria-selected', i === next ? 'true' : 'false');
+            });
+            active = next;
+        };
+
+        dots.forEach((d) => {
+            d.addEventListener('click', () => {
+                const to = parseInt(String(d.getAttribute('data-slide-to') || '0'), 10);
+                if (!Number.isNaN(to)) {
+                    setActive(to);
+                    start();
+                }
+            });
+        });
+
+        if (slides.length <= 1) {
+            return;
+        }
+
+        start();
+        root.addEventListener('mouseenter', stop);
+        root.addEventListener('mouseleave', start);
+    });
+})();
+</script>
+@endpush
 @endsection

@@ -28,7 +28,34 @@
             <nav class="site-nav" id="site-nav" data-nav-panel>
                 <ul class="site-nav__list">
                     <li><a href="{{ route('shop.home') }}">Home</a></li>
-                    <li><a href="{{ route('shop.products.index') }}">Catalog</a></li>
+                    <li class="site-nav__item site-nav__item--mega" data-nav-mega>
+                        <a href="{{ route('shop.catalog') }}" class="site-nav__mega-trigger" data-catalog-trigger aria-expanded="false" aria-controls="catalog-mega-panel" id="catalog-mega-trigger">Catalog</a>
+                        <div class="catalog-mega" id="catalog-mega-panel" role="region" aria-labelledby="catalog-mega-trigger" data-catalog-mega-panel>
+                            <div class="catalog-mega__inner">
+                                <p class="catalog-mega__lede"><a href="{{ route('shop.catalog') }}">Browse all products</a></p>
+                                @if($catalogNavCategories->isEmpty())
+                                    <p class="catalog-mega__empty">No categories yet.</p>
+                                @else
+                                    <div class="catalog-mega__grid">
+                                        @foreach($catalogNavCategories as $cat)
+                                            <div class="catalog-mega__col">
+                                                <a class="catalog-mega__cat" href="{{ route('shop.catalog.category', $cat) }}">{{ $cat->name }}</a>
+                                                @if($cat->products->isEmpty())
+                                                    <p class="catalog-mega__empty catalog-mega__empty--inline">No products in this category.</p>
+                                                @else
+                                                    <ul class="catalog-mega__products">
+                                                        @foreach($cat->products as $product)
+                                                            <li><a href="{{ route('shop.product', $product) }}">{{ $product->name }}</a></li>
+                                                        @endforeach
+                                                    </ul>
+                                                @endif
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                @endif
+                            </div>
+                        </div>
+                    </li>
                     <li><a href="{{ route('shop.about') }}">About</a></li>
                     <li><a href="{{ route('shop.contact') }}">Contact</a></li>
                 </ul>

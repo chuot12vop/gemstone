@@ -9,6 +9,7 @@ use App\Http\Controllers\Admin\OrderAdminController;
 use App\Http\Controllers\Admin\PaymentAdminController;
 use App\Http\Controllers\Admin\ProductAdminController;
 use App\Http\Controllers\Admin\ReviewAdminController;
+use App\Http\Controllers\Admin\InterfaceAdminController;
 use App\Http\Controllers\Admin\SettingAdminController;
 use App\Http\Controllers\Shop\Auth\GoogleAuthController;
 use App\Http\Controllers\Shop\Auth\LoginController;
@@ -115,5 +116,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
         Route::get('/settings', [SettingAdminController::class, 'index'])->name('settings.index');
         Route::post('/settings/save', [SettingAdminController::class, 'save'])->name('settings.save');
+
+        Route::get('/interface', [InterfaceAdminController::class, 'index'])->name('interface.index');
+        Route::post('/interface/save', [InterfaceAdminController::class, 'save'])->name('interface.save');
     });
 });

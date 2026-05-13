@@ -28,7 +28,52 @@
   initProductAttributesAccordion();
   initProductCtaBar();
   initProductCtaQtySync();
+  initCatalogMega();
 })();
+
+function initCatalogMega() {
+  const li = document.querySelector('[data-nav-mega]');
+  const trigger = document.querySelector('[data-catalog-trigger]');
+  const navToggle = document.querySelector('[data-nav-toggle]');
+  const navPanel = document.querySelector('[data-nav-panel]');
+  if (!li || !trigger) return;
+
+  function closeMega() {
+    li.classList.remove('is-mega-open');
+    trigger.setAttribute('aria-expanded', 'false');
+  }
+
+  function isMobileNav() {
+    return globalThis.matchMedia('(max-width: 767px)').matches;
+  }
+
+  trigger.addEventListener('click', function (e) {
+    if (!isMobileNav()) return;
+    if (!li.classList.contains('is-mega-open')) {
+      e.preventDefault();
+      li.classList.add('is-mega-open');
+      trigger.setAttribute('aria-expanded', 'true');
+    }
+  });
+
+  if (navToggle && navPanel) {
+    navToggle.addEventListener('click', function () {
+      window.setTimeout(function () {
+        if (!navPanel.classList.contains('is-open')) {
+          closeMega();
+        }
+      }, 0);
+    });
+  }
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') closeMega();
+  });
+
+  globalThis.matchMedia('(min-width: 768px)').addEventListener('change', function (e) {
+    if (e.matches) closeMega();
+  });
+}
 
 function initProductGallery() {
   const gallery = document.querySelector('[data-pd-gallery]');

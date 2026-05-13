@@ -1,5 +1,9 @@
 @extends('layouts.admin')
 
+@section('module-actions')
+    <a class="btn-admin" href="{{ route('admin.interface.index') }}">Interface — banner slides</a>
+@endsection
+
 @section('content')
 <form class="stack-form" method="post" enctype="multipart/form-data" action="{{ route('admin.settings.save') }}">
     @csrf
@@ -32,21 +36,6 @@
     </fieldset>
 
     <fieldset class="form-fieldset">
-        <legend>Homepage banner</legend>
-        <div id="home-banner-dropzone" style="margin-top:10px;padding:18px;border:2px dashed #c8d1dc;border-radius:10px;background:#f8fafc;text-align:center;cursor:pointer;">
-            <strong>Drop banner image here</strong><br>
-            <small>or click to choose 1 image</small>
-        </div>
-        <div style="margin-top:10px;">
-            <img id="home-banner-preview" src="{{ old('home_banner_preview', \App\Support\PublicAssetUrl::to($settings['home_banner']) ?: asset('assets/img/placeholder.svg')) }}" alt="Home banner preview" width="320" height="180" style="object-fit:cover;border:1px solid #d7dbe2;border-radius:8px;background:#fff;">
-        </div>
-        <input id="home-banner-input" class="display-none" type="file" name="home_banner" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp">
-        @error('home_banner')
-            <p style="margin:8px 0 0;color:#b33a3a;">{{ $message }}</p>
-        @enderror
-    </fieldset>
-
-    <fieldset class="form-fieldset">
         <legend>Policies</legend>
         <label>
             Security policy
@@ -67,7 +56,7 @@
     </fieldset>
 
     <div class="form-actions">
-        <button class="btn-admin btn-admin--primary" type="submit">Save settings</button>
+        <button class="btn-admin btn-admin--primary" type="submit">Save system settings</button>
     </div>
 </form>
 
@@ -118,7 +107,6 @@
     };
 
     setupSingleImageDropzone('site-logo-input', 'site-logo-preview', 'site-logo-dropzone');
-    setupSingleImageDropzone('home-banner-input', 'home-banner-preview', 'home-banner-dropzone');
 })();
 </script>
 @endsection

@@ -16,9 +16,9 @@ class SettingAdminController extends Controller
     public function index()
     {
         return view('admin.settings.index', [
-            'title' => 'Settings',
+            'title' => 'System',
             'breadcrumbs' => [
-                ['label' => 'Settings'],
+                ['label' => 'System'],
             ],
             'settings' => $this->getSettingsMap(),
         ]);
@@ -33,7 +33,6 @@ class SettingAdminController extends Controller
             'return_policy' => 'nullable|string',
             'terms_of_service' => 'nullable|string',
             'site_logo' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:4096',
-            'home_banner' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:6144',
         ]);
 
         $settings = $this->getSettingsMap();
@@ -42,12 +41,6 @@ class SettingAdminController extends Controller
         if ($logoPath !== null) {
             $this->deletePublicPath($settings['site_logo'] ?? null);
             $settings['site_logo'] = $logoPath;
-        }
-
-        $bannerPath = $this->storeImage($request->file('home_banner'), 'settings/banner');
-        if ($bannerPath !== null) {
-            $this->deletePublicPath($settings['home_banner'] ?? null);
-            $settings['home_banner'] = $bannerPath;
         }
 
         $settings['site_name'] = $validated['site_name'];
@@ -63,7 +56,7 @@ class SettingAdminController extends Controller
             );
         }
 
-        return redirect()->route('admin.settings.index')->with('success', 'Settings updated.');
+        return redirect()->route('admin.settings.index')->with('success', 'System settings updated.');
     }
 
     /**
@@ -74,7 +67,6 @@ class SettingAdminController extends Controller
         $defaults = [
             'site_name' => config('app.name'),
             'site_logo' => '',
-            'home_banner' => '',
             'security_policy' => '',
             'privacy_policy' => '',
             'return_policy' => '',

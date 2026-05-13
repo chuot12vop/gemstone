@@ -47,7 +47,6 @@ class DatabaseSeeder extends Seeder
         foreach ([
             'site_name' => 'Gemstone',
             'site_logo' => $logoPath ?? '',
-            'home_banner' => $bannerPath ?? '',
             'security_policy' => "We apply technical and organizational controls to protect your account and order data.\nIf you notice unusual activity, contact support immediately so we can assist and secure your account.",
             'privacy_policy' => PolicySeedBodies::privacyPolicyText(),
             'return_policy' => PolicySeedBodies::returnPolicyText(),
@@ -92,7 +91,7 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
-        Category::query()->updateOrCreate(
+        $cLucky = Category::query()->updateOrCreate(
             ['slug' => 'lucky-charms'],
             [
                 'name' => 'Lucky Charms',
@@ -114,6 +113,25 @@ class DatabaseSeeder extends Seeder
                 'sort_order' => 4,
                 'image' => env('APP_URL', '').'/storage/products/gallery/new-era-2026.webp',
             ]
+        );
+
+        $defaultSlides = [
+            [
+                'image' => $bannerPath,
+                'title' => 'Vitality & Balance',
+                'content' => 'Elevate your energy with naturally selected gemstone bracelets and handcrafted feng shui pieces.',
+                'category_id' => $cFox->id,
+            ],
+            [
+                'image' => $bannerPath,
+                'title' => 'Revitalize your being',
+                'content' => 'Ethically sourced stones, mindful design, and pieces made for everyday intention.',
+                'category_id' => $cLucky->id,
+            ],
+        ];
+        Setting::query()->updateOrCreate(
+            ['key' => 'home_banner_slides'],
+            ['value' => json_encode($defaultSlides, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)]
         );
 
         $productSpecs = [
