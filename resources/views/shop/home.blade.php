@@ -53,6 +53,32 @@
     @endif
 </section>
 
+@if($homeMarqueeBrands->isNotEmpty())
+<section class="home-section home-section--brands reveal-on-scroll" aria-labelledby="home-brands-title">
+    <h2 id="home-brands-title" class="section__title section__title--center home-brands-marquee__heading">Our brands</h2>
+    <div class="home-brands-marquee" data-home-brands-marquee>
+        <div class="home-brands-marquee__viewport">
+            <div class="home-brands-marquee__track">
+                @foreach($homeMarqueeBrands as $brand)
+                    <a class="home-brands-marquee__link"
+                       href="{{ route('shop.products.index', ['brand' => $brand->slug]) }}">
+                        <span class="home-brands-marquee__logo-wrap">
+                            <img class="home-brands-marquee__logo"
+                                 src="{{ \App\Support\PublicAssetUrl::to($brand->image) }}"
+                                 alt="{{ $brand->name }}"
+                                 width="200"
+                                 height="120"
+                                 loading="lazy">
+                        </span>
+                        <span class="home-brands-marquee__name">{{ $brand->name }}</span>
+                    </a>
+                @endforeach
+            </div>
+        </div>
+    </div>
+</section>
+@endif
+
 <section class="home-section home-section--spotlight reveal-on-scroll">
     <h2 class="section__title section__title--center">Featured products</h2>
     <div class="shop-product-grid">

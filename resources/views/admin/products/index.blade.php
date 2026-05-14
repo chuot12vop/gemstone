@@ -15,6 +15,7 @@
         <thead>
         <tr>
             <th>Name</th>
+            <th>Brand</th>
             <th>Category</th>
             <th>Price (USD)</th>
             <th>Stock</th>
@@ -26,6 +27,7 @@
         @forelse($products as $p)
             <tr>
                 <td>{{ $p->name }}</td>
+                <td>{{ $p->brand->name ?? '—' }}</td>
                 <td>{{ $p->category->name ?? '' }}</td>
                 <td>${{ number_format((float) $p->price_usd, 2) }}</td>
                 <td>{{ $p->stock }}</td>
@@ -44,7 +46,7 @@
                 </td>
             </tr>
         @empty
-            <tr><td colspan="6" class="data-table__empty">No products found.</td></tr>
+            <tr><td colspan="7" class="data-table__empty">No products found.</td></tr>
         @endforelse
         </tbody>
     </table>

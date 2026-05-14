@@ -520,6 +520,96 @@ body.site { margin: 0; font-family: "Source Sans 3", system-ui, sans-serif; colo
   color: var(--gold-deep);
 }
 
+.home-section--brands {
+  padding-top: 1.75rem;
+  padding-bottom: 1.75rem;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+.home-brands-marquee__heading {
+  margin-bottom: 1.1rem;
+}
+.home-brands-marquee {
+  width: 100%;
+}
+.home-brands-marquee__viewport {
+  overflow: hidden;
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  position: relative;
+  mask-image: linear-gradient(
+    to right,
+    transparent,
+    #000 5%,
+    #000 95%,
+    transparent
+  );
+}
+.home-brands-marquee__track {
+  display: flex;
+  align-items: stretch;
+  gap: 1rem;
+  width: max-content;
+  animation: home-brands-marquee 48s linear infinite;
+  will-change: transform;
+}
+.home-brands-marquee__viewport:hover .home-brands-marquee__track {
+  animation-play-state: paused;
+}
+@keyframes home-brands-marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+.home-brands-marquee__link {
+  flex: 0 0 calc((min(1400px, 100vw) - 4rem) / 5);
+  box-sizing: border-box;
+  max-width: 220px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  padding: 0.65rem 0.5rem 0.75rem;
+  text-decoration: none;
+  color: inherit;
+  background: #faf8f4;
+  border: 1px solid rgba(43, 38, 31, 0.08);
+  border-radius: 12px;
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+.home-brands-marquee__link:hover {
+  box-shadow: var(--shadow);
+  transform: translateY(-2px);
+}
+.home-brands-marquee__logo-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 4.5rem;
+}
+.home-brands-marquee__logo {
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  display: block;
+}
+.home-brands-marquee__name {
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-align: center;
+  line-height: 1.25;
+  color: var(--ink);
+}
+
 .category-card-grid {
   margin-top: 1rem;
   display: grid;

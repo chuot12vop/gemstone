@@ -3,6 +3,7 @@
         ['route' => 'admin.dashboard', 'label' => 'Dashboard', 'icon' => 'M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z'],
         ['route' => 'admin.products.index', 'label' => 'Products', 'icon' => 'M21 8h-3V6a3 3 0 0 0-3-3H9a3 3 0 0 0-3 3v2H3v13h18V8zM8 6a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2H8V6z'],
         ['route' => 'admin.categories.index', 'label' => 'Categories', 'icon' => 'M10 4H4a2 2 0 0 0-2 2v4h10V4zm10 0h-6v6h8V6a2 2 0 0 0-2-2zm-10 8H2v6a2 2 0 0 0 2 2h6v-8zm10 0h-8v8h6a2 2 0 0 0 2-2v-6z'],
+        ['route' => 'admin.brands.index', 'label' => 'Brands', 'icon' => 'M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z'],
         ['route' => 'admin.currency.index', 'label' => 'Currency', 'icon' => 'M12 1a11 11 0 1 0 11 11A11 11 0 0 0 12 1zm0 20a9 9 0 1 1 9-9 9 9 0 0 1-9 9zm.5-13.4V6h-1v1.6a3 3 0 0 0 .5 5.95 1.5 1.5 0 1 1-1.5 1.5H9a3 3 0 0 0 2.5 2.95V19h1v-1A3 3 0 0 0 12 12.05a1.5 1.5 0 1 1 1.5-1.5h1.5a3 3 0 0 0-2.5-2.95z'],
         ['route' => 'admin.orders.index', 'label' => 'Orders', 'icon' => 'M19 7h-3V6a4 4 0 0 0-8 0v1H5a1 1 0 0 0-1 1v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8a1 1 0 0 0-1-1zM10 6a2 2 0 0 1 4 0v1h-4V6zm9 14H5V9h2v2h2V9h6v2h2V9h2v11z'],
         ['route' => 'admin.payments.index', 'label' => 'Payments', 'icon' => 'M3 6a3 3 0 0 1 3-3h12a3 3 0 0 1 3 3v2H3V6zm0 4h18v8a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3v-8zm4 3v2h4v-2H7z'],

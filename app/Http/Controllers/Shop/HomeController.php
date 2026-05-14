@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Shop;
 
 use App\Http\Controllers\Controller;
+use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\Setting;
@@ -38,7 +39,7 @@ class HomeController extends Controller
 
         $bannerSlides = $this->resolvedBannerSlides();
 
-        $productQuery = Product::query()->where('is_active', true)->with('category')->latest();
+        $productQuery = Product::query()->where('is_active', true)->with(['category', 'brand'])->latest();
         $spotlightProducts = (clone $productQuery)->take(3)->get();
 
         $homeCategories = Category::query()
@@ -47,6 +48,15 @@ class HomeController extends Controller
             ->orderBy('sort_order')
             ->get();
 
+        $homeMarqueeBrands = $this->marqueeBrandSequence(
+            Brand::query()
+                ->whereNotNull('image')
+                ->where('image', '!=', '')
+                ->orderBy('sort_order')
+                ->orderBy('name')
+                ->get()
+        );
+
         return view('shop.home', [
             'siteSettings' => $defaults,
             'bannerSlides' => $bannerSlides,
@@ -54,6 +64,7 @@ class HomeController extends Controller
             'metaDescription' => 'Premium gemstone jewelry for balance, luck, and intention. Ethically sourced, handcrafted for the US market.',
             'spotlightProducts' => $spotlightProducts,
             'homeCategories' => $homeCategories,
+            'homeMarqueeBrands' => $homeMarqueeBrands,
             'currency' => app(CurrencyService::class),
         ]);
     }
@@ -139,5 +150,30 @@ class HomeController extends Controller
         }
 
         return $slides;
+    }
+
+    /**
+     * Duplicate brand list so the CSS marquee can loop seamlessly (two identical halves).
+     *
+     * @param \Illuminate\Support\Collection<int, Brand> $brands
+     * @return \Illuminate\Support\Collection<int, Brand>
+     */
+    private function marqueeBrandSequence(\Illuminate\Support\Collection $brands): \Illuminate\Support\Collection
+    {
+        if ($brands->isEmpty()) {
+            return $brands;
+        }
+
+        $base = $brands;
+        if ($base->count() < 6) {
+            $times = (int) ceil(6 / $base->count());
+            $expanded = collect();
+            for ($i = 0; $i < $times; $i++) {
+                $expanded = $expanded->merge($base);
+            }
+            $base = $expanded->values();
+        }
+
+        return $base->concat($base)->values();
     }
 }

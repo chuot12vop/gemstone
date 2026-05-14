@@ -2,15 +2,26 @@
 
 @section('content')
 <header class="page-head">
-    <h1 class="page-head__title">{{ $currentCategory ? $currentCategory->name : 'Products' }}</h1>
+    <h1 class="page-head__title">{{ $currentCategory ? $currentCategory->name : ($currentBrand ? $currentBrand->name : 'Products') }}</h1>
     @if($currentCategory && $currentCategory->description)
         <p class="page-head__summary">{{ $currentCategory->description }}</p>
+    @elseif($currentBrand)
+        <p class="page-head__summary">Pieces from {{ $currentBrand->name }}. Browse healing gemstones, lucky motifs, and limited designs.</p>
     @else
         <p class="page-head__summary">Browse healing gemstones, lucky motifs, and limited designs.</p>
     @endif
 </header>
 
 <form class="catalog-filters" method="get" action="{{ route('shop.products.index') }}">
+    <label>
+        Brand
+        <select name="brand">
+            <option value="">All brands</option>
+            @foreach($brands as $b)
+                <option value="{{ $b->slug }}" @selected(($filters['brand_slug'] ?? '') === $b->slug)>{{ $b->name }}</option>
+            @endforeach
+        </select>
+    </label>
     <label>
         Category
         <select name="category_id">

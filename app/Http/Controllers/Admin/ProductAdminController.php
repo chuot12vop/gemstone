@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductImage;
@@ -21,7 +22,7 @@ class ProductAdminController extends Controller
     public function index(Request $request)
     {
         $q = trim((string) $request->get('q', ''));
-        $query = Product::query()->with('category')->latest();
+        $query = Product::query()->with(['category', 'brand'])->latest();
         if ($q !== '') {
             $query->where(function ($w) use ($q) {
                 $w->where('name', 'like', '%'.$q.'%')
@@ -49,6 +50,7 @@ class ProductAdminController extends Controller
             ],
             'product' => null,
             'categories' => Category::query()->orderBy('sort_order')->get(),
+            'brands' => Brand::query()->orderBy('sort_order')->orderBy('name')->get(),
         ]);
     }
 
@@ -91,6 +93,7 @@ class ProductAdminController extends Controller
             ],
             'product' => $product,
             'categories' => Category::query()->orderBy('sort_order')->get(),
+            'brands' => Brand::query()->orderBy('sort_order')->orderBy('name')->get(),
         ]);
     }
 
@@ -140,6 +143,7 @@ class ProductAdminController extends Controller
             'name' => 'required|string|max:200',
             'slug' => 'nullable|string|max:200',
             'category_id' => 'required|exists:categories,id',
+            'brand_id' => 'required|exists:brands,id',
             'short_description' => 'nullable|string|max:500',
             'description' => 'nullable|string',
             'price_usd' => 'required|numeric|min:0',
@@ -164,6 +168,7 @@ class ProductAdminController extends Controller
             'name' => $validated['name'],
             'slug' => $slug ?: 'item',
             'category_id' => (int) $validated['category_id'],
+            'brand_id' => (int) $validated['brand_id'],
             'short_description' => $validated['short_description'] ?? null,
             'description' => $validated['description'] ?? null,
             'price_usd' => (float) $validated['price_usd'],

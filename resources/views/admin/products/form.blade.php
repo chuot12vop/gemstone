@@ -22,6 +22,9 @@
     @if($product)
         @method('PUT')
     @endif
+    @if($brands->isEmpty())
+        <p class="admin-banner admin-banner--err" role="alert">Add at least one brand before creating products.</p>
+    @endif
     <div class="form-grid">
         <label>
             Name
@@ -30,6 +33,14 @@
         <label>
             URL slug
             <input type="text" name="slug" placeholder="auto from name" value="{{ old('slug', $product->slug ?? '') }}">
+        </label>
+        <label>
+            Brand
+            <select name="brand_id" required>
+                @foreach($brands as $b)
+                    <option value="{{ $b->id }}" @selected((int) old('brand_id', $product->brand_id ?? 0) === $b->id)>{{ $b->name }}</option>
+                @endforeach
+            </select>
         </label>
         <label>
             Category

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\AuthController;
+use App\Http\Controllers\Admin\BrandAdminController;
 use App\Http\Controllers\Admin\CategoryAdminController;
 use App\Http\Controllers\Admin\ContactAdminController;
 use App\Http\Controllers\Admin\CurrencyAdminController;
@@ -91,6 +92,13 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::post('/categories', [CategoryAdminController::class, 'store'])->name('categories.store');
         Route::get('/categories/{category}/edit', [CategoryAdminController::class, 'edit'])->name('categories.edit');
         Route::put('/categories/{category}', [CategoryAdminController::class, 'update'])->name('categories.update');
+
+        Route::get('/brands', [BrandAdminController::class, 'index'])->name('brands.index');
+        Route::get('/brands/create', [BrandAdminController::class, 'create'])->name('brands.create');
+        Route::post('/brands', [BrandAdminController::class, 'store'])->name('brands.store');
+        Route::get('/brands/{brand}/edit', [BrandAdminController::class, 'edit'])->name('brands.edit');
+        Route::put('/brands/{brand}', [BrandAdminController::class, 'update'])->name('brands.update');
+        Route::delete('/brands/{brand}', [BrandAdminController::class, 'destroy'])->name('brands.destroy');
 
         Route::get('/currency', [CurrencyAdminController::class, 'index'])->name('currency.index');
         Route::post('/currency/save', [CurrencyAdminController::class, 'save'])->name('currency.save');

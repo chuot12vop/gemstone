@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\Admin;
+use App\Models\Brand;
 use App\Models\Category;
 use App\Models\CurrencyRate;
 use App\Models\Product;
@@ -134,8 +135,34 @@ class DatabaseSeeder extends Seeder
             ['value' => json_encode($defaultSlides, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)]
         );
 
+        $brandTaichi = Brand::query()->updateOrCreate(
+            ['slug' => 'taichi-gemstone'],
+            [
+                'name' => 'Taichi Gemstone',
+                'sort_order' => 0,
+                'image' => $logoPath,
+            ]
+        );
+        $brandFox = Brand::query()->updateOrCreate(
+            ['slug' => 'fox-queen-line'],
+            [
+                'name' => 'Fox Queen Line',
+                'sort_order' => 1,
+                'image' => env('APP_URL', '').'/storage/products/gallery/vang1.png',
+            ]
+        );
+        $brandBalance = Brand::query()->updateOrCreate(
+            ['slug' => 'balance-atelier'],
+            [
+                'name' => 'Balance Atelier',
+                'sort_order' => 2,
+                'image' => env('APP_URL', '').'/storage/products/gallery/xanh1.png',
+            ]
+        );
+
         $productSpecs = [
             'agate-harmony-necklace' => [
+                'brand_id' => $brandFox->id,
                 'category_id' => $cFox->id,
                 'name' => 'Lucky Fox Queen Stone - Yellow',
                 'short_description' => 'Hand-strung agate with gold-tone accents.',
@@ -163,6 +190,7 @@ class DatabaseSeeder extends Seeder
                 ],
             ],
             'pixiu-wealth-bracelet' => [
+                'brand_id' => $brandBalance->id,
                 'category_id' => $cFox->id,
                 'name' => 'Lucky Fox Queen Stone - Green',
                 'short_description' => 'Pixiu charm with obsidian beads.',
@@ -190,6 +218,7 @@ class DatabaseSeeder extends Seeder
                 ],
             ],
             'lucky-fox-queen-stone-red' => [
+                'brand_id' => $brandTaichi->id,
                 'category_id' => $cFox->id,
                 'name' => 'Lucky Fox Queen Stone - Red',
                 'short_description' => 'Hand-strung agate with gold-tone accents.',
@@ -217,6 +246,7 @@ class DatabaseSeeder extends Seeder
                 ],
             ],
             'fire-horse-jade-pendant' => [
+                'brand_id' => $brandFox->id,
                 'category_id' => $cFox->id,
                 'name' => 'Lucky Fox Queen Stone - White',
                 'short_description' => 'Carved jade on silk cord.',
@@ -251,6 +281,7 @@ class DatabaseSeeder extends Seeder
             $product = Product::query()->updateOrCreate(
                 ['slug' => $slug],
                 [
+                    'brand_id' => $spec['brand_id'],
                     'category_id' => $spec['category_id'],
                     'name' => $spec['name'],
                     'short_description' => $spec['short_description'],
