@@ -48,14 +48,17 @@ class HomeController extends Controller
             ->orderBy('sort_order')
             ->get();
 
-        $homeMarqueeBrands = $this->marqueeBrandSequence(
-            Brand::query()
-                ->whereNotNull('image')
-                ->where('image', '!=', '')
-                ->orderBy('sort_order')
-                ->orderBy('name')
-                ->get()
-        );
+        $homeBrandsForSection = Brand::query()
+            ->whereNotNull('image')
+            ->where('image', '!=', '')
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->get();
+
+        $homeBrandsMarquee = $homeBrandsForSection->count() > 5;
+        $homeMarqueeBrands = $homeBrandsMarquee
+            ? $this->marqueeBrandSequence($homeBrandsForSection)
+            : $homeBrandsForSection->values();
 
         return view('shop.home', [
             'siteSettings' => $defaults,
@@ -65,6 +68,7 @@ class HomeController extends Controller
             'spotlightProducts' => $spotlightProducts,
             'homeCategories' => $homeCategories,
             'homeMarqueeBrands' => $homeMarqueeBrands,
+            'homeBrandsMarquee' => $homeBrandsMarquee,
             'currency' => app(CurrencyService::class),
         ]);
     }
@@ -154,6 +158,7 @@ class HomeController extends Controller
 
     /**
      * Duplicate brand list so the CSS marquee can loop seamlessly (two identical halves).
+     * Only used when there are more than five brands with images.
      *
      * @param \Illuminate\Support\Collection<int, Brand> $brands
      * @return \Illuminate\Support\Collection<int, Brand>
@@ -164,15 +169,7 @@ class HomeController extends Controller
             return $brands;
         }
 
-        $base = $brands;
-        if ($base->count() < 6) {
-            $times = (int) ceil(6 / $base->count());
-            $expanded = collect();
-            for ($i = 0; $i < $times; $i++) {
-                $expanded = $expanded->merge($base);
-            }
-            $base = $expanded->values();
-        }
+        $base = $brands->values();
 
         return $base->concat($base)->values();
     }

@@ -557,6 +557,19 @@ body.site { margin: 0; font-family: "Source Sans 3", system-ui, sans-serif; colo
 .home-brands-marquee__viewport:hover .home-brands-marquee__track {
   animation-play-state: paused;
 }
+.home-brands-marquee--static .home-brands-marquee__viewport {
+  overflow: visible;
+  mask-image: none;
+}
+.home-brands-marquee--static .home-brands-marquee__track {
+  animation: none;
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  justify-content: center;
+  flex-wrap: wrap;
+  will-change: auto;
+}
 @keyframes home-brands-marquee {
   from {
     transform: translateX(0);

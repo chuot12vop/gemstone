@@ -56,7 +56,7 @@
 @if($homeMarqueeBrands->isNotEmpty())
 <section class="home-section home-section--brands reveal-on-scroll" aria-labelledby="home-brands-title">
     <h2 id="home-brands-title" class="section__title section__title--center home-brands-marquee__heading">Our brands</h2>
-    <div class="home-brands-marquee" data-home-brands-marquee>
+    <div class="home-brands-marquee{{ $homeBrandsMarquee ? '' : ' home-brands-marquee--static' }}" @if($homeBrandsMarquee) data-home-brands-marquee @endif>
         <div class="home-brands-marquee__viewport">
             <div class="home-brands-marquee__track">
                 @foreach($homeMarqueeBrands as $brand)
