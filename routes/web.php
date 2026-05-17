@@ -50,6 +50,7 @@ Route::get('/catalog', [CatalogController::class, 'index'])->name('shop.catalog'
 Route::get('/catalog/{category}', [CatalogController::class, 'category'])->name('shop.catalog.category');
 Route::get('/product', [CatalogController::class, 'products'])->name('shop.products.index');
 Route::get('/product/{product}', [ProductController::class, 'show'])->name('shop.product');
+Route::get('/news', [PostController::class, 'index'])->name('shop.news.index');
 Route::get('/news/{post}', [PostController::class, 'show'])->name('shop.post.show');
 Route::get('/cart', [CartController::class, 'index'])->name('shop.cart');
 Route::post('/cart/add', [CartController::class, 'add'])->name('shop.cart.add');

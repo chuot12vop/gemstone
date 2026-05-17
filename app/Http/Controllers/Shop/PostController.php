@@ -9,6 +9,21 @@ use Illuminate\View\View;
 
 class PostController extends Controller
 {
+    public function index(): View
+    {
+        $posts = Post::query()
+            ->published()
+            ->orderByDesc('published_at')
+            ->orderBy('sort_order')
+            ->paginate(12);
+
+        return view('shop.posts.index', [
+            'title' => 'Journal — News & articles',
+            'metaDescription' => 'Stories, guides, and updates from our gemstone jewelry studio.',
+            'posts' => $posts,
+        ]);
+    }
+
     public function show(Post $post): View
     {
         if (! $post->is_active || ($post->published_at && $post->published_at->isFuture())) {

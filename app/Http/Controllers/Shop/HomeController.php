@@ -5,12 +5,14 @@ namespace App\Http\Controllers\Shop;
 use App\Http\Controllers\Controller;
 use App\Models\Certificate;
 use App\Models\Category;
+use App\Models\Post;
 use App\Models\Product;
 use App\Models\Review;
 use App\Models\Setting;
 use App\Support\ShopFrontSettings;
 use App\Services\CurrencyService;
 use App\Support\PublicAssetUrl;
+use Carbon\Carbon;
 
 class HomeController extends Controller
 {
@@ -41,34 +43,13 @@ class HomeController extends Controller
 
         $bannerSlides = $this->resolvedBannerSlides();
 
-        $homeTopProducts = Product::query()
-            ->where('is_active', true)
-            ->with('category')
-            ->withCount(['approvedReviews as reviews_count'])
-            ->orderByDesc('reviews_count')
-            ->orderByDesc('id')
-            ->take(3)
-            ->get();
-
-        if ($homeTopProducts->count() < 3) {
-            $excludeIds = $homeTopProducts->pluck('id')->all();
-            $fill = Product::query()
-                ->where('is_active', true)
-                ->with('category')
-                ->when($excludeIds !== [], fn ($q) => $q->whereNotIn('id', $excludeIds))
-                ->latest('id')
-                ->take(3 - $homeTopProducts->count())
-                ->get();
-            $homeTopProducts = $homeTopProducts->concat($fill)->values();
-        }
-
         $homeNewProducts = Product::query()
             ->where('is_active', true)
             ->with('category')
             ->latest('id')
             ->take(3)
             ->get();
-
+        
         $homeCollections = Category::query()
             ->whereNotNull('image')
             ->where('image', '!=', '')
@@ -83,6 +64,12 @@ class HomeController extends Controller
             ->orderBy('sort_order')
             ->orderBy('name')
             ->get();
+        $homeJournalPosts = Post::query()
+            ->where('is_active', 1)
+            ->orderByDesc('published_at')
+            ->orderBy('sort_order')
+            ->take(3)
+            ->get();
 
         $homeReviews = Review::query()
             ->approved()
@@ -96,10 +83,10 @@ class HomeController extends Controller
             'bannerSlides' => $bannerSlides,
             'title' => 'Gemstone Jewelry & Feng Shui — Taichi-inspired wellness',
             'metaDescription' => 'Premium gemstone jewelry for balance, luck, and intention. Ethically sourced, handcrafted for the US market.',
-            'homeTopProducts' => $homeTopProducts,
             'homeNewProducts' => $homeNewProducts,
             'homeCollections' => $homeCollections,
             'homeCertificates' => $homeCertificates,
+            'homeJournalPosts' => $homeJournalPosts,
             'homeReviews' => $homeReviews,
             'currency' => app(CurrencyService::class),
         ]);

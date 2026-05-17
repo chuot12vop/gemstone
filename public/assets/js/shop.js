@@ -29,7 +29,134 @@
   initProductCtaBar();
   initProductCtaQtySync();
   initCatalogMega();
+  initHomeSlider();
 })();
+
+function initHomeSlider() {
+  document.querySelectorAll('[data-home-slider]').forEach(function (root) {
+    const viewport = root.querySelector('.home-hero__viewport');
+    const track = root.querySelector('[data-home-slider-track]');
+    const slides = Array.from(root.querySelectorAll('[data-slide]'));
+    const dots = Array.from(root.querySelectorAll('[data-dot]'));
+    if (!viewport || !track || slides.length === 0) {
+      return;
+    }
+
+    let active = 0;
+    const ms = parseInt(String(root.getAttribute('data-slide-interval') || '4000'), 10) || 4000;
+    let timer = null;
+    let touchStartX = 0;
+    let dragOffset = 0;
+    let dragging = false;
+
+    function slideWidth() {
+      return viewport.clientWidth || 1;
+    }
+
+    function applyPosition(animate) {
+      if (animate === undefined) animate = true;
+      const base = -(active * slideWidth());
+      track.style.transition = animate && !dragging ? '' : 'none';
+      track.style.transform = 'translate3d(' + (base + dragOffset) + 'px, 0, 0)';
+    }
+
+    function stop() {
+      if (timer !== null) {
+        clearInterval(timer);
+        timer = null;
+      }
+    }
+
+    function start() {
+      stop();
+      if (slides.length > 1) {
+        timer = setInterval(function () {
+          setActive(active + 1, true);
+        }, ms);
+      }
+    }
+
+    function setActive(idx, animate) {
+      if (animate === undefined) animate = true;
+      active = (idx + slides.length) % slides.length;
+      dragOffset = 0;
+      dragging = false;
+      slides.forEach(function (el, i) {
+        el.classList.toggle('is-active', i === active);
+        if (slides.length > 1) {
+          el.setAttribute('aria-hidden', i === active ? 'false' : 'true');
+        }
+      });
+      dots.forEach(function (d, i) {
+        d.classList.toggle('is-active', i === active);
+        d.setAttribute('aria-selected', i === active ? 'true' : 'false');
+      });
+      applyPosition(animate);
+    }
+
+    dots.forEach(function (d) {
+      d.addEventListener('click', function () {
+        const to = parseInt(String(d.getAttribute('data-slide-to') || '0'), 10);
+        if (!Number.isNaN(to)) {
+          setActive(to, true);
+          start();
+        }
+      });
+    });
+
+    root.querySelector('[data-slider-prev]')?.addEventListener('click', function () {
+      setActive(active - 1, true);
+      start();
+    });
+    root.querySelector('[data-slider-next]')?.addEventListener('click', function () {
+      setActive(active + 1, true);
+      start();
+    });
+
+    root.addEventListener('touchstart', function (e) {
+      if (slides.length <= 1 || e.touches.length !== 1) return;
+      stop();
+      dragging = true;
+      touchStartX = e.touches[0].clientX;
+      dragOffset = 0;
+      track.style.transition = 'none';
+    }, { passive: true });
+
+    root.addEventListener('touchmove', function (e) {
+      if (!dragging || e.touches.length !== 1) return;
+      dragOffset = e.touches[0].clientX - touchStartX;
+      applyPosition(false);
+    }, { passive: true });
+
+    root.addEventListener('touchend', function () {
+      if (!dragging) return;
+      dragging = false;
+      const threshold = slideWidth() * 0.16;
+      if (dragOffset < -threshold) {
+        setActive(active + 1, true);
+      } else if (dragOffset > threshold) {
+        setActive(active - 1, true);
+      } else {
+        setActive(active, true);
+      }
+      start();
+    }, { passive: true });
+
+    root.addEventListener('mouseenter', stop);
+    root.addEventListener('mouseleave', start);
+    window.addEventListener('resize', function () {
+      applyPosition(false);
+    });
+
+    if (slides.length <= 1) {
+      applyPosition(false);
+      return;
+    }
+
+    setActive(0, false);
+    start();
+  });
+}
 
 function initCatalogMega() {
   const li = document.querySelector('[data-nav-mega]');
@@ -81,11 +208,30 @@ function initProductGallery() {
 
   const mainWrap = gallery.querySelector('[data-pd-zoom]');
   const mainImg = gallery.querySelector('[data-pd-main]');
+  const lens = gallery.querySelector('[data-pd-lens]');
   const thumbs = Array.from(gallery.querySelectorAll('[data-pd-thumb]'));
   const prevBtn = gallery.querySelector('[data-pd-prev]');
   const nextBtn = gallery.querySelector('[data-pd-next]');
 
   if (!mainImg || !mainWrap) return;
+
+  const LENS_RADIUS = 10;
+  const LENS_ZOOM = 2;
+
+  function canLensZoom() {
+    return matchMedia('(hover: hover) and (pointer: fine)').matches;
+  }
+
+  function updateLensPosition(e) {
+    if (!lens || !mainWrap.classList.contains('is-zooming')) return;
+    const rect = mainWrap.getBoundingClientRect();
+    const x = Math.min(rect.width, Math.max(0, e.clientX - rect.left));
+    const y = Math.min(rect.height, Math.max(0, e.clientY - rect.top));
+    lens.style.left = (x - LENS_RADIUS) + 'px';
+    lens.style.top = (y - LENS_RADIUS) + 'px';
+    lens.style.backgroundSize = (rect.width * LENS_ZOOM) + 'px ' + (rect.height * LENS_ZOOM) + 'px';
+    lens.style.backgroundPosition = (-(x * LENS_ZOOM - LENS_RADIUS)) + 'px ' + (-(y * LENS_ZOOM - LENS_RADIUS)) + 'px';
+  }
 
   const images = thumbs.length
     ? thumbs.map(function (t) { return t.dataset.pdSrc; })
@@ -157,21 +303,19 @@ function initProductGallery() {
     if (nextBtn) nextBtn.classList.add('is-hidden');
   }
 
-  mainWrap.addEventListener('mouseenter', function () {
-    if (matchMedia('(hover: hover) and (pointer: fine)').matches) {
-      mainWrap.classList.add('is-zooming');
-      stopAutoplay();
-    }
+  mainWrap.addEventListener('mouseenter', function (e) {
+    if (!canLensZoom()) return;
+    mainWrap.classList.add('is-zooming');
+    stopAutoplay();
+    updateLensPosition(e);
   });
   mainWrap.addEventListener('mouseleave', function () {
     mainWrap.classList.remove('is-zooming');
     restartAutoplay();
   });
   mainWrap.addEventListener('mousemove', function (e) {
-    const rect = mainWrap.getBoundingClientRect();
-    const x = Math.min(100, Math.max(0, ((e.clientX - rect.left) / rect.width) * 100));
-    const y = Math.min(100, Math.max(0, ((e.clientY - rect.top) / rect.height) * 100));
-    mainWrap.style.setProperty('--pd-zoom-pos', x + '% ' + y + '%');
+    if (!canLensZoom()) return;
+    updateLensPosition(e);
   });
 
   let touchStartX = null;

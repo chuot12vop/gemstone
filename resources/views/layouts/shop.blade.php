@@ -7,6 +7,9 @@
     @if(!empty($metaDescription))
         <meta name="description" content="{{ $metaDescription }}">
     @endif
+    @if(!empty($siteSettings['site_logo']))
+        <link rel="icon" href="{{ $siteSettings['site_logo'] }}" type="image/png">
+    @endif
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Source+Sans+3:wght@400;500;600&display=swap" rel="stylesheet">
@@ -66,6 +69,7 @@
                             </div>
                         </div>
                     </li>
+                    <li><a href="{{ route('shop.news.index') }}">News</a></li>
                     <li><a href="{{ route('shop.about') }}">About</a></li>
                     <li><a href="{{ route('shop.contact') }}">Contact</a></li>
                 </ul>

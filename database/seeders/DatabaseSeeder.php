@@ -317,5 +317,6 @@ class DatabaseSeeder extends Seeder
         }
 
         $this->call(CertificateSeeder::class);
+        $this->call(PostSeeder::class);
     }
 }

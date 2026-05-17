@@ -9,34 +9,36 @@
          data-slide-interval="4000"
          aria-roledescription="carousel"
          aria-label="Home highlights">
-    <div class="home-hero__slides">
-        @foreach($bannerSlides as $i => $slide)
-            <div class="home-hero__slide {{ $i === 0 ? 'is-active' : '' }}"
-                 data-slide
-                 data-slide-index="{{ $i }}"
-                 aria-roledescription="slide"
-                 aria-label="Slide {{ $i + 1 }} of {{ $slideCount }}"
-                 @if($slideCount > 1) aria-hidden="{{ $i === 0 ? 'false' : 'true' }}" @endif>
-                <a class="home-hero__slide-hit" href="{{ $slide['cta_url'] }}">
-                    <img class="home-hero__bg" src="{{ $slide['image'] }}" alt="" loading="{{ $i === 0 ? 'eager' : 'lazy' }}" width="1400" height="788">
-                    <div class="home-hero__overlay">
-                        @if(($slide['title'] ?? '') !== '')
-                            <h1 class="home-hero__title">{{ $slide['title'] }}</h1>
-                        @endif
-                        @if(($slide['content'] ?? '') !== '')
-                            <p class="home-hero__lede">{{ $slide['content'] }}</p>
-                        @endif
-                        <span class="btn btn--primary home-hero__cta" style="max-width:200px;">
-                            @if(!empty($slide['category_id']))
-                                Shop this category
-                            @else
-                                Shop the collection
+    <div class="home-hero__viewport">
+        <div class="home-hero__slides" data-home-slider-track>
+            @foreach($bannerSlides as $i => $slide)
+                <div class="home-hero__slide {{ $i === 0 ? 'is-active' : '' }}"
+                     data-slide
+                     data-slide-index="{{ $i }}"
+                     aria-roledescription="slide"
+                     aria-label="Slide {{ $i + 1 }} of {{ $slideCount }}"
+                     @if($slideCount > 1) aria-hidden="{{ $i === 0 ? 'false' : 'true' }}" @endif>
+                    <a class="home-hero__slide-hit" href="{{ $slide['cta_url'] }}">
+                        <img class="home-hero__bg" src="{{ $slide['image'] }}" alt="" loading="{{ $i === 0 ? 'eager' : 'lazy' }}" width="1400" height="788" draggable="false">
+                        <div class="home-hero__overlay">
+                            @if(($slide['title'] ?? '') !== '')
+                                <h1 class="home-hero__title">{{ $slide['title'] }}</h1>
                             @endif
-                        </span>
-                    </div>
-                </a>
-            </div>
-        @endforeach
+                            @if(($slide['content'] ?? '') !== '')
+                                <p class="home-hero__lede">{{ $slide['content'] }}</p>
+                            @endif
+                            <span class="btn btn--primary home-hero__cta" style="max-width:200px;">
+                                @if(!empty($slide['category_id']))
+                                    Shop this category
+                                @else
+                                    Shop the collection
+                                @endif
+                            </span>
+                        </div>
+                    </a>
+                </div>
+            @endforeach
+        </div>
     </div>
     @if($slideCount > 1)
         <button type="button" class="home-hero__nav home-hero__nav--prev" data-slider-prev aria-label="Previous slide">&#10094;</button>
@@ -57,7 +59,7 @@
 
 @if($homeCertificates->isNotEmpty())
 <section class="home-section home-section--certificates reveal-on-scroll" aria-labelledby="home-certificates-title">
-    <h2 id="home-certificates-title" class="section__title section__title--center">Certificates</h2>
+    <h2 id="home-certificates-title" class="section__title section__title--center">As seen in</h2>
     <div class="home-certificates-scroll" tabindex="0" role="region" aria-label="Certificate logos — scroll horizontally">
         @foreach($homeCertificates as $certificate)
             <article class="home-certificates-scroll__item">
@@ -74,21 +76,8 @@
 </section>
 @endif
 
-<section class="home-section home-section--products reveal-on-scroll" aria-labelledby="home-top-products-title">
-    <h2 id="home-top-products-title" class="section__title section__title--center">Top products</h2>
-    @if($homeTopProducts->isEmpty())
-        <p class="home-section__empty home-section__empty--center">Browse the full catalog on the <a href="{{ route('shop.products.index') }}">shop page</a>.</p>
-    @else
-        <div class="shop-product-grid">
-            @foreach($homeTopProducts as $product)
-                @include('shop.partials.product-card', ['product' => $product, 'currency' => $currency])
-            @endforeach
-        </div>
-    @endif
-</section>
-
 <section class="home-section home-section--collections reveal-on-scroll" aria-labelledby="home-collections-title">
-    <h2 id="home-collections-title" class="section__title section__title--center">Top categories</h2>
+    <h2 id="home-collections-title" class="section__title section__title--center">Collection</h2>
     @if($homeCollections->isEmpty())
         <p class="home-section__empty home-section__empty--center">Browse the full catalog on the <a href="{{ route('shop.catalog') }}">shop page</a>.</p>
     @else
@@ -141,6 +130,20 @@
     </div>
 </section>
 
+@if($homeJournalPosts->isNotEmpty())
+<section class="home-section home-section--journal reveal-on-scroll" aria-labelledby="home-journal-title">
+    <div class="home-section__head-row">
+        <h2 id="home-journal-title" class="section__title">Journal</h2>
+        <a class="btn btn--ghost btn--small" href="{{ route('shop.news.index') }}">View more</a>
+    </div>
+    <div class="home-news-grid">
+        @foreach($homeJournalPosts as $post)
+            @include('shop.partials.post-card', ['post' => $post])
+        @endforeach
+    </div>
+</section>
+@endif
+
 <section class="home-section home-section--new reveal-on-scroll" aria-labelledby="home-new-title">
     <h2 id="home-new-title" class="section__title section__title--center">New arrivals</h2>
     @if($homeNewProducts->isEmpty())
@@ -170,88 +173,4 @@
         </ul>
     @endif
 </section>
-
-@push('scripts')
-<script>
-(() => {
-    document.querySelectorAll('[data-home-slider]').forEach((root) => {
-        const slides = Array.from(root.querySelectorAll('[data-slide]'));
-        const dots = Array.from(root.querySelectorAll('[data-dot]'));
-        if (slides.length === 0) {
-            return;
-        }
-
-        let active = 0;
-        const ms = parseInt(String(root.getAttribute('data-slide-interval') || '4000'), 10) || 4000;
-
-        let timer = null;
-        const stop = () => {
-            if (timer !== null) {
-                window.clearInterval(timer);
-                timer = null;
-            }
-        };
-        const start = () => {
-            stop();
-            if (slides.length > 1) {
-                timer = window.setInterval(() => setActive(active + 1), ms);
-            }
-        };
-
-        const setActive = (idx) => {
-            const next = (idx + slides.length) % slides.length;
-            slides.forEach((el, i) => {
-                el.classList.toggle('is-active', i === next);
-                if (slides.length > 1) {
-                    el.setAttribute('aria-hidden', i === next ? 'false' : 'true');
-                }
-            });
-            dots.forEach((d, i) => {
-                d.classList.toggle('is-active', i === next);
-                d.setAttribute('aria-selected', i === next ? 'true' : 'false');
-            });
-            active = next;
-        };
-
-        dots.forEach((d) => {
-            d.addEventListener('click', () => {
-                const to = parseInt(String(d.getAttribute('data-slide-to') || '0'), 10);
-                if (!Number.isNaN(to)) {
-                    setActive(to);
-                    start();
-                }
-            });
-        });
-
-        root.querySelector('[data-slider-prev]')?.addEventListener('click', () => {
-            setActive(active - 1);
-            start();
-        });
-        root.querySelector('[data-slider-next]')?.addEventListener('click', () => {
-            setActive(active + 1);
-            start();
-        });
-
-        let touchStartX = 0;
-        root.addEventListener('touchstart', (e) => {
-            touchStartX = e.changedTouches[0]?.clientX ?? 0;
-        }, { passive: true });
-        root.addEventListener('touchend', (e) => {
-            const dx = (e.changedTouches[0]?.clientX ?? 0) - touchStartX;
-            if (Math.abs(dx) < 40) return;
-            setActive(dx < 0 ? active + 1 : active - 1);
-            start();
-        }, { passive: true });
-
-        if (slides.length <= 1) {
-            return;
-        }
-
-        start();
-        root.addEventListener('mouseenter', stop);
-        root.addEventListener('mouseleave', start);
-    });
-})();
-</script>
-@endpush
 @endsection
