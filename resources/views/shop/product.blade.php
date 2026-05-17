@@ -90,7 +90,7 @@
             @if($product->description)
                 <div class="prose product-detail__description">
                     <h2 class="product-detail__section-title">Description</h2>
-                    {!! nl2br(e($product->description)) !!}
+                    {!! $product->description !!}
                 </div>
             @endif
 
@@ -104,7 +104,7 @@
                             <span class="pd-attribute-item__icon" aria-hidden="true"></span>
                         </button>
                         <div class="pd-attribute-item__panel" data-pd-attr-panel hidden>
-                            <p>{{ $attribute->value }}</p>
+                            <p>{!! nl2br(e($attribute->value)) !!}</p>
                         </div>
                     </article>
                 @endforeach

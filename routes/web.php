@@ -92,6 +92,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::post('/categories', [CategoryAdminController::class, 'store'])->name('categories.store');
         Route::get('/categories/{category}/edit', [CategoryAdminController::class, 'edit'])->name('categories.edit');
         Route::put('/categories/{category}', [CategoryAdminController::class, 'update'])->name('categories.update');
+        Route::delete('/categories/{category}', [CategoryAdminController::class, 'destroy'])->name('categories.destroy');
 
         Route::get('/brands', [BrandAdminController::class, 'index'])->name('brands.index');
         Route::get('/brands/create', [BrandAdminController::class, 'create'])->name('brands.create');

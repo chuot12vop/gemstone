@@ -31,6 +31,11 @@
                 <td>{{ $c->sort_order }}</td>
                 <td class="data-table__actions">
                     <a class="btn-admin btn-admin--small" href="{{ route('admin.categories.edit', $c) }}">Edit</a>
+                    <form class="inline-form" method="post" action="{{ route('admin.categories.destroy', $c) }}" onsubmit="return confirm('Delete this category?');">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit" class="link-danger">Delete</button>
+                    </form>
                 </td>
             </tr>
         @empty

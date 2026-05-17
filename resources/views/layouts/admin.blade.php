@@ -8,6 +8,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ asset('assets/css/admin.css') }}">
+    @stack('head')
 </head>
 <body class="admin">
     <a class="sr-only sr-only-focusable" href="#admin-main">Skip to content</a>
@@ -48,6 +49,7 @@
         </div>
     </div>
 
+    @stack('scripts')
     <script src="{{ asset('assets/js/admin.js') }}" defer></script>
 </body>
 </html>

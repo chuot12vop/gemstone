@@ -1,5 +1,9 @@
 @extends('layouts.admin')
 
+@push('head')
+<script src="https://cdn.jsdelivr.net/npm/tinymce@7/tinymce.min.js"></script>
+@endpush
+
 @section('module-actions')
     <a class="btn-admin" href="{{ route('admin.products.index') }}">← Back to list</a>
 @endsection
@@ -99,21 +103,21 @@
     </label>
     <label>
         Full description
-        <textarea name="description" rows="6">{{ old('description', $product->description ?? '') }}</textarea>
+        <textarea id="product-description" name="description" rows="8">{{ old('description', $product->description ?? '') }}</textarea>
     </label>
 
     <fieldset class="form-fieldset">
         <legend>Attributes</legend>
         <div id="attribute-list">
             @foreach($attributeRows as $i => $row)
-                <div class="form-grid js-attribute-row">
+                <div class="form-grid form-grid--attributes js-attribute-row">
                     <label>
                         Name
-                        <input type="text" name="attributes[{{ $i }}][name]" value="{{ $row['name'] ?? '' }}" placeholder="e.g. Color">
+                        <textarea name="attributes[{{ $i }}][name]" rows="2" placeholder="e.g. Color">{{ $row['name'] ?? '' }}</textarea>
                     </label>
                     <label>
                         Value
-                        <input type="text" name="attributes[{{ $i }}][value]" value="{{ $row['value'] ?? '' }}" placeholder="e.g. Black">
+                        <textarea name="attributes[{{ $i }}][value]" rows="3" placeholder="e.g. Black">{{ $row['value'] ?? '' }}</textarea>
                     </label>
                     <div class="form-actions">
                         <button class="btn-admin" type="button" data-action="remove-attribute">Remove</button>
@@ -147,14 +151,14 @@
     </div>
 </form>
 <template id="attribute-row-template">
-    <div class="form-grid js-attribute-row">
+    <div class="form-grid form-grid--attributes js-attribute-row">
         <label>
             Name
-            <input type="text" data-name="attribute-name" placeholder="e.g. Color">
+            <textarea rows="2" data-name="attribute-name" placeholder="e.g. Color"></textarea>
         </label>
         <label>
             Value
-            <input type="text" data-name="attribute-value" placeholder="e.g. Black">
+            <textarea rows="3" data-name="attribute-value" placeholder="e.g. Black"></textarea>
         </label>
         <div class="form-actions">
             <button class="btn-admin" type="button" data-action="remove-attribute">Remove</button>
@@ -163,6 +167,26 @@
 </template>
 <script>
 (() => {
+    const setupDescriptionEditor = () => {
+        const textarea = document.getElementById('product-description');
+        if (!(textarea instanceof HTMLTextAreaElement) || typeof tinymce === 'undefined') return;
+
+        tinymce.init({
+            selector: '#product-description',
+            height: 360,
+            menubar: false,
+            plugins: 'lists link table code help wordcount',
+            toolbar: 'undo redo | blocks | bold italic underline | alignleft aligncenter alignright | bullist numlist | link | removeformat code',
+            branding: false,
+            promotion: false,
+            convert_urls: false,
+            content_style: 'body { font-family: "Source Sans 3", sans-serif; font-size: 15px; line-height: 1.6; }',
+        });
+
+        const form = document.getElementById('product-form');
+        form?.addEventListener('submit', () => tinymce.triggerSave());
+    };
+
     const setupAttributes = () => {
         const list = document.getElementById('attribute-list');
         const addButton = document.getElementById('add-attribute');
@@ -172,8 +196,8 @@
         const updateNames = () => {
             const rows = list.querySelectorAll('.js-attribute-row');
             rows.forEach((row, index) => {
-                const nameInput = row.querySelector('[data-name="attribute-name"], input[name*="[name]"]');
-                const valueInput = row.querySelector('[data-name="attribute-value"], input[name*="[value]"]');
+                const nameInput = row.querySelector('[data-name="attribute-name"], textarea[name*="[name]"]');
+                const valueInput = row.querySelector('[data-name="attribute-value"], textarea[name*="[value]"]');
                 if (nameInput) nameInput.setAttribute('name', `attributes[${index}][name]`);
                 if (valueInput) valueInput.setAttribute('name', `attributes[${index}][value]`);
             });
@@ -331,6 +355,7 @@
 
     };
 
+    setupDescriptionEditor();
     setupAttributes();
     setupGalleryPreview();
     setupThumbnailDropzone();

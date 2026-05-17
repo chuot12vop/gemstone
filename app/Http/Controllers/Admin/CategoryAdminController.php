@@ -75,6 +75,18 @@ class CategoryAdminController extends Controller
         return redirect()->route('admin.categories.index')->with('success', 'Category updated.');
     }
 
+    public function destroy(Category $category)
+    {
+        if ($category->products()->exists()) {
+            return redirect()->route('admin.categories.index')->with('error', 'Cannot delete a category that still has products. Reassign or delete those products first.');
+        }
+
+        $this->deletePublicPath($category->image);
+        $category->delete();
+
+        return redirect()->route('admin.categories.index')->with('success', 'Category deleted.');
+    }
+
     /**
      * @return array<string, mixed>
      */

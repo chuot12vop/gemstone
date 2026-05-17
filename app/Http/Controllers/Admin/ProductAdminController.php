@@ -156,7 +156,7 @@ class ProductAdminController extends Controller
             'is_active' => 'nullable|boolean',
             'attributes' => 'nullable|array',
             'attributes.*.name' => 'nullable|string|max:120',
-            'attributes.*.value' => 'nullable|string|max:255',
+            'attributes.*.value' => 'nullable|string|max:5000',
         ]);
 
         $slug = $validated['slug'] ?? '';
