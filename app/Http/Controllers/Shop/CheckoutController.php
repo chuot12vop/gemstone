@@ -50,12 +50,18 @@ class CheckoutController extends Controller
                 ->with('error', 'No payment methods available right now. Please contact support.');
         }
 
+        $lines = $this->buildLines();
+        $subtotalUsd = (float) array_sum(array_column($lines, 'line_usd'));
+
         return view('shop.checkout.method', [
             'title' => 'Checkout — Choose payment',
             'metaDescription' => 'Choose how you want to pay.',
             'methods' => $methods,
             'selected' => session(self::SESSION_METHOD_KEY),
             'step' => 1,
+            'lines' => $lines,
+            'subtotalUsd' => $subtotalUsd,
+            'currency' => app(CurrencyService::class),
         ]);
     }
 
@@ -203,6 +209,24 @@ class CheckoutController extends Controller
 
         $initiation = $gateway->initiate($order, $request);
 
+        $order->load(['items.product']);
+        $lines = [];
+        foreach ($order->items as $item) {
+            $product = $item->product;
+            if ($product === null) {
+                $product = new Product([
+                    'name' => $item->product_name,
+                    'image' => null,
+                    'price_usd' => $item->unit_price_usd,
+                ]);
+            }
+            $lines[] = [
+                'product' => $product,
+                'quantity' => $item->quantity,
+                'line_usd' => (float) $item->line_total_usd,
+            ];
+        }
+
         return view('shop.checkout.processing', [
             'title' => 'Complete payment — '.$order->order_number,
             'metaDescription' => 'Finish your payment.',
@@ -210,6 +234,9 @@ class CheckoutController extends Controller
             'gateway' => $gateway,
             'gatewayData' => $initiation->viewData,
             'step' => 3,
+            'lines' => $lines,
+            'subtotalUsd' => (float) $order->subtotal_usd,
+            'currency' => app(CurrencyService::class),
         ]);
     }
 
