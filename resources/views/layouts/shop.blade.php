@@ -19,12 +19,22 @@
         <div class="site-header__inner">
             <a class="logo" href="{{ route('shop.home') }}">
                 @if(!empty($siteSettings['site_logo']))
-                    <img src="{{ $siteSettings['site_logo'] }}" alt="{{ $siteSettings['site_name'] ?? config('app.name') }}" style="height:40px;width:auto;display:block;">
-                @else
-                    {{ $siteSettings['site_name'] ?? config('app.name') }}
+                    <img class="logo__img" src="{{ $siteSettings['site_logo'] }}" alt="">
                 @endif
+                <span class="logo__name">{{ $siteSettings['site_name'] ?? config('app.name') }}</span>
             </a>
-            <button type="button" class="nav-toggle" aria-expanded="false" aria-controls="site-nav" data-nav-toggle>Menu</button>
+            @php($cartCount = (int) array_sum((array) session('cart', [])))
+            <div class="site-header__actions">
+                <a class="cart-link cart-link--icon" href="{{ route('shop.cart') }}" aria-label="Cart ({{ $cartCount }} items)">
+                    <svg class="cart-link__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M3 4h2l2.2 10.2a2 2 0 0 0 2 1.6h8.7a2 2 0 0 0 1.9-1.4l1.7-5.6a1 1 0 0 0-.9-1.3H8.2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                        <circle cx="10" cy="19" r="1.6" fill="currentColor"/>
+                        <circle cx="18" cy="19" r="1.6" fill="currentColor"/>
+                    </svg>
+                    <span class="cart-link__count" aria-hidden="true">{{ $cartCount }}</span>
+                </a>
+                <button type="button" class="nav-toggle" aria-expanded="false" aria-controls="site-nav" data-nav-toggle>Menu</button>
+            </div>
             <nav class="site-nav" id="site-nav" data-nav-panel>
                 <ul class="site-nav__list">
                     <li><a href="{{ route('shop.home') }}">Home</a></li>
@@ -70,8 +80,9 @@
                         @endforeach
                     </select>
                 </form>
+                <a class="btn btn--small btn--header-buy" href="{{ route('shop.products.index') }}">Buy now</a>
                 @auth
-                    <span class="site-user" title="{{ Auth::user()->email }}">{{ Auth::user()->name }}</span>
+                    <a class="cart-link" href="{{ route('shop.account.index') }}" title="My account">{{ Auth::user()->name }}</a>
                     <form method="post" action="{{ route('shop.logout') }}" class="site-logout-form">
                         @csrf
                         <button type="submit" class="site-signout">Sign out</button>
@@ -79,15 +90,6 @@
                 @else
                     <a class="cart-link" href="{{ route('login') }}">Sign in</a>
                 @endauth
-                @php($cartCount = (int) array_sum((array) session('cart', [])))
-                <a class="cart-link cart-link--icon" href="{{ route('shop.cart') }}" aria-label="Cart ({{ $cartCount }} items)">
-                    <svg class="cart-link__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                        <path d="M3 4h2l2.2 10.2a2 2 0 0 0 2 1.6h8.7a2 2 0 0 0 1.9-1.4l1.7-5.6a1 1 0 0 0-.9-1.3H8.2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-                        <circle cx="10" cy="19" r="1.6" fill="currentColor"/>
-                        <circle cx="18" cy="19" r="1.6" fill="currentColor"/>
-                    </svg>
-                    <span class="cart-link__count" aria-hidden="true">{{ $cartCount }}</span>
-                </a>
             </nav>
         </div>
     </header>
@@ -103,7 +105,10 @@
         @yield('content')
     </main>
 
-    <footer class="site-footer">
+    @include('shop.partials.whatsapp-float')
+
+    <footer class="site-footer{{ !empty($shopFront['footer_background']) ? ' site-footer--has-bg' : '' }}"
+            @if(!empty($shopFront['footer_background'])) style="--footer-bg: url('{{ $shopFront['footer_background'] }}');" @endif>
         <div class="site-footer__grid">
             <div>
                 <strong>{{ $siteSettings['site_name'] ?? config('app.name') }}</strong>
@@ -126,6 +131,9 @@
                     <li><a href="{{ route('shop.contact') }}">Contact</a></li>
                 </ul>
             </div>
+        </div>
+        <div class="site-footer__payments">
+            @include('shop.partials.payment-icons')
         </div>
         <p class="site-footer__copy">&copy; {{ date('Y') }} {{ $siteSettings['site_name'] ?? config('app.name') }}. All rights reserved.</p>
     </footer>

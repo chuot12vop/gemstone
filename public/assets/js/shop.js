@@ -201,6 +201,8 @@ function initProductCtaBar() {
   const bar = document.querySelector('[data-pd-cta]');
   if (!bar) return;
 
+  document.body.classList.add('has-product-cta-bar');
+
   const trigger = document.querySelector('[data-pd-form]') || document.querySelector('[data-product-detail]');
 
   function update() {

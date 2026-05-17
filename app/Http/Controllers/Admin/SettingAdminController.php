@@ -33,6 +33,9 @@ class SettingAdminController extends Controller
             'return_policy' => 'nullable|string',
             'terms_of_service' => 'nullable|string',
             'site_logo' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:4096',
+            'footer_background' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:6144',
+            'contact_whatsapp_phone' => 'nullable|string|max:60',
+            'home_news_ticker' => 'nullable|string|max:8000',
         ]);
 
         $settings = $this->getSettingsMap();
@@ -43,7 +46,15 @@ class SettingAdminController extends Controller
             $settings['site_logo'] = $logoPath;
         }
 
+        $footerBgPath = $this->storeImage($request->file('footer_background'), 'settings/footer');
+        if ($footerBgPath !== null) {
+            $this->deletePublicPath($settings['footer_background'] ?? null);
+            $settings['footer_background'] = $footerBgPath;
+        }
+
         $settings['site_name'] = $validated['site_name'];
+        $settings['contact_whatsapp_phone'] = trim((string) ($validated['contact_whatsapp_phone'] ?? ''));
+        $settings['home_news_ticker'] = trim((string) ($validated['home_news_ticker'] ?? ''));
         $settings['security_policy'] = trim((string) ($validated['security_policy'] ?? ''));
         $settings['privacy_policy'] = trim((string) ($validated['privacy_policy'] ?? ''));
         $settings['return_policy'] = trim((string) ($validated['return_policy'] ?? ''));
@@ -67,6 +78,9 @@ class SettingAdminController extends Controller
         $defaults = [
             'site_name' => config('app.name'),
             'site_logo' => '',
+            'footer_background' => '',
+            'contact_whatsapp_phone' => '',
+            'home_news_ticker' => '',
             'security_policy' => '',
             'privacy_policy' => '',
             'return_policy' => '',

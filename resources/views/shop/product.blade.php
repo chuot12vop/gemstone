@@ -84,6 +84,9 @@
                 <button class="btn btn--primary" type="submit" {{ $product->stock < 1 ? 'disabled' : '' }}>
                     {{ $product->stock < 1 ? 'Out of stock' : 'Add to cart' }}
                 </button>
+                <button class="btn btn--buy-now" type="submit" name="buy_now" value="1" {{ $product->stock < 1 ? 'disabled' : '' }}>
+                    Buy now
+                </button>
             </form>
             <p class="stock-note">{{ $product->stock }} in stock</p>
 
@@ -145,6 +148,9 @@
             </label>
             <button class="btn btn--primary product-cta-bar__btn" type="submit" {{ $product->stock < 1 ? 'disabled' : '' }}>
                 {{ $product->stock < 1 ? 'Out of stock' : 'Add to cart' }}
+            </button>
+            <button class="btn btn--buy-now product-cta-bar__btn" type="submit" name="buy_now" value="1" {{ $product->stock < 1 ? 'disabled' : '' }}>
+                Buy now
             </button>
         </form>
     </div>

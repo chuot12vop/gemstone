@@ -13,6 +13,7 @@ use App\Services\Payment\Data\PaymentInitiationResult;
 use App\Services\Payment\PaymentMethodRegistry;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
@@ -86,6 +87,8 @@ class CheckoutController extends Controller
 
         $subtotalUsd = array_sum(array_column($lines, 'line_usd'));
 
+        $user = Auth::user();
+
         return view('shop.checkout.details', [
             'title' => 'Checkout — Your details',
             'metaDescription' => 'Enter shipping and contact details.',
@@ -94,6 +97,10 @@ class CheckoutController extends Controller
             'gateway' => $gateway,
             'currency' => $currency,
             'step' => 2,
+            'checkoutDefaults' => [
+                'customer_name' => old('customer_name', $user?->name ?? ''),
+                'customer_email' => old('customer_email', $user?->email ?? ''),
+            ],
         ]);
     }
 
@@ -121,8 +128,11 @@ class CheckoutController extends Controller
         $code = $currency->currentCode();
         $totalDisplay = $currency->convertUsdToCurrent($subtotalUsd);
 
-        $order = DB::transaction(function () use ($validated, $lines, $subtotalUsd, $totalDisplay, $code, $gateway) {
+        $userId = Auth::id();
+
+        $order = DB::transaction(function () use ($validated, $lines, $subtotalUsd, $totalDisplay, $code, $gateway, $userId) {
             $order = Order::query()->create([
+                'user_id' => $userId,
                 'order_number' => $this->makeOrderNumber(),
                 'customer_email' => $validated['customer_email'],
                 'customer_name' => $validated['customer_name'],

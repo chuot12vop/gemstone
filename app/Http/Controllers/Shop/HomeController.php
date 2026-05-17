@@ -3,10 +3,12 @@
 namespace App\Http\Controllers\Shop;
 
 use App\Http\Controllers\Controller;
-use App\Models\Brand;
+use App\Models\Certificate;
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\Review;
 use App\Models\Setting;
+use App\Support\ShopFrontSettings;
 use App\Services\CurrencyService;
 use App\Support\PublicAssetUrl;
 
@@ -39,36 +41,66 @@ class HomeController extends Controller
 
         $bannerSlides = $this->resolvedBannerSlides();
 
-        $productQuery = Product::query()->where('is_active', true)->with(['category', 'brand'])->latest();
-        $spotlightProducts = (clone $productQuery)->take(3)->get();
+        $homeTopProducts = Product::query()
+            ->where('is_active', true)
+            ->with('category')
+            ->withCount(['approvedReviews as reviews_count'])
+            ->orderByDesc('reviews_count')
+            ->orderByDesc('id')
+            ->take(3)
+            ->get();
 
-        $homeCategories = Category::query()
+        if ($homeTopProducts->count() < 3) {
+            $excludeIds = $homeTopProducts->pluck('id')->all();
+            $fill = Product::query()
+                ->where('is_active', true)
+                ->with('category')
+                ->when($excludeIds !== [], fn ($q) => $q->whereNotIn('id', $excludeIds))
+                ->latest('id')
+                ->take(3 - $homeTopProducts->count())
+                ->get();
+            $homeTopProducts = $homeTopProducts->concat($fill)->values();
+        }
+
+        $homeNewProducts = Product::query()
+            ->where('is_active', true)
+            ->with('category')
+            ->latest('id')
+            ->take(3)
+            ->get();
+
+        $homeCollections = Category::query()
             ->whereNotNull('image')
             ->where('image', '!=', '')
             ->orderBy('sort_order')
+            ->orderBy('name')
+            ->take(3)
             ->get();
 
-        $homeBrandsForSection = Brand::query()
+        $homeCertificates = Certificate::query()
             ->whereNotNull('image')
             ->where('image', '!=', '')
             ->orderBy('sort_order')
             ->orderBy('name')
             ->get();
 
-        $homeBrandsMarquee = $homeBrandsForSection->count() > 5;
-        $homeMarqueeBrands = $homeBrandsMarquee
-            ? $this->marqueeBrandSequence($homeBrandsForSection)
-            : $homeBrandsForSection->values();
+        $homeReviews = Review::query()
+            ->approved()
+            ->latest()
+            ->take(5)
+            ->get(['id', 'customer_name', 'content', 'rating', 'created_at']);
 
         return view('shop.home', [
             'siteSettings' => $defaults,
+            'shopFront' => ShopFrontSettings::resolve(),
             'bannerSlides' => $bannerSlides,
             'title' => 'Gemstone Jewelry & Feng Shui — Taichi-inspired wellness',
             'metaDescription' => 'Premium gemstone jewelry for balance, luck, and intention. Ethically sourced, handcrafted for the US market.',
-            'spotlightProducts' => $spotlightProducts,
-            'homeCategories' => $homeCategories,
-            'homeMarqueeBrands' => $homeMarqueeBrands,
-            'homeBrandsMarquee' => $homeBrandsMarquee,
+            'homeTopProducts' => $homeTopProducts,
+            'homeNewProducts' => $homeNewProducts,
+            'homeCollections' => $homeCollections,
+            'homeCertificates' => $homeCertificates,
+            'homeReviews' => $homeReviews,
             'currency' => app(CurrencyService::class),
         ]);
     }
@@ -154,23 +186,5 @@ class HomeController extends Controller
         }
 
         return $slides;
-    }
-
-    /**
-     * Duplicate brand list so the CSS marquee can loop seamlessly (two identical halves).
-     * Only used when there are more than five brands with images.
-     *
-     * @param \Illuminate\Support\Collection<int, Brand> $brands
-     * @return \Illuminate\Support\Collection<int, Brand>
-     */
-    private function marqueeBrandSequence(\Illuminate\Support\Collection $brands): \Illuminate\Support\Collection
-    {
-        if ($brands->isEmpty()) {
-            return $brands;
-        }
-
-        $base = $brands->values();
-
-        return $base->concat($base)->values();
     }
 }

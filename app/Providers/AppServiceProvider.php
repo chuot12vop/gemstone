@@ -7,6 +7,7 @@ use App\Models\Order;
 use App\Models\Setting;
 use App\Services\CurrencyService;
 use App\Support\PublicAssetUrl;
+use App\Support\ShopFrontSettings;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
@@ -67,6 +68,7 @@ class AppServiceProvider extends ServiceProvider
 
             $view->with('currency', app(CurrencyService::class))
                 ->with('siteSettings', $defaults)
+                ->with('shopFront', ShopFrontSettings::resolve())
                 ->with('catalogNavCategories', $catalogNavCategories);
         });
 

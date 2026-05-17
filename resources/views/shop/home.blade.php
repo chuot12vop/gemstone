@@ -39,6 +39,8 @@
         @endforeach
     </div>
     @if($slideCount > 1)
+        <button type="button" class="home-hero__nav home-hero__nav--prev" data-slider-prev aria-label="Previous slide">&#10094;</button>
+        <button type="button" class="home-hero__nav home-hero__nav--next" data-slider-next aria-label="Next slide">&#10095;</button>
         <div class="home-hero__dots" role="tablist" aria-label="Slides">
             @foreach($bannerSlides as $i => $_slide)
                 <button type="button"
@@ -53,63 +55,45 @@
     @endif
 </section>
 
-@if($homeMarqueeBrands->isNotEmpty())
-<section class="home-section home-section--brands reveal-on-scroll" aria-labelledby="home-brands-title">
-    <h2 id="home-brands-title" class="section__title section__title--center home-brands-marquee__heading">Our brands</h2>
-    <div class="home-brands-marquee{{ $homeBrandsMarquee ? '' : ' home-brands-marquee--static' }}" @if($homeBrandsMarquee) data-home-brands-marquee @endif>
-        <div class="home-brands-marquee__viewport">
-            <div class="home-brands-marquee__track">
-                @foreach($homeMarqueeBrands as $brand)
-                    <a class="home-brands-marquee__link"
-                       href="{{ route('shop.products.index', ['brand' => $brand->slug]) }}">
-                        <span class="home-brands-marquee__logo-wrap">
-                            <img class="home-brands-marquee__logo"
-                                 src="{{ \App\Support\PublicAssetUrl::to($brand->image) }}"
-                                 alt="{{ $brand->name }}"
-                                 width="200"
-                                 height="120"
-                                 loading="lazy">
-                        </span>
-                        <span class="home-brands-marquee__name">{{ $brand->name }}</span>
-                    </a>
-                @endforeach
-            </div>
-        </div>
+@if($homeCertificates->isNotEmpty())
+<section class="home-section home-section--certificates reveal-on-scroll" aria-labelledby="home-certificates-title">
+    <h2 id="home-certificates-title" class="section__title section__title--center">Certificates</h2>
+    <div class="home-certificates-scroll" tabindex="0" role="region" aria-label="Certificate logos — scroll horizontally">
+        @foreach($homeCertificates as $certificate)
+            <article class="home-certificates-scroll__item">
+                <img class="home-certificates-scroll__img"
+                     src="{{ \App\Support\PublicAssetUrl::to($certificate->image) }}"
+                     alt="{{ $certificate->name }}"
+                     width="200"
+                     height="120"
+                     loading="lazy"
+                     draggable="false">
+            </article>
+        @endforeach
     </div>
 </section>
 @endif
 
-<section class="home-section home-section--spotlight reveal-on-scroll">
-    <h2 class="section__title section__title--center">Featured products</h2>
-    <div class="shop-product-grid">
-        @foreach($spotlightProducts as $p)
-            @include('shop.partials.product-card', ['product' => $p, 'currency' => $currency])
-        @endforeach
-    </div>
-</section>
-
-<section class="home-section features-strip reveal-on-scroll">
-    <article class="feature-item">
-        <h3>Ethically Sourced</h3>
-        <p>Every stone is selected from trusted partners focused on transparent sourcing.</p>
-    </article>
-    <article class="feature-item">
-        <h3>Infused with Energy</h3>
-        <p>Designed with feng shui principles to bring calm and positive intention.</p>
-    </article>
-    <article class="feature-item">
-        <h3>Handcrafted</h3>
-        <p>Each piece is hand-finished for comfort, durability and elegant daily wear.</p>
-    </article>
-</section>
-
-<section class="home-section home-section--categories reveal-on-scroll">
-    <h2 class="section__title">Categories</h2>
-    @if($homeCategories->isEmpty())
-        <p class="home-section__empty">Browse the full catalog on the <a href="{{ route('shop.catalog') }}">shop page</a>.</p>
+<section class="home-section home-section--products reveal-on-scroll" aria-labelledby="home-top-products-title">
+    <h2 id="home-top-products-title" class="section__title section__title--center">Top products</h2>
+    @if($homeTopProducts->isEmpty())
+        <p class="home-section__empty home-section__empty--center">Browse the full catalog on the <a href="{{ route('shop.products.index') }}">shop page</a>.</p>
     @else
-        <div class="category-card-grid">
-            @foreach($homeCategories as $cat)
+        <div class="shop-product-grid">
+            @foreach($homeTopProducts as $product)
+                @include('shop.partials.product-card', ['product' => $product, 'currency' => $currency])
+            @endforeach
+        </div>
+    @endif
+</section>
+
+<section class="home-section home-section--collections reveal-on-scroll" aria-labelledby="home-collections-title">
+    <h2 id="home-collections-title" class="section__title section__title--center">Top categories</h2>
+    @if($homeCollections->isEmpty())
+        <p class="home-section__empty home-section__empty--center">Browse the full catalog on the <a href="{{ route('shop.catalog') }}">shop page</a>.</p>
+    @else
+        <div class="category-card-grid category-card-grid--collections">
+            @foreach($homeCollections as $cat)
                 <a class="category-card" href="{{ route('shop.catalog.category', $cat) }}">
                     <span class="category-card__media">
                         <img src="{{ \App\Support\PublicAssetUrl::to($cat->image) }}" alt="{{ $cat->name }}" loading="lazy" width="600" height="600">
@@ -119,7 +103,7 @@
                         @if($cat->description)
                             <span class="category-card__desc">{{ \Illuminate\Support\Str::limit(strip_tags($cat->description), 120) }}</span>
                         @endif
-                        <span class="category-card__cta">Shop this category →</span>
+                        <span class="category-card__cta">Shop this collection →</span>
                     </span>
                 </a>
             @endforeach
@@ -127,23 +111,66 @@
     @endif
 </section>
 
-<section class="home-section insights reveal-on-scroll">
-    <article class="insight-card">
-        <h3>About Our Gemstones</h3>
-        <p>More than just jewelry—each stone is a piece of a heritage story, a whispering bridge between timeless elegance and the heartbeat of contemporary life.</p>
-        <a class="btn btn--primary btn--small" href="{{ route('shop.about.gemstones') }}">View all</a>
-    </article>
-    <article class="insight-card">
-        <h3>The Spiritual Energy of the Five Elements: Find Your Balance</h3>
-        <p>The universe thrives on balance, and so do we. The ancient philosophy of the Five Elements (Wu Xing)—Wood, Fire, Earth, Metal, and Water—is a profound map to understanding our inner energy. In this tradition, everything in nature is connected, and by aligning your personal energy with the right gemstone, you can invite harmony, protection, and prosperity into your modern life.</p>
-        <a class="btn btn--primary btn--small" href="{{ route('shop.about.spirituality') }}">View all</a>
-    </article>
-    <article class="insight-card">
-        <h3>Pick the Sacred Guardian That Attracts and Protects Wealth Energy</h3>
-        <p>Choose pieces crafted to support confidence and prosperity in daily life.</p>
-        <a class="btn btn--primary btn--small" href="{{ route('shop.about.wealth') }}">View all</a>
-    </article>
+<section class="home-section home-section--about reveal-on-scroll" aria-labelledby="home-about-title">
+    <h2 id="home-about-title" class="section__title section__title--center">About us</h2>
+    <div class="home-about">
+        <p class="home-about__lede">More than jewelry — a bridge between mindful tradition and contemporary life. We take the time to understand each stone before it is chosen, crafting pieces with reverence for energetic balance and everyday wear.</p>
+
+        <details class="home-about__panel">
+            <summary class="home-about__summary">Our philosophy</summary>
+            <div class="home-about__body">
+                <p>We believe meaningful spiritual tools shouldn't be rushed; they must be nurtured. Every design is crafted with reverence to achieve energetic balance, effortless wearability, and a pure, authentic beauty suited for customers who seek deep, genuine connections.</p>
+            </div>
+        </details>
+
+        <details class="home-about__panel">
+            <summary class="home-about__summary">Materials &amp; craftsmanship</summary>
+            <div class="home-about__body">
+                <p>Each stone is selected for clarity, color, and intention before it enters our workshop. Hand-finishing and careful stringing ensure pieces that feel as good as they look — made to be worn daily, not kept in a drawer.</p>
+            </div>
+        </details>
+
+        <details class="home-about__panel">
+            <summary class="home-about__summary">Color &amp; aesthetic</summary>
+            <div class="home-about__body">
+                <p>Our palette is an ode to daylight: warm cream, champagne gold, and soft neutrals — as elegant and quiet as nature itself.</p>
+            </div>
+        </details>
+
+        <a class="btn btn--primary btn--small" href="{{ route('shop.about') }}">Learn more about us</a>
+    </div>
 </section>
+
+<section class="home-section home-section--new reveal-on-scroll" aria-labelledby="home-new-title">
+    <h2 id="home-new-title" class="section__title section__title--center">New arrivals</h2>
+    @if($homeNewProducts->isEmpty())
+        <p class="home-section__empty home-section__empty--center">New pieces are on the way — check back soon or <a href="{{ route('shop.products.index') }}">browse the shop</a>.</p>
+    @else
+        <div class="shop-product-grid">
+            @foreach($homeNewProducts as $product)
+                @include('shop.partials.product-card', ['product' => $product, 'currency' => $currency])
+            @endforeach
+        </div>
+    @endif
+</section>
+
+<section class="home-section home-section--reviews reveal-on-scroll" aria-labelledby="home-reviews-title">
+    <h2 id="home-reviews-title" class="section__title section__title--center">Customer reviews</h2>
+    @if($homeReviews->isEmpty())
+        <p class="reviews__empty">No reviews yet — be the first to share your thoughts after your next order.</p>
+    @else
+        <ul class="home-reviews-grid">
+            @foreach($homeReviews as $review)
+                <li class="home-review-card">
+                    <p class="home-review-card__name">{{ $review->customer_name }}</p>
+                    @include('shop.partials.stars', ['rating' => $review->rating])
+                    <p class="home-review-card__content">{{ $review->content }}</p>
+                </li>
+            @endforeach
+        </ul>
+    @endif
+</section>
+
 @push('scripts')
 <script>
 (() => {
@@ -195,6 +222,26 @@
                 }
             });
         });
+
+        root.querySelector('[data-slider-prev]')?.addEventListener('click', () => {
+            setActive(active - 1);
+            start();
+        });
+        root.querySelector('[data-slider-next]')?.addEventListener('click', () => {
+            setActive(active + 1);
+            start();
+        });
+
+        let touchStartX = 0;
+        root.addEventListener('touchstart', (e) => {
+            touchStartX = e.changedTouches[0]?.clientX ?? 0;
+        }, { passive: true });
+        root.addEventListener('touchend', (e) => {
+            const dx = (e.changedTouches[0]?.clientX ?? 0) - touchStartX;
+            if (Math.abs(dx) < 40) return;
+            setActive(dx < 0 ? active + 1 : active - 1);
+            start();
+        }, { passive: true });
 
         if (slides.length <= 1) {
             return;

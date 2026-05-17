@@ -13,9 +13,14 @@
             @csrf
             <input type="hidden" name="product_id" value="{{ $product->id }}">
             <input type="hidden" name="quantity" value="1">
-            <button class="btn btn--primary btn--small shop-product-card__btn" type="submit" {{ $product->stock < 1 ? 'disabled' : '' }}>
-                {{ $product->stock < 1 ? 'Out of stock' : 'Add to cart' }}
-            </button>
+            <div class="shop-product-card__actions">
+                <button class="btn btn--primary btn--small shop-product-card__btn" type="submit" {{ $product->stock < 1 ? 'disabled' : '' }}>
+                    {{ $product->stock < 1 ? 'Out of stock' : 'Add to cart' }}
+                </button>
+                <button class="btn btn--buy-now btn--small shop-product-card__btn" type="submit" name="buy_now" value="1" {{ $product->stock < 1 ? 'disabled' : '' }}>
+                    Buy now
+                </button>
+            </div>
         </form>
     </div>
 </article>

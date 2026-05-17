@@ -22,11 +22,11 @@
     <div class="form-grid">
         <label>
             Full name
-            <input type="text" name="customer_name" required value="{{ old('customer_name') }}">
+            <input type="text" name="customer_name" required value="{{ $checkoutDefaults['customer_name'] ?? old('customer_name') }}">
         </label>
         <label>
             Email
-            <input type="email" name="customer_email" required value="{{ old('customer_email') }}">
+            <input type="email" name="customer_email" required value="{{ $checkoutDefaults['customer_email'] ?? old('customer_email') }}">
         </label>
         <label class="full">
             Shipping address

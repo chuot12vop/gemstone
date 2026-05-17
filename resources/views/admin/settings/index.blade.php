@@ -36,6 +36,26 @@
     </fieldset>
 
     <fieldset class="form-fieldset">
+        <legend>Storefront</legend>
+        <label>
+            WhatsApp contact number
+            <input type="text" name="contact_whatsapp_phone" value="{{ old('contact_whatsapp_phone', $settings['contact_whatsapp_phone'] ?? '') }}" placeholder="+849xxxxxxxx">
+            <small style="color:#5c6470;">Used for the floating WhatsApp button on the shop. Falls back to payment WhatsApp if empty.</small>
+        </label>
+        <label>
+            Home news ticker (one headline per line)
+            <textarea name="home_news_ticker" rows="4" placeholder="New collection launched&#10;Free shipping over $99">{{ old('home_news_ticker', $settings['home_news_ticker'] ?? '') }}</textarea>
+        </label>
+        <label>
+            Footer background image
+            <input type="file" name="footer_background" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp">
+            @if(!empty($settings['footer_background']))
+                <img src="{{ \App\Support\PublicAssetUrl::to($settings['footer_background']) }}" alt="" width="240" style="margin-top:8px;border-radius:8px;display:block;">
+            @endif
+        </label>
+    </fieldset>
+
+    <fieldset class="form-fieldset">
         <legend>Policies</legend>
         <label>
             Security policy

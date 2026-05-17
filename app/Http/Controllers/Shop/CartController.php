@@ -55,6 +55,10 @@ class CartController extends Controller
         $cart[$pid] = min((int) $cart[$pid], $p->stock);
         session(['cart' => $cart]);
 
+        if ($request->boolean('buy_now')) {
+            return redirect()->route('shop.checkout');
+        }
+
         return back()->with('success', 'Added to cart.');
     }
 

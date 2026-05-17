@@ -315,5 +315,7 @@ class DatabaseSeeder extends Seeder
                 ]);
             }
         }
+
+        $this->call(CertificateSeeder::class);
     }
 }

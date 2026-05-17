@@ -2,16 +2,19 @@
 
 use App\Http\Controllers\Admin\AuthController;
 use App\Http\Controllers\Admin\BrandAdminController;
+use App\Http\Controllers\Admin\CertificateAdminController;
 use App\Http\Controllers\Admin\CategoryAdminController;
 use App\Http\Controllers\Admin\ContactAdminController;
 use App\Http\Controllers\Admin\CurrencyAdminController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\OrderAdminController;
 use App\Http\Controllers\Admin\PaymentAdminController;
+use App\Http\Controllers\Admin\PostAdminController;
 use App\Http\Controllers\Admin\ProductAdminController;
 use App\Http\Controllers\Admin\ReviewAdminController;
 use App\Http\Controllers\Admin\InterfaceAdminController;
 use App\Http\Controllers\Admin\SettingAdminController;
+use App\Http\Controllers\Shop\AccountController;
 use App\Http\Controllers\Shop\Auth\GoogleAuthController;
 use App\Http\Controllers\Shop\Auth\LoginController;
 use App\Http\Controllers\Shop\CartController;
@@ -21,6 +24,7 @@ use App\Http\Controllers\Shop\ContactController;
 use App\Http\Controllers\Shop\CurrencyController;
 use App\Http\Controllers\Shop\HomeController;
 use App\Http\Controllers\Shop\PageController;
+use App\Http\Controllers\Shop\PostController;
 use App\Http\Controllers\Shop\ProductController;
 use App\Http\Controllers\Shop\ReviewController;
 use Illuminate\Support\Facades\Route;
@@ -31,6 +35,14 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', [HomeController::class, 'index'])->name('shop.home');
 Route::get('/login', [LoginController::class, 'show'])->name('login');
 Route::post('/logout', [LoginController::class, 'logout'])->middleware('auth')->name('shop.logout');
+
+Route::middleware('auth')->prefix('account')->name('shop.account.')->group(function () {
+    Route::get('/', [AccountController::class, 'index'])->name('index');
+    Route::get('/profile', [AccountController::class, 'profile'])->name('profile');
+    Route::post('/profile', [AccountController::class, 'updateProfile'])->name('profile.update');
+    Route::get('/orders', [AccountController::class, 'orders'])->name('orders');
+    Route::get('/orders/{order_number}', [AccountController::class, 'orderShow'])->name('orders.show');
+});
 Route::get('/auth/google', [GoogleAuthController::class, 'redirect'])->name('auth.google.redirect');
 Route::get('/auth/google/callback', [GoogleAuthController::class, 'callback'])->name('auth.google.callback');
 
@@ -38,6 +50,7 @@ Route::get('/catalog', [CatalogController::class, 'index'])->name('shop.catalog'
 Route::get('/catalog/{category}', [CatalogController::class, 'category'])->name('shop.catalog.category');
 Route::get('/product', [CatalogController::class, 'products'])->name('shop.products.index');
 Route::get('/product/{product}', [ProductController::class, 'show'])->name('shop.product');
+Route::get('/news/{post}', [PostController::class, 'show'])->name('shop.post.show');
 Route::get('/cart', [CartController::class, 'index'])->name('shop.cart');
 Route::post('/cart/add', [CartController::class, 'add'])->name('shop.cart.add');
 Route::post('/cart/update', [CartController::class, 'update'])->name('shop.cart.update');
@@ -94,12 +107,26 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::put('/categories/{category}', [CategoryAdminController::class, 'update'])->name('categories.update');
         Route::delete('/categories/{category}', [CategoryAdminController::class, 'destroy'])->name('categories.destroy');
 
+        Route::get('/posts', [PostAdminController::class, 'index'])->name('posts.index');
+        Route::get('/posts/create', [PostAdminController::class, 'create'])->name('posts.create');
+        Route::post('/posts', [PostAdminController::class, 'store'])->name('posts.store');
+        Route::get('/posts/{post}/edit', [PostAdminController::class, 'edit'])->name('posts.edit');
+        Route::put('/posts/{post}', [PostAdminController::class, 'update'])->name('posts.update');
+        Route::delete('/posts/{post}', [PostAdminController::class, 'destroy'])->name('posts.destroy');
+
         Route::get('/brands', [BrandAdminController::class, 'index'])->name('brands.index');
         Route::get('/brands/create', [BrandAdminController::class, 'create'])->name('brands.create');
         Route::post('/brands', [BrandAdminController::class, 'store'])->name('brands.store');
         Route::get('/brands/{brand}/edit', [BrandAdminController::class, 'edit'])->name('brands.edit');
         Route::put('/brands/{brand}', [BrandAdminController::class, 'update'])->name('brands.update');
         Route::delete('/brands/{brand}', [BrandAdminController::class, 'destroy'])->name('brands.destroy');
+
+        Route::get('/certificates', [CertificateAdminController::class, 'index'])->name('certificates.index');
+        Route::get('/certificates/create', [CertificateAdminController::class, 'create'])->name('certificates.create');
+        Route::post('/certificates', [CertificateAdminController::class, 'store'])->name('certificates.store');
+        Route::get('/certificates/{certificate}/edit', [CertificateAdminController::class, 'edit'])->name('certificates.edit');
+        Route::put('/certificates/{certificate}', [CertificateAdminController::class, 'update'])->name('certificates.update');
+        Route::delete('/certificates/{certificate}', [CertificateAdminController::class, 'destroy'])->name('certificates.destroy');
 
         Route::get('/currency', [CurrencyAdminController::class, 'index'])->name('currency.index');
         Route::post('/currency/save', [CurrencyAdminController::class, 'save'])->name('currency.save');

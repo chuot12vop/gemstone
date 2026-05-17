@@ -55,6 +55,16 @@ class GoogleAuthController extends Controller
 
         Auth::guard('web')->login($user, true);
 
-        return redirect()->intended(route('shop.home'));
+        $intended = session()->pull('url.intended');
+        if ($intended) {
+            return redirect($intended);
+        }
+
+        if (! $user->phone) {
+            return redirect()->route('shop.account.profile')
+                ->with('success', 'Welcome! Please add your phone number to complete your profile.');
+        }
+
+        return redirect()->route('shop.account.index');
     }
 }
