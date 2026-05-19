@@ -60,18 +60,24 @@
 @if($homeCertificates->isNotEmpty())
 <section class="home-section home-section--certificates reveal-on-scroll" aria-labelledby="home-certificates-title">
     <h2 id="home-certificates-title" class="section__title section__title--center">As seen in</h2>
-    <div class="home-certificates-scroll" tabindex="0" role="region" aria-label="Certificate logos — scroll horizontally">
-        @foreach($homeCertificates as $certificate)
-            <article class="home-certificates-scroll__item">
-                <img class="home-certificates-scroll__img"
-                     src="{{ \App\Support\PublicAssetUrl::to($certificate->image) }}"
-                     alt="{{ $certificate->name }}"
-                     width="200"
-                     height="120"
-                     loading="lazy"
-                     draggable="false">
-            </article>
-        @endforeach
+    <div class="home-certificates-marquee" role="region" aria-label="Certificate logos">
+        <div class="home-certificates-marquee__track">
+            @foreach([false, true] as $duplicate)
+                <div class="home-certificates-marquee__group" @if($duplicate) aria-hidden="true" @endif>
+                    @foreach($homeCertificates as $certificate)
+                        <article class="home-certificates-marquee__item">
+                            <img class="home-certificates-marquee__img"
+                                 src="{{ \App\Support\PublicAssetUrl::to($certificate->image) }}"
+                                 alt="{{ $duplicate ? '' : $certificate->name }}"
+                                 width="200"
+                                 height="120"
+                                 loading="lazy"
+                                 draggable="false">
+                        </article>
+                    @endforeach
+                </div>
+            @endforeach
+        </div>
     </div>
 </section>
 @endif
