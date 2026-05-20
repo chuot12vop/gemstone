@@ -56,6 +56,7 @@ class HomeController extends Controller
             ->where('image', '!=', '')
             ->orderBy('sort_order')
             ->orderBy('name')
+            ->take(6)
             ->get();
 
         $homeCertificates = Certificate::query()
