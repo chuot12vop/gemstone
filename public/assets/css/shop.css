@@ -1919,6 +1919,22 @@ body.site { margin: 0; font-family: "Source Sans 3", system-ui, sans-serif; colo
     overflow: hidden;
   }
 }
+@media (min-width: 1024px) {
+  .home-journal-slider__slide .home-news-card__media img {
+    height: 440px;
+  }
+  .home-journal-slider__slide .home-news-card__title {
+    font-size: 1.2rem;
+  }
+}
+@media (min-width: 1200px) {
+  .home-journal-slider__slide .home-news-card__media img {
+    height: 440px;
+  }
+  .home-journal-slider__slide .home-news-card__title {
+    font-size: 1.2rem;
+  }
+}
 .home-journal-slider__nav {
   position: absolute;
   top: 50%;
