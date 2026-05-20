@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\AboutAdminController;
 use App\Http\Controllers\Admin\AuthController;
 use App\Http\Controllers\Admin\BrandAdminController;
 use App\Http\Controllers\Admin\CertificateAdminController;
@@ -156,5 +157,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
         Route::get('/interface', [InterfaceAdminController::class, 'index'])->name('interface.index');
         Route::post('/interface/save', [InterfaceAdminController::class, 'save'])->name('interface.save');
+
+        Route::get('/about', [AboutAdminController::class, 'index'])->name('about.index');
+        Route::post('/about/save', [AboutAdminController::class, 'save'])->name('about.save');
     });
 });

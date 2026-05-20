@@ -9,7 +9,7 @@
          data-slide-interval="4000"
          aria-roledescription="carousel"
          aria-label="Home highlights">
-    <div class="home-hero__viewport">
+    <div class="home-hero__viewport" data-slider-viewport>
         <div class="home-hero__slides" data-home-slider-track>
             @foreach($bannerSlides as $i => $slide)
                 <div class="home-hero__slide {{ $i === 0 ? 'is-active' : '' }}"
@@ -109,43 +109,71 @@
 <section class="home-section home-section--about reveal-on-scroll" aria-labelledby="home-about-title">
     <h2 id="home-about-title" class="section__title section__title--center">About us</h2>
     <div class="home-about">
-        <p class="home-about__lede">More than jewelry — a bridge between mindful tradition and contemporary life. We take the time to understand each stone before it is chosen, crafting pieces with reverence for energetic balance and everyday wear.</p>
+        @if(!empty($about['home_lede']))
+            <p class="home-about__lede">{{ $about['home_lede'] }}</p>
+        @endif
 
-        <details class="home-about__panel">
-            <summary class="home-about__summary">Our philosophy</summary>
-            <div class="home-about__body">
-                <p>We believe meaningful spiritual tools shouldn't be rushed; they must be nurtured. Every design is crafted with reverence to achieve energetic balance, effortless wearability, and a pure, authentic beauty suited for customers who seek deep, genuine connections.</p>
-            </div>
-        </details>
+        @foreach($about['panels'] as $panel)
+            @if(($panel['title'] ?? '') !== '' || ($panel['body'] ?? '') !== '')
+                <details class="home-about__panel">
+                    @if(($panel['title'] ?? '') !== '')
+                        <summary class="home-about__summary">{{ $panel['title'] }}</summary>
+                    @endif
+                    @if(($panel['body'] ?? '') !== '')
+                        <div class="home-about__body">{!! $panel['body'] !!}</div>
+                    @endif
+                </details>
+            @endif
+        @endforeach
 
-        <details class="home-about__panel">
-            <summary class="home-about__summary">Materials &amp; craftsmanship</summary>
-            <div class="home-about__body">
-                <p>Each stone is selected for clarity, color, and intention before it enters our workshop. Hand-finishing and careful stringing ensure pieces that feel as good as they look — made to be worn daily, not kept in a drawer.</p>
-            </div>
-        </details>
-
-        <details class="home-about__panel">
-            <summary class="home-about__summary">Color &amp; aesthetic</summary>
-            <div class="home-about__body">
-                <p>Our palette is an ode to daylight: warm cream, champagne gold, and soft neutrals — as elegant and quiet as nature itself.</p>
-            </div>
-        </details>
-
-        <a class="btn btn--primary btn--small" href="{{ route('shop.about') }}">Learn more about us</a>
+        <a class="btn btn--primary btn--small" href="{{ route('shop.about') }}">{{ $about['home_button_label'] ?: 'Learn more about us' }}</a>
     </div>
 </section>
 
 @if($homeJournalPosts->isNotEmpty())
+@php($journalCount = $homeJournalPosts->count())
 <section class="home-section home-section--journal reveal-on-scroll" aria-labelledby="home-journal-title">
     <div class="home-section__head-row">
         <h2 id="home-journal-title" class="section__title">Journal</h2>
         <a class="btn btn--ghost btn--small" href="{{ route('shop.news.index') }}">View more</a>
     </div>
-    <div class="home-news-grid">
-        @foreach($homeJournalPosts as $post)
-            @include('shop.partials.post-card', ['post' => $post])
-        @endforeach
+    <div class="home-journal-slider"
+         data-home-slider
+         data-slide-interval="3000"
+         data-slides-mobile="1"
+         data-slides-desktop="3"
+         data-slide-breakpoint="768"
+         aria-roledescription="carousel"
+         aria-label="Journal articles">
+        <div class="home-journal-slider__viewport" data-slider-viewport>
+            <div class="home-journal-slider__track" data-home-slider-track>
+                @foreach($homeJournalPosts as $i => $post)
+                    <div class="home-journal-slider__slide {{ $i === 0 ? 'is-active' : '' }}"
+                         data-slide
+                         data-slide-index="{{ $i }}"
+                         aria-roledescription="slide"
+                         aria-label="Article {{ $i + 1 }} of {{ $journalCount }}"
+                         @if($journalCount > 1) aria-hidden="{{ $i === 0 ? 'false' : 'true' }}" @endif>
+                        @include('shop.partials.post-card', ['post' => $post])
+                    </div>
+                @endforeach
+            </div>
+        </div>
+        @if($journalCount > 1)
+            <button type="button" class="home-journal-slider__nav home-journal-slider__nav--prev" data-slider-prev aria-label="Previous article">&#10094;</button>
+            <button type="button" class="home-journal-slider__nav home-journal-slider__nav--next" data-slider-next aria-label="Next article">&#10095;</button>
+            <div class="home-journal-slider__dots" role="tablist" aria-label="Journal slides">
+                @foreach($homeJournalPosts as $i => $_post)
+                    <button type="button"
+                            class="home-journal-slider__dot {{ $i === 0 ? 'is-active' : '' }}"
+                            data-dot
+                            data-slide-to="{{ $i }}"
+                            role="tab"
+                            aria-label="Show article {{ $i + 1 }}"
+                            aria-selected="{{ $i === 0 ? 'true' : 'false' }}"></button>
+                @endforeach
+            </div>
+        @endif
     </div>
 </section>
 @endif

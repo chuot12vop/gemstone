@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Shop;
 
 use App\Http\Controllers\Controller;
 use App\Models\Setting;
+use App\Support\AboutPageSettings;
 
 class PageController extends Controller
 {
@@ -38,10 +39,14 @@ class PageController extends Controller
     public function about()
     {
         $settings = $this->settingsMap();
+        $about = AboutPageSettings::resolve();
+        $siteName = $settings['site_name'] ?: config('app.name');
 
         return view('shop.about', [
-            'title' => 'About '.$settings['site_name'].' — Heritage & intention',
-            'metaDescription' => 'Learn how we bridge ancient feng shui wisdom with modern craftsmanship for US customers.',
+            'title' => 'About '.$siteName.' — Heritage & intention',
+            'metaDescription' => $about['page_summary'] ?: 'Learn how we bridge ancient feng shui wisdom with modern craftsmanship.',
+            'about' => $about,
+            'siteName' => $siteName,
         ]);
     }
 

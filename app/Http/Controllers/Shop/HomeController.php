@@ -9,6 +9,7 @@ use App\Models\Post;
 use App\Models\Product;
 use App\Models\Review;
 use App\Models\Setting;
+use App\Support\AboutPageSettings;
 use App\Support\ShopFrontSettings;
 use App\Services\CurrencyService;
 use App\Support\PublicAssetUrl;
@@ -47,7 +48,6 @@ class HomeController extends Controller
             ->where('is_active', true)
             ->with('category')
             ->latest('id')
-            ->take(3)
             ->get();
         
         $homeCollections = Category::query()
@@ -55,7 +55,6 @@ class HomeController extends Controller
             ->where('image', '!=', '')
             ->orderBy('sort_order')
             ->orderBy('name')
-            ->take(3)
             ->get();
 
         $homeCertificates = Certificate::query()
@@ -68,13 +67,11 @@ class HomeController extends Controller
             ->where('is_active', 1)
             ->orderByDesc('published_at')
             ->orderBy('sort_order')
-            ->take(3)
             ->get();
 
         $homeReviews = Review::query()
             ->approved()
             ->latest()
-            ->take(5)
             ->get(['id', 'customer_name', 'content', 'rating', 'created_at']);
 
         return view('shop.home', [
@@ -88,6 +85,7 @@ class HomeController extends Controller
             'homeCertificates' => $homeCertificates,
             'homeJournalPosts' => $homeJournalPosts,
             'homeReviews' => $homeReviews,
+            'about' => AboutPageSettings::resolve(),
             'currency' => app(CurrencyService::class),
         ]);
     }

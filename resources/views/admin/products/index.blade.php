@@ -5,11 +5,49 @@
 @endsection
 
 @section('module-meta')
-    {{ $products->count() }} {{ \Illuminate\Support\Str::plural('item', $products->count()) }}
+    {{ $products->total() }} {{ \Illuminate\Support\Str::plural('product', $products->total()) }}
+    @if($products->hasPages())
+        · page {{ $products->currentPage() }} of {{ $products->lastPage() }}
+    @endif
     @if(!empty($q)) — search: <strong>{{ $q }}</strong> @endif
+    @if($brandId > 0)
+        · brand: <strong>{{ $brands->firstWhere('id', $brandId)?->name ?? '—' }}</strong>
+    @endif
+    @if($categoryId > 0)
+        · category: <strong>{{ $categories->firstWhere('id', $categoryId)?->name ?? '—' }}</strong>
+    @endif
 @endsection
 
 @section('content')
+<form class="stack-form form-inline" method="get" action="{{ route('admin.products.index') }}" style="margin-bottom:14px;">
+    <label class="form-inline__field">
+        Search
+        <input type="text" name="q" value="{{ $q }}" placeholder="Name or slug">
+    </label>
+    <label class="form-inline__field">
+        Brand
+        <select name="brand_id">
+            <option value="0">All brands</option>
+            @foreach($brands as $brand)
+                <option value="{{ $brand->id }}" @selected($brandId === (int) $brand->id)>{{ $brand->name }}</option>
+            @endforeach
+        </select>
+    </label>
+    <label class="form-inline__field">
+        Category
+        <select name="category_id">
+            <option value="0">All categories</option>
+            @foreach($categories as $category)
+                <option value="{{ $category->id }}" @selected($categoryId === (int) $category->id)>{{ $category->name }}</option>
+            @endforeach
+        </select>
+    </label>
+    <button class="btn-admin" type="submit">Filter</button>
+    @if($q !== '' || $brandId > 0 || $categoryId > 0)
+        <a class="btn-admin" href="{{ route('admin.products.index') }}">Clear</a>
+    @endif
+</form>
+
 <div class="table-wrap">
     <table class="data-table">
         <thead>
@@ -46,9 +84,13 @@
                 </td>
             </tr>
         @empty
-            <tr><td colspan="7" class="data-table__empty">No products found.</td></tr>
+            <tr><td colspan="7" class="data-table__empty">No products match these filters.</td></tr>
         @endforelse
         </tbody>
     </table>
 </div>
+
+@if($products->hasPages())
+    @include('admin.partials.pagination', ['paginator' => $products])
+@endif
 @endsection

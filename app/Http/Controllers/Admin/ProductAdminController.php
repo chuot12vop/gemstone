@@ -22,6 +22,9 @@ class ProductAdminController extends Controller
     public function index(Request $request)
     {
         $q = trim((string) $request->get('q', ''));
+        $brandId = (int) $request->get('brand_id', 0);
+        $categoryId = (int) $request->get('category_id', 0);
+
         $query = Product::query()->with(['category', 'brand'])->latest();
         if ($q !== '') {
             $query->where(function ($w) use ($q) {
@@ -29,14 +32,24 @@ class ProductAdminController extends Controller
                     ->orWhere('slug', 'like', '%'.$q.'%');
             });
         }
+        if ($brandId > 0) {
+            $query->where('brand_id', $brandId);
+        }
+        if ($categoryId > 0) {
+            $query->where('category_id', $categoryId);
+        }
 
         return view('admin.products.index', [
             'title' => 'Products',
             'breadcrumbs' => [
                 ['label' => 'Products'],
             ],
-            'products' => $query->get(),
+            'products' => $query->paginate(20)->withQueryString(),
             'q' => $q,
+            'brandId' => $brandId,
+            'categoryId' => $categoryId,
+            'brands' => Brand::query()->orderBy('sort_order')->orderBy('name')->get(['id', 'name']),
+            'categories' => Category::query()->orderBy('sort_order')->orderBy('name')->get(['id', 'name']),
         ]);
     }
 

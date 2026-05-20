@@ -45,7 +45,7 @@
                         <a href="{{ route('shop.catalog') }}" class="site-nav__mega-trigger" data-catalog-trigger aria-expanded="false" aria-controls="catalog-mega-panel" id="catalog-mega-trigger">Catalog</a>
                         <div class="catalog-mega" id="catalog-mega-panel" role="region" aria-labelledby="catalog-mega-trigger" data-catalog-mega-panel>
                             <div class="catalog-mega__inner">
-                                <p class="catalog-mega__lede"><a href="{{ route('shop.catalog') }}">Browse all products</a></p>
+                                <p class="catalog-mega__lede"><a href="{{ route('shop.catalog') }}">Collections</a></p>
                                 @if($catalogNavCategories->isEmpty())
                                     <p class="catalog-mega__empty">No categories yet.</p>
                                 @else

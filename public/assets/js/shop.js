@@ -34,7 +34,7 @@
 
 function initHomeSlider() {
   document.querySelectorAll('[data-home-slider]').forEach(function (root) {
-    const viewport = root.querySelector('.home-hero__viewport');
+    const viewport = root.querySelector('[data-slider-viewport]') || root.querySelector('.home-hero__viewport');
     const track = root.querySelector('[data-home-slider-track]');
     const slides = Array.from(root.querySelectorAll('[data-slide]'));
     const dots = Array.from(root.querySelectorAll('[data-dot]'));
@@ -49,8 +49,47 @@ function initHomeSlider() {
     let dragOffset = 0;
     let dragging = false;
 
+    function slidesPerView() {
+      const bp = parseInt(String(root.getAttribute('data-slide-breakpoint') || '768'), 10) || 768;
+      const mobile = parseInt(String(root.getAttribute('data-slides-mobile') || '1'), 10) || 1;
+      const desktop = parseInt(String(root.getAttribute('data-slides-desktop') || String(mobile)), 10) || mobile;
+      return globalThis.matchMedia('(min-width: ' + bp + 'px)').matches ? desktop : mobile;
+    }
+
+    function maxActiveIndex() {
+      return Math.max(0, slides.length - slidesPerView());
+    }
+
+    function canAdvance() {
+      return slides.length > slidesPerView();
+    }
+
+    function normalizeIndex(idx) {
+      const max = maxActiveIndex();
+      if (max === 0) {
+        return 0;
+      }
+      if (idx < 0) {
+        return max;
+      }
+      if (idx > max) {
+        return 0;
+      }
+      return idx;
+    }
+
     function slideWidth() {
-      return viewport.clientWidth || 1;
+      return (viewport.clientWidth || 1) / slidesPerView();
+    }
+
+    function syncStaticState() {
+      const isStatic = !canAdvance();
+      root.classList.toggle('is-static', isStatic);
+      if (isStatic) {
+        stop();
+        active = 0;
+        track.style.transform = 'translate3d(0, 0, 0)';
+      }
     }
 
     function applyPosition(animate) {
@@ -69,29 +108,36 @@ function initHomeSlider() {
 
     function start() {
       stop();
-      if (slides.length > 1) {
+      if (canAdvance()) {
         timer = setInterval(function () {
           setActive(active + 1, true);
         }, ms);
       }
     }
 
-    function setActive(idx, animate) {
-      if (animate === undefined) animate = true;
-      active = (idx + slides.length) % slides.length;
-      dragOffset = 0;
-      dragging = false;
+    function updateSlideAria() {
+      const per = slidesPerView();
       slides.forEach(function (el, i) {
+        const visible = i >= active && i < active + per;
         el.classList.toggle('is-active', i === active);
         if (slides.length > 1) {
-          el.setAttribute('aria-hidden', i === active ? 'false' : 'true');
+          el.setAttribute('aria-hidden', visible ? 'false' : 'true');
         }
       });
+    }
+
+    function setActive(idx, animate) {
+      if (animate === undefined) animate = true;
+      active = normalizeIndex(idx);
+      dragOffset = 0;
+      dragging = false;
+      updateSlideAria();
       dots.forEach(function (d, i) {
         d.classList.toggle('is-active', i === active);
         d.setAttribute('aria-selected', i === active ? 'true' : 'false');
       });
       applyPosition(animate);
+      syncStaticState();
     }
 
     dots.forEach(function (d) {
@@ -114,7 +160,7 @@ function initHomeSlider() {
     });
 
     root.addEventListener('touchstart', function (e) {
-      if (slides.length <= 1 || e.touches.length !== 1) return;
+      if (!canAdvance() || e.touches.length !== 1) return;
       stop();
       dragging = true;
       touchStartX = e.touches[0].clientX;
@@ -145,16 +191,15 @@ function initHomeSlider() {
     root.addEventListener('mouseenter', stop);
     root.addEventListener('mouseleave', start);
     window.addEventListener('resize', function () {
-      applyPosition(false);
+      active = normalizeIndex(active);
+      setActive(active, false);
+      start();
     });
 
-    if (slides.length <= 1) {
-      applyPosition(false);
-      return;
-    }
-
     setActive(0, false);
-    start();
+    if (canAdvance()) {
+      start();
+    }
   });
 }
 

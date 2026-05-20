@@ -648,3 +648,39 @@ body.admin {
 .admin-contact-snippet { color: var(--muted); display: inline-block; max-width: 320px; }
 .data-table__row--highlight { background: linear-gradient(0deg, rgba(255, 244, 216, 0.5), rgba(255, 244, 216, 0.5)); }
 .data-table__row--highlight td:first-child { box-shadow: inset 3px 0 0 var(--gold-deep); }
+
+/* ---------- Pagination ---------- */
+.admin-pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px dashed var(--border-soft);
+}
+.admin-pagination__btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.4rem 0.85rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: #fff;
+  color: var(--ink);
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+.admin-pagination__btn:hover:not(.is-disabled) {
+  border-color: var(--gold);
+  background: #fffaf0;
+}
+.admin-pagination__btn.is-disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.admin-pagination__info {
+  font-size: 0.9rem;
+  color: var(--muted);
+}
