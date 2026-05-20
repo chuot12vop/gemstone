@@ -28,12 +28,14 @@ use App\Http\Controllers\Shop\PageController;
 use App\Http\Controllers\Shop\PostController;
 use App\Http\Controllers\Shop\ProductController;
 use App\Http\Controllers\Shop\ReviewController;
+use App\Http\Controllers\Shop\WelcomeOfferController;
 use Illuminate\Support\Facades\Route;
 
 /*
 | Shop (storefront) — customers use table `users`, sign in with Google
 */
 Route::get('/', [HomeController::class, 'index'])->name('shop.home');
+Route::post('/welcome-offer', [WelcomeOfferController::class, 'store'])->name('shop.welcome.offer');
 Route::get('/login', [LoginController::class, 'show'])->name('login');
 Route::post('/logout', [LoginController::class, 'logout'])->middleware('auth')->name('shop.logout');
 

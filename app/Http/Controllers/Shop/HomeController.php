@@ -11,6 +11,7 @@ use App\Models\Review;
 use App\Models\Setting;
 use App\Support\AboutPageSettings;
 use App\Support\ShopFrontSettings;
+use App\Support\WelcomePopupSettings;
 use App\Services\CurrencyService;
 use App\Support\PublicAssetUrl;
 use Carbon\Carbon;
@@ -86,6 +87,7 @@ class HomeController extends Controller
             'homeJournalPosts' => $homeJournalPosts,
             'homeReviews' => $homeReviews,
             'about' => AboutPageSettings::resolve(),
+            'welcomePopup' => WelcomePopupSettings::resolve(),
             'currency' => app(CurrencyService::class),
         ]);
     }

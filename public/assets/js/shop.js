@@ -30,7 +30,105 @@
   initProductCtaQtySync();
   initCatalogMega();
   initHomeSlider();
+  initWelcomePopup();
 })();
+
+function initWelcomePopup() {
+  const root = document.querySelector('[data-welcome-popup]');
+  if (!root) {
+    return;
+  }
+
+  let openTimer = null;
+  let dismissed = false;
+  let opened = false;
+
+  function openPopup() {
+    if (dismissed || opened) {
+      return;
+    }
+    opened = true;
+    root.hidden = false;
+    root.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('welcome-popup-open');
+    const email = root.querySelector('#welcome-popup-email');
+    if (email) {
+      email.focus();
+    }
+  }
+
+  function closePopup() {
+    dismissed = true;
+    root.hidden = true;
+    root.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('welcome-popup-open');
+    if (openTimer !== null) {
+      clearTimeout(openTimer);
+      openTimer = null;
+    }
+  }
+
+  function scheduleOpen() {
+    if (openTimer !== null || dismissed || opened) {
+      return;
+    }
+    const delayMs = (parseInt(String(root.getAttribute('data-welcome-delay') || '10'), 10) || 10) * 1000;
+    openTimer = setTimeout(openPopup, delayMs);
+  }
+
+  window.addEventListener('scroll', scheduleOpen, { passive: true, once: true });
+  window.addEventListener('wheel', scheduleOpen, { passive: true, once: true });
+  window.addEventListener('touchmove', scheduleOpen, { passive: true, once: true });
+
+  root.querySelectorAll('[data-welcome-close]').forEach(function (el) {
+    el.addEventListener('click', closePopup);
+  });
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && !root.hidden) {
+      closePopup();
+    }
+  });
+
+  const form = root.querySelector('[data-welcome-form]');
+  const success = root.querySelector('[data-welcome-success]');
+  if (form) {
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      const submitBtn = form.querySelector('button[type="submit"]');
+      if (submitBtn) {
+        submitBtn.disabled = true;
+      }
+      fetch(form.action, {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
+        },
+        body: new FormData(form),
+      })
+        .then(function (res) {
+          if (!res.ok) {
+            throw new Error('Request failed');
+          }
+          return res.json();
+        })
+        .then(function () {
+          form.hidden = true;
+          if (success) {
+            success.hidden = false;
+          }
+          setTimeout(closePopup, 2200);
+        })
+        .catch(function () {
+          if (submitBtn) {
+            submitBtn.disabled = false;
+          }
+          window.alert('Please enter a valid email and try again.');
+        });
+    });
+  }
+}
 
 function initHomeSlider() {
   document.querySelectorAll('[data-home-slider]').forEach(function (root) {

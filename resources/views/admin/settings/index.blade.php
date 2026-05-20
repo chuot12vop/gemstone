@@ -36,6 +36,56 @@
     </fieldset>
 
     <fieldset class="form-fieldset">
+        <legend>Welcome popup (homepage)</legend>
+        <label class="checkbox">
+            <input type="checkbox" name="welcome_popup_enabled" value="1" @checked(old('welcome_popup_enabled', $welcomePopup['enabled'] ?? true))>
+            Show welcome popup on the home page
+        </label>
+        <div class="form-grid">
+            <label>
+                Delay after first scroll (seconds)
+                <input type="number" name="welcome_popup_delay_seconds" min="1" max="120" value="{{ old('welcome_popup_delay_seconds', $welcomePopup['delay_seconds'] ?? 10) }}">
+            </label>
+        </div>
+        <label>
+            Title
+            <input type="text" name="welcome_popup_title" value="{{ old('welcome_popup_title', $welcomePopup['title'] ?? '') }}" maxlength="300">
+        </label>
+        <label>
+            Email placeholder
+            <input type="text" name="welcome_popup_email_placeholder" value="{{ old('welcome_popup_email_placeholder', $welcomePopup['email_placeholder'] ?? '') }}" maxlength="120">
+        </label>
+        <label>
+            Submit button label
+            <input type="text" name="welcome_popup_submit_label" value="{{ old('welcome_popup_submit_label', $welcomePopup['submit_label'] ?? '') }}" maxlength="120">
+        </label>
+        <label>
+            Legal / fine print (HTML allowed)
+            <textarea name="welcome_popup_legal_html" rows="5">{{ old('welcome_popup_legal_html', $welcomePopup['legal_html'] ?? '') }}</textarea>
+        </label>
+        <label>
+            Success message
+            <input type="text" name="welcome_popup_success_message" value="{{ old('welcome_popup_success_message', $welcomePopup['success_message'] ?? '') }}" maxlength="500">
+        </label>
+        <p style="margin:0 0 6px;font-weight:600;font-size:0.9rem;">Background image (faint behind card)</p>
+        <div id="welcome-popup-dropzone" style="margin-top:6px;padding:18px;border:2px dashed #c8d1dc;border-radius:10px;background:#f8fafc;text-align:center;cursor:pointer;">
+            <strong>Drop welcome banner image here</strong><br>
+            <small>or click to choose 1 image</small>
+        </div>
+        <div style="margin-top:10px;">
+            <img id="welcome-popup-preview"
+                 src="{{ old('welcome_popup_image_preview', $welcomePopup['image_url'] ?? asset('assets/img/welcome-popup.png')) }}"
+                 alt="Welcome popup preview"
+                 width="280"
+                 style="max-width:100%;object-fit:cover;border:1px solid #d7dbe2;border-radius:12px;background:#fff;">
+        </div>
+        <input id="welcome-popup-input" class="display-none" type="file" name="welcome_popup_image" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp">
+        @error('welcome_popup_image')
+            <p style="margin:8px 0 0;color:#b33a3a;">{{ $message }}</p>
+        @enderror
+    </fieldset>
+
+    <fieldset class="form-fieldset">
         <legend>Storefront</legend>
         <label>
             WhatsApp contact number
@@ -127,6 +177,7 @@
     };
 
     setupSingleImageDropzone('site-logo-input', 'site-logo-preview', 'site-logo-dropzone');
+    setupSingleImageDropzone('welcome-popup-input', 'welcome-popup-preview', 'welcome-popup-dropzone');
 })();
 </script>
 @endsection

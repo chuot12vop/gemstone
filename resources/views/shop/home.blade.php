@@ -207,4 +207,8 @@
         </ul>
     @endif
 </section>
+
+@if(!empty($welcomePopup['enabled']))
+    @include('shop.partials.welcome-popup', ['welcomePopup' => $welcomePopup])
+@endif
 @endsection

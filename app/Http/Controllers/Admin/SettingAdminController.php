@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Setting;
+use App\Support\WelcomePopupSettings;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -21,6 +22,7 @@ class SettingAdminController extends Controller
                 ['label' => 'System'],
             ],
             'settings' => $this->getSettingsMap(),
+            'welcomePopup' => WelcomePopupSettings::resolve(),
         ]);
     }
 
@@ -36,6 +38,14 @@ class SettingAdminController extends Controller
             'footer_background' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:6144',
             'contact_whatsapp_phone' => 'nullable|string|max:60',
             'home_news_ticker' => 'nullable|string|max:8000',
+            'welcome_popup_enabled' => 'nullable|boolean',
+            'welcome_popup_delay_seconds' => 'nullable|integer|min:1|max:120',
+            'welcome_popup_title' => 'nullable|string|max:300',
+            'welcome_popup_email_placeholder' => 'nullable|string|max:120',
+            'welcome_popup_submit_label' => 'nullable|string|max:120',
+            'welcome_popup_legal_html' => 'nullable|string|max:8000',
+            'welcome_popup_success_message' => 'nullable|string|max:500',
+            'welcome_popup_image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:6144',
         ]);
 
         $settings = $this->getSettingsMap();
@@ -59,6 +69,27 @@ class SettingAdminController extends Controller
         $settings['privacy_policy'] = trim((string) ($validated['privacy_policy'] ?? ''));
         $settings['return_policy'] = trim((string) ($validated['return_policy'] ?? ''));
         $settings['terms_of_service'] = trim((string) ($validated['terms_of_service'] ?? ''));
+
+        $welcome = WelcomePopupSettings::resolve();
+        $welcomeImagePath = $this->storeImage($request->file('welcome_popup_image'), 'settings/welcome-popup');
+        if ($welcomeImagePath !== null) {
+            $oldImage = (string) ($welcome['image'] ?? '');
+            if (str_starts_with($oldImage, self::PUBLIC_STORAGE_PREFIX)) {
+                $this->deletePublicPath($oldImage);
+            }
+            $welcome['image'] = $welcomeImagePath;
+        }
+
+        WelcomePopupSettings::store([
+            'enabled' => $request->boolean('welcome_popup_enabled'),
+            'delay_seconds' => (int) ($validated['welcome_popup_delay_seconds'] ?? $welcome['delay_seconds']),
+            'title' => $validated['welcome_popup_title'] ?? $welcome['title'],
+            'email_placeholder' => $validated['welcome_popup_email_placeholder'] ?? $welcome['email_placeholder'],
+            'submit_label' => $validated['welcome_popup_submit_label'] ?? $welcome['submit_label'],
+            'legal_html' => $validated['welcome_popup_legal_html'] ?? $welcome['legal_html'],
+            'success_message' => $validated['welcome_popup_success_message'] ?? $welcome['success_message'],
+            'image' => $welcome['image'],
+        ]);
 
         foreach ($settings as $key => $value) {
             Setting::query()->updateOrCreate(
