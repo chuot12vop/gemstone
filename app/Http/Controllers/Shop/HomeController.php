@@ -53,7 +53,7 @@ class HomeController extends Controller
             ->get();
         
         $bestSellers = Category::query()
-            ->where('id', 9)
+            ->where('slug', 'Best-Sellers')
             ->first();
         if ($bestSellers) {
             $homeBestSellers = Product::query()
