@@ -52,13 +52,20 @@ class HomeController extends Controller
             ->limit(6)
             ->get();
         
-
-        $homeBestSellers = Product::query()
+        $bestSellers = Category::query()
             ->where('is_active', true)
-            ->with('category')
-            ->orderBy('sales_count', 'desc')
-            ->limit(6)
-            ->get();
+            ->where('id', 9)
+            ->first();
+        if ($bestSellers) {
+            $homeBestSellers = Product::query()
+                ->where('is_active', true)
+                ->where('category_id', $bestSellers->id)
+                ->with('category')
+                ->limit(6)
+                ->get();
+        } else {
+            $homeBestSellers = [];
+        }
 
         $homeCollections = Category::query()
             ->whereNotNull('image')
