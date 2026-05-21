@@ -61,10 +61,16 @@ class AppServiceProvider extends ServiceProvider
                 ->with(['products' => function ($q) {
                     $q->where('is_active', true)
                         ->orderBy('name')
-                        ->limit(12)
                         ->select('id', 'category_id', 'name', 'slug');
                 }])
                 ->get(['id', 'name', 'slug', 'sort_order']);
+
+            $catalogNavCategories->each(function ($category) {
+                $category->setRelation(
+                    'products',
+                    $category->products->take(5)
+                );
+            });
 
             $view->with('currency', app(CurrencyService::class))
                 ->with('siteSettings', $defaults)
