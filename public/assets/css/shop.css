@@ -860,7 +860,6 @@ body.site { margin: 0; font-family: "Source Sans 3", system-ui, sans-serif; colo
   display: flex;
   flex-shrink: 0;
   align-items: stretch;
-  gap: 1rem;
   padding-right: 1rem;
 }
 .home-certificates-marquee__item {
@@ -868,9 +867,9 @@ body.site { margin: 0; font-family: "Source Sans 3", system-ui, sans-serif; colo
   display: flex;
   align-items: center;
   justify-content: center;
-  min-width: min(200px, 72vw);
+  min-width: min(100px, 72vw);
   max-width: 220px;
-  padding: 0.85rem 1.1rem;
+  padding: 0.5rem 1.1rem;
 }
 .home-certificates-marquee__img {
   display: block;
