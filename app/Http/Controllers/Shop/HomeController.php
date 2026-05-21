@@ -49,8 +49,17 @@ class HomeController extends Controller
             ->where('is_active', true)
             ->with('category')
             ->latest('id')
+            ->limit(6)
             ->get();
         
+
+        $homeBestSellers = Product::query()
+            ->where('is_active', true)
+            ->with('category')
+            ->orderBy('sales_count', 'desc')
+            ->limit(6)
+            ->get();
+
         $homeCollections = Category::query()
             ->whereNotNull('image')
             ->where('image', '!=', '')
@@ -83,6 +92,7 @@ class HomeController extends Controller
             'title' => 'Gemstone Jewelry & Feng Shui — Taichi-inspired wellness',
             'metaDescription' => 'Premium gemstone jewelry for balance, luck, and intention. Ethically sourced, handcrafted for the US market.',
             'homeNewProducts' => $homeNewProducts,
+            'homeBestSellers' => $homeBestSellers,
             'homeCollections' => $homeCollections,
             'homeCertificates' => $homeCertificates,
             'homeJournalPosts' => $homeJournalPosts,

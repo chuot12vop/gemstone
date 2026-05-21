@@ -179,6 +179,19 @@
 @endif
 
 <section class="home-section home-section--new reveal-on-scroll" aria-labelledby="home-new-title">
+    <h2 id="home-new-title" class="section__title section__title--center">Best sellers</h2>
+    @if($homeBestSellers->isEmpty())
+        <p class="home-section__empty home-section__empty--center">No best sellers yet — check back soon or <a href="{{ route('shop.products.index') }}">browse the shop</a>.</p>
+    @else
+        <div class="shop-product-grid">
+            @foreach($homeBestSellers as $product)
+                @include('shop.partials.product-card', ['product' => $product, 'currency' => $currency])
+            @endforeach
+        </div>
+    @endif
+</section>
+
+<section class="home-section home-section--new reveal-on-scroll" aria-labelledby="home-new-title">
     <h2 id="home-new-title" class="section__title section__title--center">New arrivals</h2>
     @if($homeNewProducts->isEmpty())
         <p class="home-section__empty home-section__empty--center">New pieces are on the way — check back soon or <a href="{{ route('shop.products.index') }}">browse the shop</a>.</p>
