@@ -83,7 +83,7 @@
 @endif
 
 <section class="home-section home-section--collections reveal-on-scroll" aria-labelledby="home-collections-title">
-    <h2 id="home-collections-title" class="section__title section__title--center">Collection</h2>
+    <h2 id="home-collections-title" class="section__title section__title--center">Collections</h2>
     @if($homeCollections->isEmpty())
         <p class="home-section__empty home-section__empty--center">Browse the full catalog on the <a href="{{ route('shop.catalog') }}">shop page</a>.</p>
     @else
@@ -91,12 +91,12 @@
             @foreach($homeCollections as $cat)
                 <a class="category-card" href="{{ route('shop.catalog.category', $cat) }}">
                     <span class="category-card__media">
-                        <img src="{{ \App\Support\PublicAssetUrl::to($cat->image) }}" alt="{{ $cat->name }}" loading="lazy" width="600" height="600">
+                        <img src="{{ \App\Support\PublicAssetUrl::to($cat->image) }}" alt="{{ $cat->name }}" loading="lazy" width="280" height="280">
                     </span>
                     <span class="category-card__body">
                         <span class="category-card__title">{{ $cat->name }}</span>
                         @if($cat->description)
-                            <span class="category-card__desc">{{ \Illuminate\Support\Str::limit(strip_tags($cat->description), 120) }}</span>
+                            <span class="category-card__desc">{{ \Illuminate\Support\Str::limit(strip_tags($cat->description), 80) }}</span>
                         @endif
                         <span class="category-card__cta">Shop this collection →</span>
                     </span>
@@ -178,18 +178,20 @@
 </section>
 @endif
 
-<section class="home-section home-section--new reveal-on-scroll" aria-labelledby="home-new-title">
-    <h2 id="home-new-title" class="section__title section__title--center">Best sellers</h2>
-    @if($homeBestSellers->isEmpty())
-        <p class="home-section__empty home-section__empty--center">No best sellers yet — check back soon or <a href="{{ route('shop.products.index') }}">browse the shop</a>.</p>
-    @else
-        <div class="shop-product-grid">
-            @foreach($homeBestSellers as $product)
-                @include('shop.partials.product-card', ['product' => $product, 'currency' => $currency])
-            @endforeach
-        </div>
-    @endif
-</section>
+@if($homeBestSellers)
+    <section class="home-section home-section--new reveal-on-scroll" aria-labelledby="home-new-title">
+        @if($homeBestSellers->isEmpty())
+        <h2 id="home-new-title" class="section__title section__title--center">Best sellers</h2>
+            <p class="home-section__empty home-section__empty--center">No best sellers yet — check back soon or <a href="{{ route('shop.products.index') }}">browse the shop</a>.</p>
+        @else
+            <div class="shop-product-grid">
+                @foreach($homeBestSellers as $product)
+                    @include('shop.partials.product-card', ['product' => $product, 'currency' => $currency])
+                @endforeach
+            </div>
+        @endif
+    </section>
+@endif
 
 <section class="home-section home-section--new reveal-on-scroll" aria-labelledby="home-new-title">
     <h2 id="home-new-title" class="section__title section__title--center">New arrivals</h2>

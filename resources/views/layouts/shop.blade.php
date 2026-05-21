@@ -42,7 +42,7 @@
                 <ul class="site-nav__list">
                     <li><a href="{{ route('shop.home') }}">Home</a></li>
                     <li class="site-nav__item site-nav__item--mega" data-nav-mega>
-                        <a href="{{ route('shop.catalog') }}" class="site-nav__mega-trigger" data-catalog-trigger aria-expanded="false" aria-controls="catalog-mega-panel" id="catalog-mega-trigger">Catalog</a>
+                        <a href="{{ route('shop.catalog') }}" class="site-nav__mega-trigger" data-catalog-trigger aria-expanded="false" aria-controls="catalog-mega-panel" id="catalog-mega-trigger">Collections</a>
                         <div class="catalog-mega" id="catalog-mega-panel" role="region" aria-labelledby="catalog-mega-trigger" data-catalog-mega-panel>
                             <div class="catalog-mega__inner">
                                 <p class="catalog-mega__lede"><a href="{{ route('shop.catalog') }}">Collections</a></p>
