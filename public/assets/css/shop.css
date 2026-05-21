@@ -1396,7 +1396,6 @@ body.site { margin: 0; font-family: "Source Sans 3", system-ui, sans-serif; colo
 }
 
 .reveal-on-scroll {
-  opacity: 0;
   transform: translateY(34px);
   transition: opacity 0.55s ease, transform 0.55s ease;
   transition-delay: 0.5s;

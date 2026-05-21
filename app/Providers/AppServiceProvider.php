@@ -61,7 +61,7 @@ class AppServiceProvider extends ServiceProvider
                 ->with(['products' => function ($q) {
                     $q->where('is_active', true)
                         ->orderBy('name')
-                        ->limit(10)
+                        ->limit(12)
                         ->select('id', 'category_id', 'name', 'slug');
                 }])
                 ->get(['id', 'name', 'slug', 'sort_order']);
