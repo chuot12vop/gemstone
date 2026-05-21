@@ -53,7 +53,6 @@ class HomeController extends Controller
             ->get();
         
         $bestSellers = Category::query()
-            ->where('is_active', true)
             ->where('id', 9)
             ->first();
         if ($bestSellers) {
