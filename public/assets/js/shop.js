@@ -29,9 +29,33 @@
   initProductCtaBar();
   initProductCtaQtySync();
   initCatalogMega();
+  initCatalogFiltersCollapse();
   initHomeSlider();
   initWelcomePopup();
 })();
+
+function initCatalogFiltersCollapse() {
+  const details = document.querySelector('[data-catalog-filters]');
+  if (!details) {
+    return;
+  }
+  const mq = window.matchMedia('(min-width: 820px)');
+  function sync() {
+    if (mq.matches) {
+      details.open = true;
+      return;
+    }
+    if (!details.hasAttribute('data-filters-active')) {
+      details.open = false;
+    }
+  }
+  if (typeof mq.addEventListener === 'function') {
+    mq.addEventListener('change', sync);
+  } else {
+    mq.addListener(sync);
+  }
+  sync();
+}
 
 function initWelcomePopup() {
   const root = document.querySelector('[data-welcome-popup]');

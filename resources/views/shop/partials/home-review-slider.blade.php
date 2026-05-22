@@ -4,7 +4,7 @@
     $slidesTablet = (int) ($slidesTablet ?? 4);
     $slidesDesktop = (int) ($slidesDesktop ?? 6);
     $breakpointTablet = (int) ($breakpointTablet ?? 820);
-    $breakpointDesktop = (int) ($breakpointDesktop ?? 960);
+    $breakpointDesktop = (int) ($breakpointDesktop ?? 1200);
     $slideBasisMobile = 100 / max(1, $slidesMobile);
     $slideBasisTablet = 100 / max(1, $slidesTablet);
     $slideBasisDesktop = 100 / max(1, $slidesDesktop);

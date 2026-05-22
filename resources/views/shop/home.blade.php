@@ -207,7 +207,7 @@
 @endif
 
 <section class="home-section home-section--reviews reveal-on-scroll " aria-labelledby="home-reviews-title">
-    <h2 id="home-reviews-title" class="section__title section__title--center">Customer reviews</h2>
+    <h2 id="home-reviews-title" class="section__title section__title--center">Feedback</h2>
     @if($homeReviews->isEmpty())
         <p class="reviews__empty">No photo reviews yet — share your experience with images after your next order.</p>
     @else
