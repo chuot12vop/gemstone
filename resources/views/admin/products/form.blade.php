@@ -1,9 +1,5 @@
 @extends('layouts.admin')
 
-@push('head')
-<script src="https://cdn.jsdelivr.net/npm/tinymce@7/tinymce.min.js"></script>
-@endpush
-
 @section('module-actions')
     <a class="btn-admin" href="{{ route('admin.products.index') }}">← Back to list</a>
 @endsection
@@ -103,7 +99,7 @@
     </label>
     <label>
         Full description
-        <textarea id="product-description" name="description" rows="8">{{ old('description', $product->description ?? '') }}</textarea>
+        <textarea id="product-description" class="js-rich-text" name="description" rows="8" data-rich-height="360">{{ old('description', $product->description ?? '') }}</textarea>
     </label>
 
     <fieldset class="form-fieldset">
@@ -167,26 +163,6 @@
 </template>
 <script>
 (() => {
-    const setupDescriptionEditor = () => {
-        const textarea = document.getElementById('product-description');
-        if (!(textarea instanceof HTMLTextAreaElement) || typeof tinymce === 'undefined') return;
-
-        tinymce.init({
-            selector: '#product-description',
-            height: 360,
-            menubar: false,
-            plugins: 'lists link table code help wordcount',
-            toolbar: 'undo redo | blocks | bold italic underline | alignleft aligncenter alignright | bullist numlist | link | removeformat code',
-            branding: false,
-            promotion: false,
-            convert_urls: false,
-            content_style: 'body { font-family: "Source Sans 3", sans-serif; font-size: 15px; line-height: 1.6; }',
-        });
-
-        const form = document.getElementById('product-form');
-        form?.addEventListener('submit', () => tinymce.triggerSave());
-    };
-
     const setupAttributes = () => {
         const list = document.getElementById('attribute-list');
         const addButton = document.getElementById('add-attribute');
@@ -355,10 +331,11 @@
 
     };
 
-    setupDescriptionEditor();
     setupAttributes();
     setupGalleryPreview();
     setupThumbnailDropzone();
 })();
 </script>
+
+@include('admin.partials.tinymce-init', ['formSelector' => '#product-form'])
 @endsection

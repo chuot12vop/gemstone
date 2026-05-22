@@ -91,14 +91,10 @@
             @foreach($homeCollections as $cat)
                 <a class="category-card" href="{{ route('shop.catalog.category', $cat) }}">
                     <span class="category-card__media">
-                        <img src="{{ \App\Support\PublicAssetUrl::to($cat->image) }}" alt="{{ $cat->name }}" loading="lazy" width="280" height="280">
+                        <img src="{{ \App\Support\PublicAssetUrl::to($cat->image) }}" alt="{{ $cat->name }}" loading="lazy">
                     </span>
                     <span class="category-card__body">
                         <span class="category-card__title">{{ $cat->name }}</span>
-                        @if($cat->description)
-                            <span class="category-card__desc">{{ \Illuminate\Support\Str::limit(strip_tags($cat->description), 80) }}</span>
-                        @endif
-                        <span class="category-card__cta">Shop this collection →</span>
                     </span>
                 </a>
             @endforeach
@@ -179,16 +175,16 @@
 @endif
 
 @if($homeBestSellers)
-    <section class="home-section home-section--new reveal-on-scroll" aria-labelledby="home-new-title">
+    <section class="home-section home-section--bestsellers reveal-on-scroll" aria-labelledby="home-bestsellers-title">
+        <h2 id="home-bestsellers-title" class="section__title section__title--center">Best sellers</h2>
         @if($homeBestSellers->isEmpty())
-        <h2 id="home-new-title" class="section__title section__title--center">Best sellers</h2>
             <p class="home-section__empty home-section__empty--center">No best sellers yet — check back soon or <a href="{{ route('shop.products.index') }}">browse the shop</a>.</p>
         @else
-            <div class="shop-product-grid">
-                @foreach($homeBestSellers as $product)
-                    @include('shop.partials.product-card', ['product' => $product, 'currency' => $currency])
-                @endforeach
-            </div>
+            @include('shop.partials.home-product-slider', [
+                'products' => $homeBestSellers,
+                'currency' => $currency,
+                'sliderLabel' => 'Best sellers',
+            ])
         @endif
     </section>
 @endif
@@ -198,25 +194,50 @@
     @if($homeNewProducts->isEmpty())
         <p class="home-section__empty home-section__empty--center">New pieces are on the way — check back soon or <a href="{{ route('shop.products.index') }}">browse the shop</a>.</p>
     @else
-        <div class="shop-product-grid">
-            @foreach($homeNewProducts as $product)
-                @include('shop.partials.product-card', ['product' => $product, 'currency' => $currency])
-            @endforeach
-        </div>
+        @include('shop.partials.home-product-slider', [
+            'products' => $homeNewProducts,
+            'currency' => $currency,
+            'sliderLabel' => 'New arrivals',
+        ])
     @endif
 </section>
 
 <section class="home-section home-section--reviews reveal-on-scroll" aria-labelledby="home-reviews-title">
     <h2 id="home-reviews-title" class="section__title section__title--center">Customer reviews</h2>
     @if($homeReviews->isEmpty())
-        <p class="reviews__empty">No reviews yet — be the first to share your thoughts after your next order.</p>
+        <p class="reviews__empty">No photo reviews yet — share your experience with images after your next order.</p>
     @else
         <ul class="home-reviews-grid">
             @foreach($homeReviews as $review)
+                @php($cover = $review->images->first())
                 <li class="home-review-card">
-                    <p class="home-review-card__name">{{ $review->customer_name }}</p>
-                    @include('shop.partials.stars', ['rating' => $review->rating])
-                    <p class="home-review-card__content">{{ $review->content }}</p>
+                    @if($cover)
+                        <a class="home-review-card__media" href="{{ \App\Support\PublicAssetUrl::to($cover->path) }}" target="_blank" rel="noopener">
+                            <img src="{{ \App\Support\PublicAssetUrl::to($cover->path) }}" alt="" loading="lazy" width="320" height="240">
+                        </a>
+                    @endif
+                    <div class="home-review-card__body">
+                        <p class="home-review-card__name">{{ $review->customer_name }}</p>
+                        @include('shop.partials.stars', ['rating' => $review->rating])
+                        @if($review->title)
+                            <p class="home-review-card__title">{{ $review->title }}</p>
+                        @endif
+                        <p class="home-review-card__content">{{ $review->content }}</p>
+                        @if($review->images->count() > 1)
+                            <ul class="home-review-card__thumbs" aria-label="More photos from this review">
+                                @foreach($review->images->skip(1)->take(3) as $img)
+                                    <li>
+                                        <a href="{{ \App\Support\PublicAssetUrl::to($img->path) }}" target="_blank" rel="noopener">
+                                            <img src="{{ \App\Support\PublicAssetUrl::to($img->path) }}" alt="" loading="lazy" width="64" height="64">
+                                        </a>
+                                    </li>
+                                @endforeach
+                                @if($review->images->count() > 4)
+                                    <li class="home-review-card__thumbs-more">+{{ $review->images->count() - 4 }}</li>
+                                @endif
+                            </ul>
+                        @endif
+                    </div>
                 </li>
             @endforeach
         </ul>

@@ -33,8 +33,8 @@
         <textarea name="excerpt" rows="2">{{ old('excerpt', $post->excerpt ?? '') }}</textarea>
     </label>
     <label>
-        Body (HTML allowed)
-        <textarea name="body" rows="10">{{ old('body', $post->body ?? '') }}</textarea>
+        Body
+        <textarea id="post-body" class="js-rich-text" name="body" rows="8" data-rich-height="360">{{ old('body', $post->body ?? '') }}</textarea>
     </label>
     <label>
         Cover image
@@ -51,4 +51,6 @@
         <button class="btn-admin btn-admin--primary" type="submit">{{ $post ? 'Save changes' : 'Create article' }}</button>
     </div>
 </form>
+
+@include('admin.partials.tinymce-init')
 @endsection

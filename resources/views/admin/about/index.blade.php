@@ -10,7 +10,7 @@
 @endsection
 
 @section('content')
-<form class="stack-form" method="post" action="{{ route('admin.about.save') }}">
+<form id="about-form" class="stack-form" method="post" action="{{ route('admin.about.save') }}">
     @csrf
     @if($errors->any())
         <div class="admin-banner admin-banner--err" role="alert" style="margin-bottom:12px;">
@@ -25,8 +25,8 @@
             <input type="text" name="page_summary" value="{{ old('page_summary', $about['page_summary']) }}" maxlength="500">
         </label>
         <label>
-            Page body (HTML allowed)
-            <textarea name="page_body" rows="10">{{ old('page_body', $about['page_body']) }}</textarea>
+            Page body
+            <textarea id="about-page-body" class="js-rich-text" name="page_body" rows="8" data-rich-height="360">{{ old('page_body', $about['page_body']) }}</textarea>
         </label>
     </fieldset>
 
@@ -49,8 +49,8 @@
                         <input type="text" name="panels[{{ $i }}][title]" value="{{ $panel['title'] ?? '' }}" maxlength="200">
                     </label>
                     <label>
-                        Panel body (HTML allowed)
-                        <textarea name="panels[{{ $i }}][body]" rows="4">{{ $panel['body'] ?? '' }}</textarea>
+                        Panel body
+                        <textarea class="js-rich-text" name="panels[{{ $i }}][body]" rows="6" data-rich-height="220">{{ $panel['body'] ?? '' }}</textarea>
                     </label>
                     <button type="button" class="btn-admin btn-admin--small btn-admin--danger js-about-panel-remove">Remove panel</button>
                 </div>
@@ -71,8 +71,8 @@
             <input type="text" data-name="title" maxlength="200">
         </label>
         <label>
-            Panel body (HTML allowed)
-            <textarea data-name="body" rows="4"></textarea>
+            Panel body
+            <textarea class="js-rich-text" data-name="body" rows="6" data-rich-height="220"></textarea>
         </label>
         <button type="button" class="btn-admin btn-admin--small btn-admin--danger js-about-panel-remove">Remove panel</button>
     </div>
@@ -107,8 +107,14 @@
         if (!btn) return;
         btn.addEventListener('click', function () {
             if (list.querySelectorAll('.js-about-panel').length <= 1) {
+                if (typeof window.adminRemoveRichText === 'function') {
+                    window.adminRemoveRichText(row);
+                }
                 row.querySelectorAll('input, textarea').forEach(function (el) { el.value = ''; });
                 return;
+            }
+            if (typeof window.adminRemoveRichText === 'function') {
+                window.adminRemoveRichText(row);
             }
             row.remove();
             reindexPanels();
@@ -124,9 +130,15 @@
         row.querySelector('[data-name="title"]').setAttribute('name', 'panels[' + index + '][title]');
         row.querySelector('[data-name="body"]').setAttribute('name', 'panels[' + index + '][body]');
         list.appendChild(fragment);
-        bindRemove(list.lastElementChild);
+        const newRow = list.lastElementChild;
+        bindRemove(newRow);
+        if (typeof window.adminInitRichText === 'function') {
+            window.adminInitRichText(newRow);
+        }
     });
 })();
 </script>
 @endpush
+
+@include('admin.partials.tinymce-init', ['formSelector' => '#about-form'])
 @endsection

@@ -88,8 +88,11 @@ class HomeController extends Controller
 
         $homeReviews = Review::query()
             ->approved()
+            ->whereHas('images')
+            ->with('images')
             ->latest()
-            ->get(['id', 'customer_name', 'content', 'rating', 'created_at']);
+            ->take(10)
+            ->get();
 
         return view('shop.home', [
             'siteSettings' => $defaults,

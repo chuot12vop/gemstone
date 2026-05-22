@@ -60,8 +60,8 @@
             <input type="text" name="welcome_popup_submit_label" value="{{ old('welcome_popup_submit_label', $welcomePopup['submit_label'] ?? '') }}" maxlength="120">
         </label>
         <label>
-            Legal / fine print (HTML allowed)
-            <textarea name="welcome_popup_legal_html" rows="5">{{ old('welcome_popup_legal_html', $welcomePopup['legal_html'] ?? '') }}</textarea>
+            Legal / fine print
+            <textarea id="welcome-popup-legal" class="js-rich-text" name="welcome_popup_legal_html" rows="6" data-rich-height="220">{{ old('welcome_popup_legal_html', $welcomePopup['legal_html'] ?? '') }}</textarea>
         </label>
         <label>
             Success message
@@ -180,4 +180,6 @@
     setupSingleImageDropzone('welcome-popup-input', 'welcome-popup-preview', 'welcome-popup-dropzone');
 })();
 </script>
+
+@include('admin.partials.tinymce-init')
 @endsection
