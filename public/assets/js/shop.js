@@ -148,10 +148,22 @@ function initHomeSlider() {
     let dragging = false;
 
     function slidesPerView() {
-      const bp = parseInt(String(root.getAttribute('data-slide-breakpoint') || '768'), 10) || 768;
+      const desktopBp = parseInt(String(root.getAttribute('data-slide-breakpoint') || '768'), 10) || 768;
       const mobile = parseInt(String(root.getAttribute('data-slides-mobile') || '1'), 10) || 1;
       const desktop = parseInt(String(root.getAttribute('data-slides-desktop') || String(mobile)), 10) || mobile;
-      return globalThis.matchMedia('(min-width: ' + bp + 'px)').matches ? desktop : mobile;
+      const tabletAttr = root.getAttribute('data-slides-tablet');
+      if (tabletAttr === null || tabletAttr === '') {
+        return globalThis.matchMedia('(min-width: ' + desktopBp + 'px)').matches ? desktop : mobile;
+      }
+      const tabletBp = parseInt(String(root.getAttribute('data-slide-breakpoint-tablet') || '640'), 10) || 640;
+      const tablet = parseInt(String(tabletAttr), 10) || mobile;
+      if (globalThis.matchMedia('(min-width: ' + desktopBp + 'px)').matches) {
+        return desktop;
+      }
+      if (globalThis.matchMedia('(min-width: ' + tabletBp + 'px)').matches) {
+        return tablet;
+      }
+      return mobile;
     }
 
     function maxActiveIndex() {

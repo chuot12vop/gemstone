@@ -202,45 +202,16 @@
     @endif
 </section>
 
-<section class="home-section home-section--reviews reveal-on-scroll" aria-labelledby="home-reviews-title">
+@if($homeStoryPage)
+    @include('shop.partials.home-stories', ['storyPage' => $homeStoryPage])
+@endif
+
+<section class="home-section home-section--reviews reveal-on-scroll " aria-labelledby="home-reviews-title">
     <h2 id="home-reviews-title" class="section__title section__title--center">Customer reviews</h2>
     @if($homeReviews->isEmpty())
         <p class="reviews__empty">No photo reviews yet — share your experience with images after your next order.</p>
     @else
-        <ul class="home-reviews-grid">
-            @foreach($homeReviews as $review)
-                @php($cover = $review->images->first())
-                <li class="home-review-card">
-                    @if($cover)
-                        <a class="home-review-card__media" href="{{ \App\Support\PublicAssetUrl::to($cover->path) }}" target="_blank" rel="noopener">
-                            <img src="{{ \App\Support\PublicAssetUrl::to($cover->path) }}" alt="" loading="lazy" width="320" height="240">
-                        </a>
-                    @endif
-                    <div class="home-review-card__body">
-                        <p class="home-review-card__name">{{ $review->customer_name }}</p>
-                        @include('shop.partials.stars', ['rating' => $review->rating])
-                        @if($review->title)
-                            <p class="home-review-card__title">{{ $review->title }}</p>
-                        @endif
-                        <p class="home-review-card__content">{{ $review->content }}</p>
-                        @if($review->images->count() > 1)
-                            <ul class="home-review-card__thumbs" aria-label="More photos from this review">
-                                @foreach($review->images->skip(1)->take(3) as $img)
-                                    <li>
-                                        <a href="{{ \App\Support\PublicAssetUrl::to($img->path) }}" target="_blank" rel="noopener">
-                                            <img src="{{ \App\Support\PublicAssetUrl::to($img->path) }}" alt="" loading="lazy" width="64" height="64">
-                                        </a>
-                                    </li>
-                                @endforeach
-                                @if($review->images->count() > 4)
-                                    <li class="home-review-card__thumbs-more">+{{ $review->images->count() - 4 }}</li>
-                                @endif
-                            </ul>
-                        @endif
-                    </div>
-                </li>
-            @endforeach
-        </ul>
+        @include('shop.partials.home-review-slider', ['posts' => $homeReviews, 'type' => 'reviews'])
     @endif
 </section>
 

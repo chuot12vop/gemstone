@@ -1,5 +1,5 @@
 @php($titleTag = $titleTag ?? 'h3')
-<article class="home-news-card">
+<article class="home-news-card home-journal">
     @if($post->image)
         <a class="home-news-card__media" href="{{ route('shop.post.show', $post) }}">
             <img src="{{ \App\Support\PublicAssetUrl::to($post->image) }}" alt="" loading="lazy" width="400" height="240">

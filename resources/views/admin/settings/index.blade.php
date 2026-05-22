@@ -123,6 +123,10 @@
             Terms of service
             <textarea name="terms_of_service" rows="8">{{ old('terms_of_service', $settings['terms_of_service'] ?? '') }}</textarea>
         </label>
+        <label>
+            Story of us
+            <textarea name="story_of_us" rows="8">{{ old('story_of_us', $settings['story_of_us'] ?? '') }}</textarea>
+        </label>
     </fieldset>
 
     <div class="form-actions">

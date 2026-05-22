@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Shop;
 use App\Http\Controllers\Controller;
 use App\Models\Certificate;
 use App\Models\Category;
+use App\Models\Page;
 use App\Models\Post;
 use App\Models\Product;
 use App\Models\Review;
@@ -80,6 +81,12 @@ class HomeController extends Controller
             ->orderBy('sort_order')
             ->orderBy('name')
             ->get();
+        $homeStoryPage = Page::query()
+            ->where('is_active', true)
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->first();
+
         $homeJournalPosts = Post::query()
             ->where('is_active', 1)
             ->orderByDesc('published_at')
@@ -104,6 +111,7 @@ class HomeController extends Controller
             'homeBestSellers' => $homeBestSellers,
             'homeCollections' => $homeCollections,
             'homeCertificates' => $homeCertificates,
+            'homeStoryPage' => $homeStoryPage,
             'homeJournalPosts' => $homeJournalPosts,
             'homeReviews' => $homeReviews,
             'about' => AboutPageSettings::resolve(),

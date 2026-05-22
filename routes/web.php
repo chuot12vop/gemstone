@@ -10,6 +10,7 @@ use App\Http\Controllers\Admin\CurrencyAdminController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\OrderAdminController;
 use App\Http\Controllers\Admin\PaymentAdminController;
+use App\Http\Controllers\Admin\PageAdminController;
 use App\Http\Controllers\Admin\PostAdminController;
 use App\Http\Controllers\Admin\ProductAdminController;
 use App\Http\Controllers\Admin\ReviewAdminController;
@@ -117,6 +118,13 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/posts/{post}/edit', [PostAdminController::class, 'edit'])->name('posts.edit');
         Route::put('/posts/{post}', [PostAdminController::class, 'update'])->name('posts.update');
         Route::delete('/posts/{post}', [PostAdminController::class, 'destroy'])->name('posts.destroy');
+
+        Route::get('/pages', [PageAdminController::class, 'index'])->name('pages.index');
+        Route::get('/pages/create', [PageAdminController::class, 'create'])->name('pages.create');
+        Route::post('/pages', [PageAdminController::class, 'store'])->name('pages.store');
+        Route::get('/pages/{page}/edit', [PageAdminController::class, 'edit'])->name('pages.edit');
+        Route::put('/pages/{page}', [PageAdminController::class, 'update'])->name('pages.update');
+        Route::delete('/pages/{page}', [PageAdminController::class, 'destroy'])->name('pages.destroy');
 
         Route::get('/brands', [BrandAdminController::class, 'index'])->name('brands.index');
         Route::get('/brands/create', [BrandAdminController::class, 'create'])->name('brands.create');
