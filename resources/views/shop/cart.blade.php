@@ -17,7 +17,7 @@
                 </a>
                 <div class="cart-line__body">
                     <h2 class="cart-line__title"><a href="{{ route('shop.product', $p) }}">{{ $p->name }}</a></h2>
-                    <p class="cart-line__price">{{ $currency->formatUsd((float) $p->price_usd) }} each</p>
+                    <p class="cart-line__price">{{ $currency->formatUsd((float) $row['unit_price_usd']) }} each</p>
                     <label>
                         Qty
                         <input form="cart-update" type="number" name="qty[{{ $p->id }}]" value="{{ $row['quantity'] }}" min="0" max="{{ $p->stock }}">

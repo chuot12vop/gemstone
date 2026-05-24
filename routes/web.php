@@ -58,6 +58,7 @@ Route::get('/news', [PostController::class, 'index'])->name('shop.news.index');
 Route::get('/news/{post}', [PostController::class, 'show'])->name('shop.post.show');
 Route::get('/cart', [CartController::class, 'index'])->name('shop.cart');
 Route::post('/cart/add', [CartController::class, 'add'])->name('shop.cart.add');
+Route::post('/cart/add-bundle', [CartController::class, 'addBundle'])->name('shop.cart.add-bundle');
 Route::post('/cart/update', [CartController::class, 'update'])->name('shop.cart.update');
 Route::post('/cart/remove', [CartController::class, 'remove'])->name('shop.cart.remove');
 Route::get('/checkout', [CheckoutController::class, 'index'])->name('shop.checkout');
@@ -99,6 +100,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::middleware('auth:admin')->group(function () {
         Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
         Route::get('/products', [ProductAdminController::class, 'index'])->name('products.index');
+        Route::get('/products/search', [ProductAdminController::class, 'search'])->name('products.search');
         Route::get('/products/create', [ProductAdminController::class, 'create'])->name('products.create');
         Route::post('/products', [ProductAdminController::class, 'store'])->name('products.store');
         Route::get('/products/{product}/edit', [ProductAdminController::class, 'edit'])->name('products.edit');

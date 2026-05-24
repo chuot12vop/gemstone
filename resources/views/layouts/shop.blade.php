@@ -26,7 +26,7 @@
                 @endif
                 <span class="logo__name">{{ $siteSettings['site_name'] ?? config('app.name') }}</span>
             </a>
-            @php($cartCount = (int) array_sum((array) session('cart', [])))
+            @php($cartCount = app(\App\Services\CartService::class)->totalQuantity())
             <div class="site-header__actions">
                 <a class="cart-link cart-link--icon" href="{{ route('shop.cart') }}" aria-label="Cart ({{ $cartCount }} items)">
                     <svg class="cart-link__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">

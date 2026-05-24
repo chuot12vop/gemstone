@@ -7,6 +7,7 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\PaymentTransaction;
 use App\Models\Product;
+use App\Services\CartService;
 use App\Services\CurrencyService;
 use App\Services\Payment\Contracts\PaymentGateway;
 use App\Services\Payment\Data\PaymentInitiationResult;
@@ -35,7 +36,10 @@ class CheckoutController extends Controller
 
     private const ERR_EMPTY_CART = 'Your cart is empty.';
 
-    public function __construct(private PaymentMethodRegistry $registry) {}
+    public function __construct(
+        private PaymentMethodRegistry $registry,
+        private CartService $cart,
+    ) {}
 
     /** Step 1 — choose payment method. */
     public function index(): RedirectResponse|View
@@ -153,13 +157,14 @@ class CheckoutController extends Controller
                 /** @var Product $p */
                 $p = $row['product'];
                 $q = (int) $row['quantity'];
+                $unit = (float) $row['unit_price_usd'];
                 OrderItem::query()->create([
                     'order_id' => $order->id,
                     'product_id' => $p->id,
                     'product_name' => $p->name,
                     'quantity' => $q,
-                    'unit_price_usd' => (float) $p->price_usd,
-                    'line_total_usd' => (float) $p->price_usd * $q,
+                    'unit_price_usd' => $unit,
+                    'line_total_usd' => $unit * $q,
                 ]);
                 $p->stock = max(0, $p->stock - $q);
                 $p->save();
@@ -183,7 +188,7 @@ class CheckoutController extends Controller
             'notes' => $result->notes,
         ]);
 
-        session()->forget('cart');
+        $this->cart->clear();
         session()->forget(self::SESSION_METHOD_KEY);
 
         return match ($result->type) {
@@ -330,49 +335,15 @@ class CheckoutController extends Controller
     }
 
     /**
-     * @return array<int, array{product: Product, quantity: int, line_usd: float}>
+     * @return array<int, array{product: Product, quantity: int, unit_price_usd: float, line_usd: float}>
      */
     private function buildLines(): array
     {
-        $lines = [];
-        foreach ($this->cartItems() as $pid => $qty) {
-            $p = Product::query()->where('id', $pid)->where('is_active', true)->first();
-            if (! $p) {
-                continue;
-            }
-            $q = min((int) $qty, max(0, $p->stock));
-            if ($q < 1) {
-                continue;
-            }
-            $lines[] = [
-                'product' => $p,
-                'quantity' => $q,
-                'line_usd' => (float) $p->price_usd * $q,
-            ];
-        }
-
-        return $lines;
+        return $this->cart->buildLines();
     }
 
     private function makeOrderNumber(): string
     {
         return 'GS-'.strtoupper(bin2hex(random_bytes(4))).'-'.date('ymd');
-    }
-
-    /**
-     * @return array<int, int>
-     */
-    private function cartItems(): array
-    {
-        $c = session('cart', []);
-        if (! is_array($c)) {
-            return [];
-        }
-        $out = [];
-        foreach ($c as $k => $v) {
-            $out[(int) $k] = (int) $v;
-        }
-
-        return $out;
     }
 }

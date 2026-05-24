@@ -78,7 +78,7 @@ class ProductAdminController extends Controller
             $data['image'] = $thumbnailUrl;
         }
 
-        DB::transaction(function () use ($data, $attributes, $galleryImageUrls): void {
+        DB::transaction(function () use ($data, $attributes, $galleryImageUrls, $request): void {
             $createPayload = $data;
             // Use a temporary unique slug to avoid violating unique index before final slug resolution.
             $createPayload['slug'] = $this->makeTemporarySlug($data['slug']);
@@ -89,6 +89,7 @@ class ProductAdminController extends Controller
             ]);
             $this->syncAttributes($product, $attributes);
             $this->syncGalleryImages($product, $galleryImageUrls);
+            $this->syncUpsellProducts($product, $this->extractUpsells($request), $product->id);
         });
 
         return redirect()->route('admin.products.index')->with('success', 'Product created.');
@@ -96,7 +97,7 @@ class ProductAdminController extends Controller
 
     public function edit(Product $product)
     {
-        $product->load('productAttributes', 'productImages');
+        $product->load('productAttributes', 'productImages', 'upsellProducts');
 
         return view('admin.products.form', [
             'title' => 'Edit product',
@@ -124,15 +125,49 @@ class ProductAdminController extends Controller
             $data['image'] = $thumbnailUrl;
         }
 
-        DB::transaction(function () use ($product, $data, $attributes, $galleryImageUrls): void {
+        DB::transaction(function () use ($product, $data, $attributes, $galleryImageUrls, $request): void {
             $product->update($data);
             $this->syncAttributes($product, $attributes);
             if ($galleryImageUrls->isNotEmpty()) {
                 $this->syncGalleryImages($product, $galleryImageUrls);
             }
+            $this->syncUpsellProducts($product, $this->extractUpsells($request), $product->id);
         });
 
         return redirect()->route('admin.products.index')->with('success', 'Product updated.');
+    }
+
+    public function search(Request $request)
+    {
+        $q = trim((string) $request->get('q', ''));
+        $excludeId = (int) $request->get('exclude', 0);
+
+        $query = Product::query()
+            ->where('is_active', true)
+            ->orderBy('name');
+
+        if ($excludeId > 0) {
+            $query->where('id', '!=', $excludeId);
+        }
+
+        if ($q !== '') {
+            $query->where(function ($w) use ($q) {
+                $w->where('name', 'like', '%'.$q.'%')
+                    ->orWhere('slug', 'like', '%'.$q.'%');
+            });
+        }
+
+        $products = $query->limit(15)->get(['id', 'name', 'slug', 'price_usd', 'thumbnail', 'image']);
+
+        return response()->json($products->map(static function (Product $p): array {
+            return [
+                'id' => $p->id,
+                'name' => $p->name,
+                'slug' => $p->slug,
+                'price_usd' => (float) $p->price_usd,
+                'thumbnail' => $p->thumbnail ?: $p->image,
+            ];
+        }));
     }
 
     public function destroy(Product $product)
@@ -170,6 +205,10 @@ class ProductAdminController extends Controller
             'attributes' => 'nullable|array',
             'attributes.*.name' => 'nullable|string|max:120',
             'attributes.*.value' => 'nullable|string|max:5000',
+            'upsells' => 'nullable|array',
+            'upsells.*.product_id' => 'required|integer|exists:products,id|distinct',
+            'upsells.*.discount' => 'nullable|numeric|min:0|max:100',
+            'upsells.*.upsale_discount' => 'nullable|numeric|min:0|max:100',
         ]);
 
         $slug = $validated['slug'] ?? '';
@@ -234,6 +273,45 @@ class ProductAdminController extends Controller
         })->all();
 
         $product->productAttributes()->insert($rows);
+    }
+
+    /**
+     * @return Collection<int, array{product_id: int, discount: float, upsale_discount: float}>
+     */
+    private function extractUpsells(Request $request): Collection
+    {
+        return collect($request->input('upsells', []))
+            ->map(static function ($row): array {
+                return [
+                    'product_id' => (int) ($row['product_id'] ?? 0),
+                    'discount' => (float) ($row['discount'] ?? 0),
+                    'upsale_discount' => (float) ($row['upsale_discount'] ?? 0),
+                ];
+            })
+            ->filter(static fn (array $row): bool => $row['product_id'] > 0)
+            ->unique('product_id')
+            ->values();
+    }
+
+    /**
+     * @param Collection<int, array{product_id: int, discount: float, upsale_discount: float}> $upsells
+     */
+    private function syncUpsellProducts(Product $product, Collection $upsells, int $excludeProductId): void
+    {
+        $sync = [];
+        foreach ($upsells->values() as $index => $row) {
+            $upsellId = (int) $row['product_id'];
+            if ($upsellId === $excludeProductId) {
+                continue;
+            }
+            $sync[$upsellId] = [
+                'discount' => max(0, min(100, (float) $row['discount'])),
+                'upsale_discount' => max(0, min(100, (float) $row['upsale_discount'])),
+                'sort_order' => $index,
+            ];
+        }
+
+        $product->upsellProducts()->sync($sync);
     }
 
     /**

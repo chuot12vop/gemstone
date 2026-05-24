@@ -118,6 +118,8 @@
 
     @include('shop.partials.review-list', ['reviews' => $reviews, 'reviewStats' => $reviewStats])
 
+    @include('shop.partials.product-upsell-bundle', ['product' => $product, 'currency' => $currency])
+
     @if($relatedProducts->isNotEmpty())
         <section class="product-related">
             <h2 class="section__title section__title--center">You may also like</h2>

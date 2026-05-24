@@ -14,7 +14,12 @@ class ProductController extends Controller
             abort(404);
         }
 
-        $product->load('category', 'productImages', 'productAttributes');
+        $product->load([
+            'category',
+            'productImages',
+            'productAttributes',
+            'upsellProducts' => static fn ($q) => $q->where('is_active', true),
+        ]);
         $currency = app(CurrencyService::class);
 
         $relatedProducts = Product::query()

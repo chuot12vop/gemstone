@@ -30,9 +30,93 @@
   initProductCtaQtySync();
   initCatalogMega();
   initCatalogFiltersCollapse();
+  initProductUpsellBundle();
   initHomeSlider();
   initWelcomePopup();
 })();
+
+function initProductUpsellBundle() {
+  const root = document.querySelector('[data-product-upsell]');
+  if (!root) {
+    return;
+  }
+
+  const form = root.querySelector('[data-product-upsell-form]');
+  const totalSale = root.querySelector('[data-upsell-total-sale]');
+  const totalWas = root.querySelector('[data-upsell-total-was]');
+  const symbol = root.dataset.currencySymbol || '$';
+  const rate = parseFloat(root.dataset.currencyRate || '1', 10) || 1;
+  const code = root.dataset.currencyCode || 'USD';
+
+  const formatMoney = (usd) => {
+    const local = usd * rate;
+    return symbol + local.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',') + (code !== 'USD' ? ' ' + code : '');
+  };
+
+  const syncRowInputs = (check) => {
+    const row = check.closest('.product-upsell__item');
+    if (!row) {
+      return;
+    }
+    const productIdInput = row.querySelector('[data-upsell-product-id]');
+    const qtyInput = row.querySelector('[data-upsell-qty]');
+    const enabled = check.checked && !check.disabled;
+    if (productIdInput instanceof HTMLInputElement) {
+      productIdInput.disabled = !enabled;
+    }
+    if (qtyInput instanceof HTMLInputElement) {
+      qtyInput.disabled = !enabled;
+    }
+  };
+
+  const updateTotals = () => {
+    let saleUsd = 0;
+    let baseUsd = 0;
+    root.querySelectorAll('[data-upsell-check]').forEach((check) => {
+      if (!(check instanceof HTMLInputElement) || !check.checked) {
+        return;
+      }
+      const base = parseFloat(check.dataset.baseUsd || '0', 10) || 0;
+      const cart = parseFloat(check.dataset.cartUsd || check.dataset.displayUsd || '0', 10) || 0;
+      saleUsd += cart;
+      baseUsd += base;
+    });
+    if (totalSale) {
+      totalSale.textContent = formatMoney(saleUsd);
+    }
+    if (totalWas) {
+      if (baseUsd > saleUsd + 0.001) {
+        totalWas.textContent = formatMoney(baseUsd);
+        totalWas.hidden = false;
+      } else {
+        totalWas.hidden = true;
+      }
+    }
+  };
+
+  root.querySelectorAll('[data-upsell-check]').forEach((check) => {
+    if (!(check instanceof HTMLInputElement)) {
+      return;
+    }
+    syncRowInputs(check);
+    check.addEventListener('change', () => {
+      syncRowInputs(check);
+      updateTotals();
+    });
+  });
+
+  if (form instanceof HTMLFormElement) {
+    form.addEventListener('submit', () => {
+      root.querySelectorAll('[data-upsell-check]').forEach((check) => {
+        if (check instanceof HTMLInputElement) {
+          syncRowInputs(check);
+        }
+      });
+    });
+  }
+
+  updateTotals();
+}
 
 function initCatalogFiltersCollapse() {
   const details = document.querySelector('[data-catalog-filters]');

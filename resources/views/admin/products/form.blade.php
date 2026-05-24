@@ -124,6 +124,57 @@
         <button class="btn-admin" type="button" id="add-attribute">+ Add attribute</button>
     </fieldset>
 
+    @php
+        $upsellRows = old('upsells');
+        if (! is_array($upsellRows) && $product) {
+            $upsellRows = $product->upsellProducts->map(fn ($p) => [
+                'product_id' => $p->id,
+                'name' => $p->name,
+                'thumbnail' => $p->thumbnail ?: $p->image,
+                'price_usd' => (float) $p->price_usd,
+                'discount' => (float) ($p->pivot->discount ?? 0),
+                'upsale_discount' => (float) ($p->pivot->upsale_discount ?? 0),
+            ])->all();
+        }
+        $upsellRows = is_array($upsellRows) ? $upsellRows : [];
+        $upsellSearchUrl = route('admin.products.search', $product ? ['exclude' => $product->id] : []);
+    @endphp
+    <fieldset class="form-fieldset">
+        <legend>Upsell products</legend>
+        <p class="admin-hint">Products shown as “Frequently bought together” on the storefront. Set display discount and upsale cart discount (% off base price).</p>
+        <div class="upsell-picker" data-upsell-picker data-search-url="{{ $upsellSearchUrl }}">
+            <label class="upsell-picker__search-label">
+                Search products
+                <input type="search" class="upsell-picker__search" placeholder="Type to search…" autocomplete="off" data-upsell-search>
+            </label>
+            <div class="upsell-picker__results" data-upsell-results hidden></div>
+            <div class="upsell-picker__selected" data-upsell-selected>
+                @foreach($upsellRows as $row)
+                    @if((int) ($row['product_id'] ?? 0) > 0)
+                        <div class="upsell-picker__row" data-upsell-row data-product-id="{{ (int) $row['product_id'] }}">
+                            <input type="hidden" name="upsells[{{ (int) $row['product_id'] }}][product_id]" value="{{ (int) $row['product_id'] }}">
+                            <div class="upsell-picker__product">
+                                @if(!empty($row['thumbnail']))
+                                    <img src="{{ $row['thumbnail'] }}" alt="" width="40" height="40">
+                                @endif
+                                <span>{{ $row['name'] ?? ('#' . $row['product_id']) }}</span>
+                            </div>
+                            <label>
+                                Discount %
+                                <input type="number" name="upsells[{{ (int) $row['product_id'] }}][discount]" min="0" max="100" step="0.01" value="{{ $row['discount'] ?? 0 }}">
+                            </label>
+                            <label>
+                                Upsale discount %
+                                <input type="number" name="upsells[{{ (int) $row['product_id'] }}][upsale_discount]" min="0" max="100" step="0.01" value="{{ $row['upsale_discount'] ?? 0 }}">
+                            </label>
+                            <button type="button" class="btn-admin" data-upsell-remove aria-label="Remove">×</button>
+                        </div>
+                    @endif
+                @endforeach
+            </div>
+        </div>
+    </fieldset>
+
     <fieldset class="form-fieldset">
         <legend>SEO</legend>
         <label>
@@ -331,9 +382,123 @@
 
     };
 
+    const setupUpsellPicker = () => {
+        const root = document.querySelector('[data-upsell-picker]');
+        if (!root) return;
+        const searchUrl = root.dataset.searchUrl || '';
+        const searchInput = root.querySelector('[data-upsell-search]');
+        const results = root.querySelector('[data-upsell-results]');
+        const selected = root.querySelector('[data-upsell-selected]');
+        if (!(searchInput instanceof HTMLInputElement) || !results || !selected) return;
+
+        let debounceTimer = null;
+
+        const selectedIds = () => new Set(
+            Array.from(selected.querySelectorAll('[data-upsell-row]'))
+                .map((row) => parseInt(row.getAttribute('data-product-id') || '0', 10))
+                .filter((id) => id > 0)
+        );
+
+        const renderRow = (product) => {
+            const id = product.id;
+            const row = document.createElement('div');
+            row.className = 'upsell-picker__row';
+            row.setAttribute('data-upsell-row', '');
+            row.setAttribute('data-product-id', String(id));
+            const thumb = product.thumbnail
+                ? `<img src="${product.thumbnail}" alt="" width="40" height="40">`
+                : '';
+            row.innerHTML = `
+                <input type="hidden" name="upsells[${id}][product_id]" value="${id}">
+                <div class="upsell-picker__product">${thumb}<span>${product.name}</span></div>
+                <label>Discount %
+                    <input type="number" name="upsells[${id}][discount]" min="0" max="100" step="0.01" value="0">
+                </label>
+                <label>Upsale discount %
+                    <input type="number" name="upsells[${id}][upsale_discount]" min="0" max="100" step="0.01" value="0">
+                </label>
+                <button type="button" class="btn-admin" data-upsell-remove aria-label="Remove">×</button>
+            `;
+            return row;
+        };
+
+        const hideResults = () => {
+            results.hidden = true;
+            results.innerHTML = '';
+        };
+
+        const runSearch = async () => {
+            const q = searchInput.value.trim();
+            if (q.length < 1) {
+                hideResults();
+                return;
+            }
+            const url = new URL(searchUrl, window.location.origin);
+            url.searchParams.set('q', q);
+            const response = await fetch(url.toString(), { headers: { Accept: 'application/json' } });
+            if (!response.ok) return;
+            const items = await response.json();
+            const ids = selectedIds();
+            const matches = items.filter((item) => !ids.has(item.id));
+            if (matches.length === 0) {
+                results.innerHTML = '<p class="upsell-picker__empty">No products found.</p>';
+                results.hidden = false;
+                return;
+            }
+            results.innerHTML = '';
+            matches.forEach((item) => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'upsell-picker__result';
+                btn.setAttribute('data-upsell-add', '');
+                if (item.thumbnail) {
+                    const img = document.createElement('img');
+                    img.src = item.thumbnail;
+                    img.alt = '';
+                    img.width = 32;
+                    img.height = 32;
+                    btn.appendChild(img);
+                }
+                const name = document.createElement('span');
+                name.textContent = item.name;
+                btn.appendChild(name);
+                const price = document.createElement('small');
+                price.textContent = '$' + Number(item.price_usd).toFixed(2);
+                btn.appendChild(price);
+                btn.addEventListener('click', () => {
+                    selected.appendChild(renderRow(item));
+                    searchInput.value = '';
+                    hideResults();
+                });
+                results.appendChild(btn);
+            });
+            results.hidden = false;
+        };
+
+        searchInput.addEventListener('input', () => {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(runSearch, 250);
+        });
+
+        selected.addEventListener('click', (event) => {
+            const btn = event.target instanceof HTMLElement
+                ? event.target.closest('[data-upsell-remove]')
+                : null;
+            if (!btn) return;
+            const row = btn.closest('[data-upsell-row]');
+            if (row) row.remove();
+        });
+
+        document.addEventListener('click', (event) => {
+            if (!(event.target instanceof Node) || root.contains(event.target)) return;
+            hideResults();
+        });
+    };
+
     setupAttributes();
     setupGalleryPreview();
     setupThumbnailDropzone();
+    setupUpsellPicker();
 })();
 </script>
 
