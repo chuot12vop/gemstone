@@ -1289,12 +1289,6 @@ body.site { margin: 0; font-family: "Source Sans 3", system-ui, sans-serif; colo
   border: none;
   text-align: center;
 }
-@media (max-width: 1000px) {
-  .home-hero__slide .home-hero__bg,
-  .home-hero__slide-hit .home-hero__bg {
-    object-fit: contain;
-  }
-}
 
 .home-hero__slide .home-hero__bg,
 .home-hero__slide-hit .home-hero__bg {
@@ -2000,7 +1994,7 @@ body.site { margin: 0; font-family: "Source Sans 3", system-ui, sans-serif; colo
   .home-hero__nav { display: none; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .home-hero--slider .home-hero__slides { transition: none; }
+  .home-hero--slider .home-hero__slides { transition: none; min-height: fit-content;}
   .home-journal-slider__track { transition: none; }
   .home-product-slider__track { transition: none; }
   .home-review-slider__track { transition: none; }

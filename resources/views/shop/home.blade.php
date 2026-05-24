@@ -102,6 +102,21 @@
     @endif
 </section>
 
+@if($homeBestSellers)
+    <section class="home-section home-section--bestsellers reveal-on-scroll" aria-labelledby="home-bestsellers-title">
+        <h2 id="home-bestsellers-title" class="section__title section__title--center">Best sellers</h2>
+        @if($homeBestSellers->isEmpty())
+            <p class="home-section__empty home-section__empty--center">No best sellers yet — check back soon or <a href="{{ route('shop.products.index') }}">browse the shop</a>.</p>
+        @else
+            @include('shop.partials.home-product-slider', [
+                'products' => $homeBestSellers,
+                'currency' => $currency,
+                'sliderLabel' => 'Best sellers',
+            ])
+        @endif
+    </section>
+@endif
+
 <section class="home-section home-section--about reveal-on-scroll" aria-labelledby="home-about-title">
     <h2 id="home-about-title" class="section__title section__title--center">About us</h2>
     <div class="home-about">
@@ -172,21 +187,6 @@
         @endif
     </div>
 </section>
-@endif
-
-@if($homeBestSellers)
-    <section class="home-section home-section--bestsellers reveal-on-scroll" aria-labelledby="home-bestsellers-title">
-        <h2 id="home-bestsellers-title" class="section__title section__title--center">Best sellers</h2>
-        @if($homeBestSellers->isEmpty())
-            <p class="home-section__empty home-section__empty--center">No best sellers yet — check back soon or <a href="{{ route('shop.products.index') }}">browse the shop</a>.</p>
-        @else
-            @include('shop.partials.home-product-slider', [
-                'products' => $homeBestSellers,
-                'currency' => $currency,
-                'sliderLabel' => 'Best sellers',
-            ])
-        @endif
-    </section>
 @endif
 
 <section class="home-section home-section--new reveal-on-scroll" aria-labelledby="home-new-title">
