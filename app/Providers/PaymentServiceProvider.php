@@ -4,8 +4,11 @@ namespace App\Providers;
 
 use App\Services\Payment\Contracts\PaymentGateway;
 use App\Services\Payment\Gateways\ApplePayGateway;
+use App\Services\Payment\Gateways\CashAppGateway;
 use App\Services\Payment\Gateways\PayPalGateway;
+use App\Services\Payment\Gateways\VenmoGateway;
 use App\Services\Payment\Gateways\WhatsAppGateway;
+use App\Services\Payment\Gateways\ZelleGateway;
 use App\Services\Payment\PaymentMethodRegistry;
 use Illuminate\Support\ServiceProvider;
 
@@ -26,6 +29,9 @@ class PaymentServiceProvider extends ServiceProvider
         PayPalGateway::class,
         WhatsAppGateway::class,
         ApplePayGateway::class,
+        VenmoGateway::class,
+        CashAppGateway::class,
+        ZelleGateway::class,
     ];
 
     public function register(): void

@@ -29,7 +29,6 @@ class CatalogController extends Controller
     private function renderProductList(Request $request, ?Category $category)
     {
         $categories = Category::query()->orderBy('sort_order')->get();
-        $brands = Brand::query()->orderBy('sort_order')->orderBy('name')->get();
 
         $selectedCategoryId = $category?->id;
         if ($selectedCategoryId === null) {
@@ -44,6 +43,23 @@ class CatalogController extends Controller
         if ($minPrice !== null && $maxPrice !== null && $maxPrice < $minPrice) {
             [$minPrice, $maxPrice] = [$maxPrice, $minPrice];
         }
+
+        $brands = Brand::query()
+            ->whereHas('products', function ($query) use ($selectedCategoryId, $minPrice, $maxPrice) {
+                $query->where('is_active', true);
+                if ($selectedCategoryId !== null) {
+                    $query->where('category_id', $selectedCategoryId);
+                }
+                if ($minPrice !== null) {
+                    $query->where('price_usd', '>=', $minPrice);
+                }
+                if ($maxPrice !== null) {
+                    $query->where('price_usd', '<=', $maxPrice);
+                }
+            })
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->get();
 
         $brandSlug = trim((string) $request->query('brand', ''));
         $selectedBrand = $brandSlug !== ''

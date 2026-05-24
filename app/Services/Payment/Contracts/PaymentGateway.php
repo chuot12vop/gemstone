@@ -60,7 +60,14 @@ interface PaymentGateway
     /**
      * Customer-side confirmation handler (the "I have paid" / gateway return
      * postback). Returning true marks the transaction as `paid` and the order
-     * as `paid` on the calling controller's side.
+     * as `paid` on the calling controller's side when {@see marksOrderPaidOnConfirm}
+     * is true.
      */
     public function confirm(Order $order, Request $request): bool;
+
+    /**
+     * When false, {@see confirm} may succeed (e.g. proof uploaded) without
+     * marking the order paid — staff verifies manually.
+     */
+    public function marksOrderPaidOnConfirm(): bool;
 }

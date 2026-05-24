@@ -37,6 +37,7 @@ class SettingAdminController extends Controller
             'site_logo' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:4096',
             'footer_background' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:6144',
             'contact_whatsapp_phone' => 'nullable|string|max:60',
+            'contact_google_script_url' => 'nullable|url|max:500',
             'home_news_ticker' => 'nullable|string|max:8000',
             'welcome_popup_enabled' => 'nullable|boolean',
             'welcome_popup_delay_seconds' => 'nullable|integer|min:1|max:120',
@@ -64,6 +65,7 @@ class SettingAdminController extends Controller
 
         $settings['site_name'] = $validated['site_name'];
         $settings['contact_whatsapp_phone'] = trim((string) ($validated['contact_whatsapp_phone'] ?? ''));
+        $settings['contact_google_script_url'] = trim((string) ($validated['contact_google_script_url'] ?? ''));
         $settings['home_news_ticker'] = trim((string) ($validated['home_news_ticker'] ?? ''));
         $settings['security_policy'] = trim((string) ($validated['security_policy'] ?? ''));
         $settings['privacy_policy'] = trim((string) ($validated['privacy_policy'] ?? ''));
@@ -111,6 +113,7 @@ class SettingAdminController extends Controller
             'site_logo' => '',
             'footer_background' => '',
             'contact_whatsapp_phone' => '',
+            'contact_google_script_url' => '',
             'home_news_ticker' => '',
             'security_policy' => '',
             'privacy_policy' => '',

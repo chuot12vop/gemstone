@@ -257,6 +257,12 @@ class CheckoutController extends Controller
         }
 
         if ($gateway->confirm($order, $request)) {
+            if (! $gateway->marksOrderPaidOnConfirm()) {
+                return redirect()
+                    ->route('shop.order.show', ['order_number' => $order->order_number])
+                    ->with('success', 'Thank you! We received your payment proof for order #'.$order->order_number.'. Our team will verify and confirm shortly.');
+            }
+
             return $this->markOrderPaid($order, $gateway, $request->input('gateway_transaction_id'));
         }
 

@@ -15,6 +15,7 @@ class PaymentTransaction extends Model
         'currency_code',
         'status',
         'notes',
+        'proof_path',
         'paid_at',
     ];
 

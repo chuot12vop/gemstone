@@ -24,7 +24,7 @@
 
 @if(($tab ?? 'history') === 'settings')
     <h2 class="admin-h2">Payment method settings</h2>
-    <form class="stack-form" method="post" action="{{ route('admin.payments.settings') }}">
+    <form class="stack-form" method="post" action="{{ route('admin.payments.settings') }}" enctype="multipart/form-data">
         @csrf
         <fieldset class="form-fieldset">
             <legend>PayPal</legend>
@@ -83,6 +83,68 @@
             </label>
         </fieldset>
 
+        <fieldset class="form-fieldset">
+            <legend>Venmo</legend>
+            <p class="muted" style="margin:0 0 8px;">QR is generated per order (amount + order note). Customer uploads transfer screenshot after paying.</p>
+            <label class="switch-field">
+                <span class="switch-field__label">Enable method</span>
+                <span class="switch">
+                    <input type="checkbox" name="venmo_enabled" value="1" @checked(old('venmo_enabled', ($settings['payment_venmo_enabled'] ?? '0') === '1'))>
+                    <span class="switch__slider" aria-hidden="true"></span>
+                </span>
+            </label>
+            <label>
+                Venmo username
+                <input type="text" name="venmo_username" value="{{ old('venmo_username', $settings['payment_venmo_username'] ?? '') }}" placeholder="YourVenmoHandle">
+            </label>
+        </fieldset>
+
+        <fieldset class="form-fieldset">
+            <legend>Cash App</legend>
+            <p class="muted" style="margin:0 0 8px;">Upload a static QR from your Cash App profile. Customers pay the order total and upload proof.</p>
+            <label class="switch-field">
+                <span class="switch-field__label">Enable method</span>
+                <span class="switch">
+                    <input type="checkbox" name="cashapp_enabled" value="1" @checked(old('cashapp_enabled', ($settings['payment_cashapp_enabled'] ?? '0') === '1'))>
+                    <span class="switch__slider" aria-hidden="true"></span>
+                </span>
+            </label>
+            <label>
+                $Cashtag
+                <input type="text" name="cashapp_cashtag" value="{{ old('cashapp_cashtag', $settings['payment_cashapp_cashtag'] ?? '') }}" placeholder="YourCashtag">
+            </label>
+            <label>
+                QR image
+                <input type="file" name="cashapp_qr" accept="image/jpeg,image/png,image/webp">
+            </label>
+            @if(! empty($settings['payment_cashapp_qr_image']))
+                <p><img src="{{ $settings['payment_cashapp_qr_image'] }}" alt="Current Cash App QR" style="max-width:140px;border-radius:8px;border:1px solid #e2e5ea;"></p>
+            @endif
+        </fieldset>
+
+        <fieldset class="form-fieldset">
+            <legend>Zelle</legend>
+            <p class="muted" style="margin:0 0 8px;">Upload a static Zelle QR from your bank. Customers pay the order total and upload proof.</p>
+            <label class="switch-field">
+                <span class="switch-field__label">Enable method</span>
+                <span class="switch">
+                    <input type="checkbox" name="zelle_enabled" value="1" @checked(old('zelle_enabled', ($settings['payment_zelle_enabled'] ?? '0') === '1'))>
+                    <span class="switch__slider" aria-hidden="true"></span>
+                </span>
+            </label>
+            <label>
+                Payee label (shown to customer)
+                <input type="text" name="zelle_payee_label" value="{{ old('zelle_payee_label', $settings['payment_zelle_payee_label'] ?? '') }}" placeholder="Tachi Gem Stone">
+            </label>
+            <label>
+                QR image
+                <input type="file" name="zelle_qr" accept="image/jpeg,image/png,image/webp">
+            </label>
+            @if(! empty($settings['payment_zelle_qr_image']))
+                <p><img src="{{ $settings['payment_zelle_qr_image'] }}" alt="Current Zelle QR" style="max-width:140px;border-radius:8px;border:1px solid #e2e5ea;"></p>
+            @endif
+        </fieldset>
+
         <div class="form-actions">
             <button class="btn-admin btn-admin--primary" type="submit">Save payment settings</button>
         </div>
@@ -127,6 +189,7 @@
                 <th>Amount</th>
                 <th>Status</th>
                 <th>Notes</th>
+                <th>Proof</th>
             </tr>
             </thead>
             <tbody>
@@ -145,9 +208,16 @@
                     <td>{{ strtoupper($transaction->currency_code) }} {{ number_format((float) $transaction->amount, 2) }}</td>
                     <td><span class="badge badge--{{ $transaction->status }}">{{ $transaction->status }}</span></td>
                     <td>{{ $transaction->notes ?: '-' }}</td>
+                    <td>
+                        @if($transaction->proof_path)
+                            <a href="{{ $transaction->proof_path }}" target="_blank" rel="noopener">View</a>
+                        @else
+                            -
+                        @endif
+                    </td>
                 </tr>
             @empty
-                <tr><td colspan="7" class="data-table__empty">No payment transactions yet.</td></tr>
+                <tr><td colspan="8" class="data-table__empty">No payment transactions yet.</td></tr>
             @endforelse
             </tbody>
         </table>

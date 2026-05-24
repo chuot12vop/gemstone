@@ -93,6 +93,11 @@
             <small style="color:#5c6470;">Used for the floating WhatsApp button on the shop. Falls back to payment WhatsApp if empty.</small>
         </label>
         <label>
+            Contact form Google Script URL
+            <input type="url" name="contact_google_script_url" value="{{ old('contact_google_script_url', $settings['contact_google_script_url'] ?? '') }}" placeholder="https://script.google.com/macros/s/.../exec">
+            <small style="color:#5c6470;">Web app URL from Google Apps Script (deploy as &ldquo;Anyone&rdquo;). Sends JSON: <code>name</code>, <code>phone</code>, <code>email</code>, <code>address</code>, <code>product</code>, <code>message</code>. Overrides <code>CONTACT_GOOGLE_SCRIPT_URL</code> in .env when set.</small>
+        </label>
+        <label>
             Home news ticker (one headline per line)
             <textarea name="home_news_ticker" rows="4" placeholder="New collection launched&#10;Free shipping over $99">{{ old('home_news_ticker', $settings['home_news_ticker'] ?? '') }}</textarea>
         </label>

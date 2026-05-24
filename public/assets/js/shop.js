@@ -30,9 +30,11 @@
   initProductCtaQtySync();
   initCatalogMega();
   initCatalogFiltersCollapse();
+  initCatalogCategoryFilter();
   initProductUpsellBundle();
   initHomeSlider();
   initWelcomePopup();
+  initContactForm();
 })();
 
 function initProductUpsellBundle() {
@@ -116,6 +118,22 @@ function initProductUpsellBundle() {
   }
 
   updateTotals();
+}
+
+function initCatalogCategoryFilter() {
+  const form = document.querySelector('[data-catalog-filter-form]');
+  const categorySelect = document.querySelector('[data-catalog-category-filter]');
+  if (!form || !categorySelect) {
+    return;
+  }
+
+  categorySelect.addEventListener('change', function () {
+    const brandSelect = form.querySelector('[name="brand"]');
+    if (brandSelect instanceof HTMLSelectElement) {
+      brandSelect.value = '';
+    }
+    form.requestSubmit();
+  });
 }
 
 function initCatalogFiltersCollapse() {
@@ -236,6 +254,92 @@ function initWelcomePopup() {
         });
     });
   }
+}
+
+function initContactForm() {
+  const form = document.querySelector('[data-contact-form]');
+  if (!form) {
+    return;
+  }
+
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const feedback = form.querySelector('[data-contact-feedback]');
+    const csrfInput = form.querySelector('[name="_token"]');
+
+    if (submitBtn) {
+      submitBtn.disabled = true;
+    }
+    if (feedback) {
+      feedback.hidden = true;
+      feedback.classList.remove('is-ok', 'is-err');
+    }
+
+    const headers = {
+      Accept: 'application/json',
+      'X-Requested-With': 'XMLHttpRequest',
+      'X-Contact-Form': '1',
+    };
+    if (csrfInput && csrfInput.value) {
+      headers['X-CSRF-TOKEN'] = csrfInput.value;
+    }
+
+    const requests = [];
+
+    requests.push(
+      fetch(form.action, {
+        method: 'POST',
+        headers: headers,
+        credentials: 'same-origin',
+        body: new FormData(form),
+      }).then(function (res) {
+        return res.text().then(function (text) {
+          var data = {};
+          if (text) {
+            try {
+              data = JSON.parse(text);
+            } catch (parseErr) {
+              throw new Error('Unexpected server response. Please reload the page and try again.');
+            }
+          }
+          if (!res.ok) {
+            var message = data.message
+              || (data.errors && Object.values(data.errors).flat()[0])
+              || 'Request failed';
+            throw new Error(message);
+          }
+          return data;
+        });
+      })
+    );
+
+    Promise.all(requests)
+      .then(function (results) {
+        const data = results[results.length - 1] || {};
+        form.reset();
+        if (feedback) {
+          feedback.textContent = data.message || 'Thanks! Our team will reach out shortly.';
+          feedback.classList.add('is-ok');
+          feedback.hidden = false;
+        }
+      })
+      .catch(function (err) {
+        if (feedback) {
+          feedback.textContent = err && err.message
+            ? err.message
+            : 'Something went wrong. Please check your details and try again.';
+          feedback.classList.add('is-err');
+          feedback.hidden = false;
+        }
+      })
+      .finally(function () {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+        }
+      });
+  });
 }
 
 function initHomeSlider() {
@@ -434,7 +538,7 @@ function initCatalogMega() {
   }
 
   function isMobileNav() {
-    return globalThis.matchMedia('(max-width: 767px)').matches;
+    return globalThis.matchMedia('(max-width: 1023px)').matches;
   }
 
   trigger.addEventListener('click', function (e) {
@@ -460,7 +564,7 @@ function initCatalogMega() {
     if (e.key === 'Escape') closeMega();
   });
 
-  globalThis.matchMedia('(min-width: 768px)').addEventListener('change', function (e) {
+  globalThis.matchMedia('(min-width: 1024px)').addEventListener('change', function (e) {
     if (e.matches) closeMega();
   });
 }

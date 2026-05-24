@@ -41,9 +41,10 @@ class PageController extends Controller
         $settings = $this->settingsMap();
         $about = AboutPageSettings::resolve();
         $siteName = $settings['site_name'] ?: config('app.name');
+        $pageTitle = trim($about['page_title'] ?? '') ?: 'About Our '.$siteName;
 
         return view('shop.about', [
-            'title' => 'About '.$siteName.' — Heritage & intention',
+            'title' => $pageTitle.' — Heritage & intention',
             'metaDescription' => $about['page_summary'] ?: 'Learn how we bridge ancient feng shui wisdom with modern craftsmanship.',
             'about' => $about,
             'siteName' => $siteName,

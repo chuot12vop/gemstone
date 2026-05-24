@@ -6,7 +6,7 @@
 @endsection
 
 @section('module-meta')
-    Edit the full <strong>/about</strong> page and the About us teaser on the homepage.
+    Edit the full <strong>/about</strong> page and the About us teaser on the homepage. Accordion panels appear on both pages.
 @endsection
 
 @section('content')
@@ -20,6 +20,10 @@
 
     <fieldset class="form-fieldset">
         <legend>About page (/about)</legend>
+        <label>
+            Page title
+            <input type="text" name="page_title" value="{{ old('page_title', $about['page_title']) }}" maxlength="200" placeholder="About Our {{ config('app.name') }}">
+        </label>
         <label>
             Page summary (subtitle under title)
             <input type="text" name="page_summary" value="{{ old('page_summary', $about['page_summary']) }}" maxlength="500">

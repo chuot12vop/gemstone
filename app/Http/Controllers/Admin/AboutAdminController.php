@@ -26,6 +26,7 @@ class AboutAdminController extends Controller
     public function save(Request $request): RedirectResponse
     {
         $validated = $request->validate([
+            'page_title' => 'nullable|string|max:200',
             'page_summary' => 'nullable|string|max:500',
             'page_body' => 'nullable|string|max:50000',
             'home_lede' => 'nullable|string|max:2000',
@@ -36,6 +37,7 @@ class AboutAdminController extends Controller
         ]);
 
         AboutPageSettings::store([
+            'page_title' => $validated['page_title'] ?? '',
             'page_summary' => $validated['page_summary'] ?? '',
             'page_body' => $validated['page_body'] ?? '',
             'home_lede' => $validated['home_lede'] ?? '',

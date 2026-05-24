@@ -45,6 +45,11 @@ abstract class AbstractPaymentGateway implements PaymentGateway
         return null;
     }
 
+    public function marksOrderPaidOnConfirm(): bool
+    {
+        return true;
+    }
+
     /**
      * Read a single setting value for this gateway.
      *

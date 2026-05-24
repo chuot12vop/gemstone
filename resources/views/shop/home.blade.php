@@ -124,18 +124,7 @@
             <p class="home-about__lede">{{ $about['home_lede'] }}</p>
         @endif
 
-        @foreach($about['panels'] as $panel)
-            @if(($panel['title'] ?? '') !== '' || ($panel['body'] ?? '') !== '')
-                <details class="home-about__panel">
-                    @if(($panel['title'] ?? '') !== '')
-                        <summary class="home-about__summary">{{ $panel['title'] }}</summary>
-                    @endif
-                    @if(($panel['body'] ?? '') !== '')
-                        <div class="home-about__body">{!! $panel['body'] !!}</div>
-                    @endif
-                </details>
-            @endif
-        @endforeach
+        @include('shop.partials.about-panels', ['panels' => $about['panels']])
 
         <a class="btn btn--primary btn--small" href="{{ route('shop.about') }}">{{ $about['home_button_label'] ?: 'Learn more about us' }}</a>
     </div>
@@ -152,8 +141,11 @@
          data-home-slider
          data-slide-interval="3000"
          data-slides-mobile="1"
+         data-slides-tablet="2"
          data-slides-desktop="3"
-         data-slide-breakpoint="768"
+         data-slide-breakpoint-tablet="480"
+         data-slide-breakpoint="961"
+         style="--slide-basis-mobile: 100%; --slide-basis-tablet: 50%; --slide-basis-desktop: 33.333%;"
          aria-roledescription="carousel"
          aria-label="Journal articles">
         <div class="home-journal-slider__viewport" data-slider-viewport>

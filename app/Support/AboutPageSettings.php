@@ -10,6 +10,7 @@ final class AboutPageSettings
 
     /**
      * @return array{
+     *     page_title: string,
      *     page_summary: string,
      *     page_body: string,
      *     home_lede: string,
@@ -20,6 +21,7 @@ final class AboutPageSettings
     public static function defaults(): array
     {
         return [
+            'page_title' => '',
             'page_summary' => 'More than jewelry — a bridge between mindful tradition and contemporary life.',
             'page_body' => '<p>We believe meaningful spiritual tools shouldn\'t be rushed; they must be nurtured. We take the time to understand each stone before it is chosen. Every design is crafted with reverence to achieve energetic balance, effortless wearability, and a pure, authentic beauty suited for customers who seek deep, genuine connections.</p>'
                 .'<p>Our palette is an ode to daylight: warm cream, champagne gold, and soft neutrals—as elegant and quiet as nature itself.</p>',
@@ -44,6 +46,7 @@ final class AboutPageSettings
 
     /**
      * @return array{
+     *     page_title: string,
      *     page_summary: string,
      *     page_body: string,
      *     home_lede: string,
@@ -65,6 +68,9 @@ final class AboutPageSettings
             return $data;
         }
 
+        if (isset($decoded['page_title'])) {
+            $data['page_title'] = trim((string) $decoded['page_title']);
+        }
         if (isset($decoded['page_summary'])) {
             $data['page_summary'] = trim((string) $decoded['page_summary']);
         }
@@ -112,6 +118,7 @@ final class AboutPageSettings
 
     /**
      * @param  array{
+     *     page_title?: string,
      *     page_summary?: string,
      *     page_body?: string,
      *     home_lede?: string,
@@ -122,6 +129,7 @@ final class AboutPageSettings
     public static function store(array $data): void
     {
         $payload = [
+            'page_title' => trim((string) ($data['page_title'] ?? '')),
             'page_summary' => trim((string) ($data['page_summary'] ?? '')),
             'page_body' => trim((string) ($data['page_body'] ?? '')),
             'home_lede' => trim((string) ($data['home_lede'] ?? '')),

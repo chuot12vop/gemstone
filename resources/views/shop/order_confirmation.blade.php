@@ -3,8 +3,23 @@
 @section('content')
 <header class="page-head">
     <h1 class="page-head__title">Thank you</h1>
-    <p class="page-head__summary">Order <strong>{{ $order->order_number }}</strong> is confirmed.</p>
+    <p class="page-head__summary">
+        Order <strong>{{ $order->order_number }}</strong>
+        @if($order->status === 'paid')
+            is confirmed.
+        @else
+            has been placed.
+        @endif
+    </p>
 </header>
+
+@if(session('success'))
+    <p class="banner banner--ok">{{ session('success') }}</p>
+@endif
+
+@if($order->status === 'pending')
+    <p class="banner banner--info">Your payment proof is being reviewed. We will email you at <strong>{{ $order->customer_email }}</strong> once confirmed.</p>
+@endif
 
 <div class="prose">
     <p>We sent a confirmation to <strong>{{ $order->customer_email }}</strong>.</p>

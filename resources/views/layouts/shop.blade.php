@@ -49,20 +49,27 @@
                                 @if($catalogNavCategories->isEmpty())
                                     <p class="catalog-mega__empty">No categories yet.</p>
                                 @else
-                                    <div class="catalog-mega__grid">
+                                    <div class="catalog-mega__list">
                                         @foreach($catalogNavCategories as $cat)
-                                            <div class="catalog-mega__col">
-                                                <a class="catalog-mega__cat" href="{{ route('shop.catalog.category', $cat) }}">{{ $cat->name }}</a>
-                                                @if($cat->products->isEmpty())
-                                                    <p class="catalog-mega__empty catalog-mega__empty--inline">No products in this category.</p>
-                                                @else
-                                                    <ul class="catalog-mega__products">
-                                                        @foreach($cat->products as $product)
-                                                            <li><a href="{{ route('shop.product', $product) }}">{{ $product->name }}</a></li>
-                                                        @endforeach
-                                                    </ul>
-                                                @endif
-                                            </div>
+                                            <details class="catalog-mega__group">
+                                                <summary class="catalog-mega__summary">
+                                                    <span class="catalog-mega__summary-label">{{ $cat->name }}</span>
+                                                </summary>
+                                                <div class="catalog-mega__panel">
+                                                    <p class="catalog-mega__panel-head">
+                                                        <a href="{{ route('shop.catalog.category', $cat) }}">View all {{ $cat->name }}</a>
+                                                    </p>
+                                                    @if($cat->products->isEmpty())
+                                                        <p class="catalog-mega__empty catalog-mega__empty--inline">No products in this category.</p>
+                                                    @else
+                                                        <ul class="catalog-mega__products">
+                                                            @foreach($cat->products as $product)
+                                                                <li><a href="{{ route('shop.product', $product) }}">{{ $product->name }}</a></li>
+                                                            @endforeach
+                                                        </ul>
+                                                    @endif
+                                                </div>
+                                            </details>
                                         @endforeach
                                     </div>
                                 @endif

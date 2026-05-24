@@ -34,22 +34,22 @@
             <span class="catalog-filters-wrap__badge">{{ $activeFilterCount }}</span>
         @endif
     </summary>
-    <form class="catalog-filters" method="get" action="{{ route('shop.products.index') }}">
+    <form class="catalog-filters" method="get" action="{{ route('shop.products.index') }}" data-catalog-filter-form>
+        <label>
+            Category
+            <select name="category_id" data-catalog-category-filter>
+                <option value="">All categories</option>
+                @foreach($categories as $c)
+                    <option value="{{ $c->id }}" @selected((int) ($filters['category_id'] ?? 0) === $c->id)>{{ $c->name }}</option>
+                @endforeach
+            </select>
+        </label>
         <label>
             Brand
             <select name="brand">
                 <option value="">All brands</option>
                 @foreach($brands as $b)
                     <option value="{{ $b->slug }}" @selected(($filters['brand_slug'] ?? '') === $b->slug)>{{ $b->name }}</option>
-                @endforeach
-            </select>
-        </label>
-        <label>
-            Category
-            <select name="category_id">
-                <option value="">All categories</option>
-                @foreach($categories as $c)
-                    <option value="{{ $c->id }}" @selected((int) ($filters['category_id'] ?? 0) === $c->id)>{{ $c->name }}</option>
                 @endforeach
             </select>
         </label>

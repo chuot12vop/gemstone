@@ -61,6 +61,14 @@ class DatabaseSeeder extends Seeder
             'payment_apple_pay_enabled' => '1',
             'payment_apple_pay_merchant_id' => '',
             'payment_apple_pay_domain' => '',
+            'payment_venmo_enabled' => '1',
+            'payment_venmo_username' => '',
+            'payment_cashapp_enabled' => '1',
+            'payment_cashapp_cashtag' => '',
+            'payment_cashapp_qr_image' => '',
+            'payment_zelle_enabled' => '1',
+            'payment_zelle_payee_label' => 'Tachi Gem Stone',
+            'payment_zelle_qr_image' => '',
         ] as $key => $value) {
             Setting::query()->updateOrCreate(
                 ['key' => $key],

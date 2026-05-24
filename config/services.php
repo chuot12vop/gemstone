@@ -37,5 +37,9 @@ return [
         'redirect' => env('GOOGLE_REDIRECT_URI', rtrim((string) env('APP_URL', ''), '/').'/auth/google/callback'),
     ],
 
+    'contact' => [
+        'google_script_url' => env('CONTACT_GOOGLE_SCRIPT_URL', ''),
+    ],
+
 ];
 

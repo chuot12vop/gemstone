@@ -55,6 +55,7 @@
             <th>Txn ID</th>
             <th>Amount</th>
             <th>Status</th>
+            <th>Proof</th>
         </tr>
         </thead>
         <tbody>
@@ -65,9 +66,16 @@
                 <td>{{ $txn->gateway_transaction_id ?: '-' }}</td>
                 <td>{{ strtoupper($txn->currency_code) }} {{ number_format((float) $txn->amount, 2) }}</td>
                 <td><span class="badge badge--{{ $txn->status }}">{{ $txn->status }}</span></td>
+                <td>
+                    @if($txn->proof_path)
+                        <a href="{{ $txn->proof_path }}" target="_blank" rel="noopener">Screenshot</a>
+                    @else
+                        -
+                    @endif
+                </td>
             </tr>
         @empty
-            <tr><td colspan="5" class="data-table__empty">No payment transactions for this order.</td></tr>
+            <tr><td colspan="6" class="data-table__empty">No payment transactions for this order.</td></tr>
         @endforelse
         </tbody>
     </table>
