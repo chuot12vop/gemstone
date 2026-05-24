@@ -1256,13 +1256,6 @@ body.site { margin: 0; font-family: "Source Sans 3", system-ui, sans-serif; colo
   max-height: 45rem;
 }
 
-@media (max-width: 767px) {
-  .home-hero.home-hero--slider {
-    min-height: clamp(200px, 40vh, 40rem);
-    height: clamp(200px, 40vh, 40rem);
-    max-height: 40rem;
-  }
-}
 .home-hero__viewport {
   position: relative;
   width: 100%;
@@ -1401,6 +1394,43 @@ body.site { margin: 0; font-family: "Source Sans 3", system-ui, sans-serif; colo
 .home-hero__lede {
   margin: 0;
   max-width: 30rem;
+}
+
+@media (max-width: 767px) {
+  /* Let the banner image set height so nothing is cropped and overlay matches the image. */
+  .home-hero.home-hero--slider {
+    min-height: 0;
+    height: auto;
+    max-height: none;
+  }
+
+  .home-hero--slider .home-hero__viewport,
+  .home-hero--slider .home-hero__slides {
+    height: auto;
+    min-height: 0;
+    max-height: none;
+  }
+
+  .home-hero--slider .home-hero__slide {
+    height: auto;
+    min-height: 0;
+    align-self: flex-start;
+  }
+
+  .home-hero--slider .home-hero__slide-hit {
+    position: relative;
+    inset: auto;
+    height: auto;
+    min-height: 0;
+  }
+
+  .home-hero--slider .home-hero__slide .home-hero__bg,
+  .home-hero--slider .home-hero__slide-hit .home-hero__bg {
+    height: auto;
+    min-height: 0;
+    max-height: none;
+    object-fit: contain;
+  }
 }
 
 .home-section {
