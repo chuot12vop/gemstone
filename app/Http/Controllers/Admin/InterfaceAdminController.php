@@ -5,9 +5,9 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Setting;
+use App\Services\PublicImageStore;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class InterfaceAdminController extends Controller
@@ -15,6 +15,13 @@ class InterfaceAdminController extends Controller
     private const PUBLIC_STORAGE_PREFIX = '/storage/';
 
     private const SLIDES_KEY = 'home_banner_slides';
+
+    private PublicImageStore $images;
+
+    public function __construct(PublicImageStore $images)
+    {
+        $this->images = $images;
+    }
 
     public function index()
     {
@@ -55,7 +62,7 @@ class InterfaceAdminController extends Controller
 
             $imagePath = null;
             if ($file instanceof UploadedFile) {
-                $imagePath = $this->storeImage($file, 'settings/banner-slides');
+                $imagePath = $this->images->store($file, 'settings/banner-slides', asWebp: true);
             } elseif ($existing !== '') {
                 $imagePath = $existing;
             }
@@ -78,7 +85,7 @@ class InterfaceAdminController extends Controller
         $oldPaths = $this->collectImagePaths($oldSlides);
         $newPaths = $this->collectImagePaths($newSlides);
         foreach (array_diff($oldPaths, $newPaths) as $removed) {
-            $this->deletePublicPath($removed);
+            $this->deleteBannerPath($removed);
         }
 
         Setting::query()->updateOrCreate(
@@ -150,25 +157,7 @@ class InterfaceAdminController extends Controller
         )));
     }
 
-    private function storeImage(UploadedFile $file, string $directory): ?string
-    {
-        $extension = strtolower($file->getClientOriginalExtension() ?: 'jpg');
-        $allowed = ['jpg', 'jpeg', 'png', 'webp'];
-        if (! in_array($extension, $allowed, true)) {
-            $extension = 'jpg';
-        }
-        $relativeDirectory = trim($directory, '/');
-        $fileName = Str::uuid()->toString().'.'.$extension;
-        $path = $file->storeAs($relativeDirectory, $fileName, 'public');
-
-        if (! is_string($path) || $path === '') {
-            return null;
-        }
-
-        return self::PUBLIC_STORAGE_PREFIX.$path;
-    }
-
-    private function deletePublicPath(?string $path): void
+    private function deleteBannerPath(?string $path): void
     {
         if ($path === null || $path === '') {
             return;
@@ -179,7 +168,7 @@ class InterfaceAdminController extends Controller
             : ltrim($path, '/');
 
         if ($relativePath !== '' && Str::startsWith($relativePath, 'settings/banner-slides/')) {
-            Storage::disk('public')->delete($relativePath);
+            $this->images->delete($path);
         }
     }
 }

@@ -4,14 +4,18 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Category;
+use App\Services\PublicImageStore;
 use Illuminate\Http\Request;
-use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class CategoryAdminController extends Controller
 {
-    private const PUBLIC_STORAGE_PREFIX = '/storage/';
+    private PublicImageStore $images;
+
+    public function __construct(PublicImageStore $images)
+    {
+        $this->images = $images;
+    }
 
     public function index()
     {
@@ -39,7 +43,7 @@ class CategoryAdminController extends Controller
     public function store(Request $request)
     {
         $data = $this->validated($request);
-        $imageUrl = $this->storeImage($request->file('image'), 'categories');
+        $imageUrl = $this->images->store($request->file('image'), 'categories', asWebp: true);
         if ($imageUrl !== null) {
             $data['image'] = $imageUrl;
         }
@@ -64,9 +68,9 @@ class CategoryAdminController extends Controller
     public function update(Request $request, Category $category)
     {
         $data = $this->validated($request);
-        $imageUrl = $this->storeImage($request->file('image'), 'categories');
+        $imageUrl = $this->images->store($request->file('image'), 'categories', asWebp: true);
         if ($imageUrl !== null) {
-            $this->deletePublicPath($category->image);
+            $this->images->delete($category->image);
             $data['image'] = $imageUrl;
         }
 
@@ -81,7 +85,7 @@ class CategoryAdminController extends Controller
             return redirect()->route('admin.categories.index')->with('error', 'Cannot delete a category that still has products. Reassign or delete those products first.');
         }
 
-        $this->deletePublicPath($category->image);
+        $this->images->delete($category->image);
         $category->delete();
 
         return redirect()->route('admin.categories.index')->with('success', 'Category deleted.');
@@ -115,43 +119,5 @@ class CategoryAdminController extends Controller
             'meta_title' => $validated['meta_title'] ?? null,
             'meta_description' => $validated['meta_description'] ?? null,
         ];
-    }
-
-    private function storeImage(?UploadedFile $file, string $directory): ?string
-    {
-        if ($file === null) {
-            return null;
-        }
-
-        $extension = strtolower($file->getClientOriginalExtension() ?: 'jpg');
-        $allowed = ['jpg', 'jpeg', 'png', 'webp'];
-        if (! in_array($extension, $allowed, true)) {
-            $extension = 'jpg';
-        }
-
-        $relativeDirectory = trim($directory, '/');
-        $fileName = Str::uuid()->toString().'.'.$extension;
-        $path = $file->storeAs($relativeDirectory, $fileName, 'public');
-
-        if (! is_string($path) || $path === '') {
-            return null;
-        }
-
-        return self::PUBLIC_STORAGE_PREFIX.$path;
-    }
-
-    private function deletePublicPath(?string $path): void
-    {
-        if ($path === null || $path === '') {
-            return;
-        }
-
-        $relativePath = Str::startsWith($path, self::PUBLIC_STORAGE_PREFIX)
-            ? Str::after($path, self::PUBLIC_STORAGE_PREFIX)
-            : ltrim($path, '/');
-
-        if ($relativePath !== '') {
-            Storage::disk('public')->delete($relativePath);
-        }
     }
 }

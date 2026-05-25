@@ -7,17 +7,22 @@ use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductImage;
+use App\Services\PublicImageStore;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class ProductAdminController extends Controller
 {
-    private const PUBLIC_STORAGE_PREFIX = '/storage/';
+    private PublicImageStore $images;
+
+    public function __construct(PublicImageStore $images)
+    {
+        $this->images = $images;
+    }
 
     public function index(Request $request)
     {
@@ -71,8 +76,8 @@ class ProductAdminController extends Controller
     {
         $data = $this->validated($request);
         $attributes = $this->extractAttributes($request);
-        $thumbnailUrl = $this->storeImage($request->file('thumbnail'), 'products/thumbnails');
-        $galleryImageUrls = $this->storeMultipleImages($this->normalizeUploadedFiles($request->file('images')), 'products/gallery');
+        $thumbnailUrl = $this->images->store($request->file('thumbnail'), 'products/thumbnails', asWebp: true);
+        $galleryImageUrls = $this->images->storeMany($this->normalizeUploadedFiles($request->file('images')), 'products/gallery');
         if ($thumbnailUrl !== null) {
             $data['thumbnail'] = $thumbnailUrl;
             $data['image'] = $thumbnailUrl;
@@ -116,11 +121,11 @@ class ProductAdminController extends Controller
         $data = $this->validated($request);
         $data['slug'] = $this->resolveSlugForProduct($data['slug'], $product->id);
         $attributes = $this->extractAttributes($request);
-        $thumbnailUrl = $this->storeImage($request->file('thumbnail'), 'products/thumbnails');
-        $galleryImageUrls = $this->storeMultipleImages($this->normalizeUploadedFiles($request->file('images')), 'products/gallery');
+        $thumbnailUrl = $this->images->store($request->file('thumbnail'), 'products/thumbnails', asWebp: true);
+        $galleryImageUrls = $this->images->storeMany($this->normalizeUploadedFiles($request->file('images')), 'products/gallery');
 
         if ($thumbnailUrl !== null) {
-            $this->deletePublicPath($product->thumbnail);
+            $this->images->delete($product->thumbnail);
             $data['thumbnail'] = $thumbnailUrl;
             $data['image'] = $thumbnailUrl;
         }
@@ -173,9 +178,9 @@ class ProductAdminController extends Controller
     public function destroy(Product $product)
     {
         $product->load('productImages');
-        $this->deletePublicPath($product->thumbnail);
+        $this->images->delete($product->thumbnail);
         foreach ($product->productImages as $image) {
-            $this->deletePublicPath($image->path);
+            $this->images->delete($image->path);
         }
         $product->delete();
 
@@ -320,7 +325,7 @@ class ProductAdminController extends Controller
     private function syncGalleryImages(Product $product, Collection $paths): void
     {
         foreach ($product->productImages as $image) {
-            $this->deletePublicPath($image->path);
+            $this->images->delete($image->path);
         }
         $product->productImages()->delete();
 
@@ -358,57 +363,6 @@ class ProductAdminController extends Controller
         }
 
         return $input;
-    }
-
-    private function storeImage(?UploadedFile $file, string $directory): ?string
-    {
-        if ($file === null) {
-            return null;
-        }
-
-        $extension = strtolower($file->getClientOriginalExtension() ?: 'jpg');
-        $allowed = ['jpg', 'jpeg', 'png', 'webp'];
-        if (! in_array($extension, $allowed, true)) {
-            $extension = 'jpg';
-        }
-
-        $relativeDirectory = trim($directory, '/');
-        $fileName = Str::uuid()->toString().'.'.$extension;
-        $path = $file->storeAs($relativeDirectory, $fileName, 'public');
-
-        if (! is_string($path) || $path === '') {
-            return null;
-        }
-
-        return self::PUBLIC_STORAGE_PREFIX.$path;
-    }
-
-    /**
-     * @param array<int, UploadedFile|null> $files
-     * @return Collection<int, string>
-     */
-    private function storeMultipleImages(array $files, string $directory): Collection
-    {
-        return collect($files)
-            ->filter(static fn ($file): bool => $file instanceof UploadedFile)
-            ->map(fn (UploadedFile $file): ?string => $this->storeImage($file, $directory))
-            ->filter(static fn (?string $path): bool => $path !== null)
-            ->values();
-    }
-
-    private function deletePublicPath(?string $path): void
-    {
-        if ($path === null || $path === '') {
-            return;
-        }
-
-        $relativePath = Str::startsWith($path, self::PUBLIC_STORAGE_PREFIX)
-            ? Str::after($path, self::PUBLIC_STORAGE_PREFIX)
-            : ltrim($path, '/');
-
-        if ($relativePath !== '') {
-            Storage::disk('public')->delete($relativePath);
-        }
     }
 
     private function resolveSlugForProduct(string $baseSlug, int $productId): string

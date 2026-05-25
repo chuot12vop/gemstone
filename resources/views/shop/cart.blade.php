@@ -40,8 +40,15 @@
     </form>
     <div class="cart-actions">
         <button class="btn btn--ghost" type="submit" form="cart-update">Update cart</button>
-        <a class="btn btn--primary" href="{{ route('shop.checkout') }}">Checkout</a>
+        @auth
+            <a class="btn btn--primary" href="{{ route('shop.checkout') }}">Checkout</a>
+        @else
+            <a class="btn btn--primary" href="{{ route('login') }}">Sign in to checkout</a>
+        @endauth
     </div>
+    @guest
+        <p class="cart-auth-note">You need an account to checkout and pay. <a href="{{ route('register') }}">Create account</a> or <a href="{{ route('login') }}">sign in</a>.</p>
+    @endguest
 
     <p class="cart-subtotal">Subtotal (USD basis): <strong>${{ number_format($subtotalUsd, 2) }}</strong> · Display: <strong>{{ $currency->formatUsd((float) $subtotalUsd) }}</strong></p>
 @endif

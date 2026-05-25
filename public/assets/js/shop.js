@@ -25,9 +25,11 @@
   }
 
   initProductGallery();
+  initProductDescriptionToggle();
   initProductAttributesAccordion();
   initProductCtaBar();
   initProductCtaQtySync();
+  initSiteHeaderHeight();
   initCatalogMega();
   initCatalogFiltersCollapse();
   initCatalogCategoryFilter();
@@ -118,6 +120,22 @@ function initProductUpsellBundle() {
   }
 
   updateTotals();
+}
+
+function initSiteHeaderHeight() {
+  const header = document.querySelector('.site-header');
+  if (!header) {
+    return;
+  }
+  function sync() {
+    document.documentElement.style.setProperty('--site-header-height', header.offsetHeight + 'px');
+  }
+  sync();
+  if (typeof ResizeObserver !== 'undefined') {
+    new ResizeObserver(sync).observe(header);
+  } else {
+    window.addEventListener('resize', sync);
+  }
 }
 
 function initCatalogCategoryFilter() {
@@ -356,8 +374,13 @@ function initHomeSlider() {
     const ms = parseInt(String(root.getAttribute('data-slide-interval') || '4000'), 10) || 4000;
     let timer = null;
     let touchStartX = 0;
+    let touchStartY = 0;
     let dragOffset = 0;
     let dragging = false;
+    let lockAxis = null;
+    let cachedSlideWidth = 0;
+    let lastInnerWidth = window.innerWidth;
+    let rafId = null;
 
     function slidesPerView() {
       const desktopBp = parseInt(String(root.getAttribute('data-slide-breakpoint') || '768'), 10) || 768;
@@ -404,6 +427,10 @@ function initHomeSlider() {
       return (viewport.clientWidth || 1) / slidesPerView();
     }
 
+    function refreshSlideWidth() {
+      cachedSlideWidth = slideWidth();
+    }
+
     function syncStaticState() {
       const isStatic = !canAdvance();
       root.classList.toggle('is-static', isStatic);
@@ -416,9 +443,48 @@ function initHomeSlider() {
 
     function applyPosition(animate) {
       if (animate === undefined) animate = true;
-      const base = -(active * slideWidth());
+      const w = dragging ? cachedSlideWidth : slideWidth();
+      const x = Math.round(-(active * w) + dragOffset);
       track.style.transition = animate && !dragging ? '' : 'none';
-      track.style.transform = 'translate3d(' + (base + dragOffset) + 'px, 0, 0)';
+      track.style.transform = 'translate3d(' + x + 'px, 0, 0)';
+    }
+
+    function queueApplyPosition() {
+      if (rafId !== null) return;
+      rafId = requestAnimationFrame(function () {
+        rafId = null;
+        if (dragging) applyPosition(false);
+      });
+    }
+
+    function cancelQueuedPosition() {
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId);
+        rafId = null;
+      }
+    }
+
+    function finishTouchDrag() {
+      if (!dragging) return;
+      cancelQueuedPosition();
+      const wasHorizontal = lockAxis === true;
+      dragging = false;
+      lockAxis = null;
+      if (!wasHorizontal) {
+        dragOffset = 0;
+        setActive(active, true);
+        start();
+        return;
+      }
+      const threshold = cachedSlideWidth * 0.16;
+      if (dragOffset < -threshold) {
+        setActive(active + 1, true);
+      } else if (dragOffset > threshold) {
+        setActive(active - 1, true);
+      } else {
+        setActive(active, true);
+      }
+      start();
     }
 
     function stop() {
@@ -481,43 +547,51 @@ function initHomeSlider() {
       start();
     });
 
-    root.addEventListener('touchstart', function (e) {
+    viewport.addEventListener('touchstart', function (e) {
       if (!canAdvance() || e.touches.length !== 1) return;
       stop();
+      refreshSlideWidth();
       dragging = true;
+      lockAxis = null;
       touchStartX = e.touches[0].clientX;
+      touchStartY = e.touches[0].clientY;
       dragOffset = 0;
       track.style.transition = 'none';
     }, { passive: true });
 
-    root.addEventListener('touchmove', function (e) {
+    viewport.addEventListener('touchmove', function (e) {
       if (!dragging || e.touches.length !== 1) return;
-      dragOffset = e.touches[0].clientX - touchStartX;
-      applyPosition(false);
-    }, { passive: true });
-
-    root.addEventListener('touchend', function () {
-      if (!dragging) return;
-      dragging = false;
-      const threshold = slideWidth() * 0.16;
-      if (dragOffset < -threshold) {
-        setActive(active + 1, true);
-      } else if (dragOffset > threshold) {
-        setActive(active - 1, true);
-      } else {
-        setActive(active, true);
+      const x = e.touches[0].clientX;
+      const y = e.touches[0].clientY;
+      const dx = x - touchStartX;
+      const dy = y - touchStartY;
+      if (lockAxis === null) {
+        if (Math.abs(dx) < 6 && Math.abs(dy) < 6) return;
+        lockAxis = Math.abs(dx) >= Math.abs(dy);
       }
-      start();
-    }, { passive: true });
+      if (!lockAxis) return;
+      e.preventDefault();
+      dragOffset = dx;
+      queueApplyPosition();
+    }, { passive: false });
+
+    viewport.addEventListener('touchend', finishTouchDrag, { passive: true });
+    viewport.addEventListener('touchcancel', finishTouchDrag, { passive: true });
 
     root.addEventListener('mouseenter', stop);
     root.addEventListener('mouseleave', start);
     window.addEventListener('resize', function () {
+      if (dragging) return;
+      const w = window.innerWidth;
+      if (Math.abs(w - lastInnerWidth) < 2) return;
+      lastInnerWidth = w;
+      refreshSlideWidth();
       active = normalizeIndex(active);
       setActive(active, false);
       start();
     });
 
+    refreshSlideWidth();
     setActive(0, false);
     if (canAdvance()) {
       start();
@@ -706,6 +780,61 @@ function initProductGallery() {
   });
 
   startAutoplay();
+}
+
+function initProductDescriptionToggle() {
+  const root = document.querySelector('[data-pd-description]');
+  if (!root) return;
+
+  const body = root.querySelector('[data-pd-description-body]');
+  const toggle = root.querySelector('[data-pd-description-toggle]');
+  if (!body || !toggle) return;
+
+  const labelMore = toggle.dataset.labelMore || 'Read more';
+  const labelLess = toggle.dataset.labelLess || 'Read less';
+  let expanded = false;
+  let canToggle = false;
+
+  function setCollapsed() {
+    expanded = false;
+    body.classList.add('is-collapsed');
+    body.classList.remove('is-expanded');
+    toggle.textContent = labelMore;
+  }
+
+  function setExpanded() {
+    expanded = true;
+    body.classList.remove('is-collapsed');
+    body.classList.add('is-expanded');
+    toggle.textContent = labelLess;
+  }
+
+  function measure() {
+    if (expanded) {
+      return;
+    }
+    setCollapsed();
+    canToggle = body.scrollHeight > body.clientHeight + 1;
+    toggle.hidden = !canToggle;
+    if (!canToggle) {
+      body.classList.remove('is-collapsed');
+    }
+  }
+
+  measure();
+  window.addEventListener('resize', measure);
+
+  toggle.addEventListener('click', function () {
+    if (!canToggle && !expanded) {
+      return;
+    }
+    if (expanded) {
+      setCollapsed();
+      measure();
+    } else {
+      setExpanded();
+    }
+  });
 }
 
 function initProductCtaBar() {

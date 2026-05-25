@@ -55,9 +55,8 @@ class GoogleAuthController extends Controller
 
         Auth::guard('web')->login($user, true);
 
-        $intended = session()->pull('url.intended');
-        if ($intended) {
-            return redirect($intended);
+        if (session()->has('url.intended')) {
+            return redirect()->intended(route('shop.account.index'));
         }
 
         if (! $user->phone) {

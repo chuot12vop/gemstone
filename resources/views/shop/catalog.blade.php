@@ -1,5 +1,7 @@
 @extends('layouts.shop')
 
+@section('mainClass', 'site-main--catalog')
+
 @section('content')
 <header class="page-head">
     <h1 class="page-head__title">{{ $currentCategory ? $currentCategory->name : ($currentBrand ? $currentBrand->name : 'Products') }}</h1>

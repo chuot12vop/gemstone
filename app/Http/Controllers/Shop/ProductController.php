@@ -3,8 +3,11 @@
 namespace App\Http\Controllers\Shop;
 
 use App\Http\Controllers\Controller;
+use App\Models\Category;
 use App\Models\Product;
 use App\Services\CurrencyService;
+use App\Support\ProductDetailPolicies;
+use Illuminate\Support\Str;
 
 class ProductController extends Controller
 {
@@ -31,6 +34,19 @@ class ProductController extends Controller
             ->limit(8)
             ->get();
 
+        $bestSellerProducts = collect();
+        $bestSellersCategory = Category::query()->where('slug', 'Best-Sellers')->first();
+        if ($bestSellersCategory) {
+            $bestSellerProducts = Product::query()
+                ->where('is_active', true)
+                ->where('category_id', $bestSellersCategory->id)
+                ->where('id', '!=', $product->id)
+                ->with('category')
+                ->inRandomOrder()
+                ->limit(8)
+                ->get();
+        }
+
         $reviews = $product->approvedReviews()->with('images')->get();
         $reviewStats = [
             'count' => $reviews->count(),
@@ -42,10 +58,16 @@ class ProductController extends Controller
 
         return view('shop.product', [
             'title' => $product->meta_title ?: $product->name,
-            'metaDescription' => $product->meta_description ?: ($product->short_description ?: $product->name),
+            'metaDescription' => $product->meta_description ?: (
+                $product->short_description
+                ?: Str::limit(strip_tags((string) $product->description), 160, '')
+                ?: $product->name
+            ),
             'product' => $product,
             'currency' => $currency,
+            'bestSellerProducts' => $bestSellerProducts,
             'relatedProducts' => $relatedProducts,
+            'productPolicies' => ProductDetailPolicies::rows(),
             'reviews' => $reviews,
             'reviewStats' => $reviewStats,
         ]);

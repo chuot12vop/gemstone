@@ -19,6 +19,7 @@ use App\Http\Controllers\Admin\SettingAdminController;
 use App\Http\Controllers\Shop\AccountController;
 use App\Http\Controllers\Shop\Auth\GoogleAuthController;
 use App\Http\Controllers\Shop\Auth\LoginController;
+use App\Http\Controllers\Shop\Auth\RegisterController;
 use App\Http\Controllers\Shop\CartController;
 use App\Http\Controllers\Shop\CatalogController;
 use App\Http\Controllers\Shop\CheckoutController;
@@ -33,11 +34,17 @@ use App\Http\Controllers\Shop\WelcomeOfferController;
 use Illuminate\Support\Facades\Route;
 
 /*
-| Shop (storefront) — customers use table `users`, sign in with Google
+| Shop (storefront) — customers use table `users` (email/password or Google)
 */
 Route::get('/', [HomeController::class, 'index'])->name('shop.home');
 Route::post('/welcome-offer', [WelcomeOfferController::class, 'store'])->name('shop.welcome.offer');
-Route::get('/login', [LoginController::class, 'show'])->name('login');
+
+Route::middleware('guest')->group(function () {
+    Route::get('/login', [LoginController::class, 'show'])->name('login');
+    Route::post('/login', [LoginController::class, 'login'])->name('shop.login');
+    Route::get('/register', [RegisterController::class, 'show'])->name('register');
+    Route::post('/register', [RegisterController::class, 'store'])->name('shop.register');
+});
 Route::post('/logout', [LoginController::class, 'logout'])->middleware('auth')->name('shop.logout');
 
 Route::middleware('auth')->prefix('account')->name('shop.account.')->group(function () {
@@ -61,10 +68,12 @@ Route::post('/cart/add', [CartController::class, 'add'])->name('shop.cart.add');
 Route::post('/cart/add-bundle', [CartController::class, 'addBundle'])->name('shop.cart.add-bundle');
 Route::post('/cart/update', [CartController::class, 'update'])->name('shop.cart.update');
 Route::post('/cart/remove', [CartController::class, 'remove'])->name('shop.cart.remove');
-Route::get('/checkout', [CheckoutController::class, 'index'])->name('shop.checkout');
-Route::post('/checkout/method', [CheckoutController::class, 'chooseMethod'])->name('shop.checkout.method');
-Route::get('/checkout/details', [CheckoutController::class, 'details'])->name('shop.checkout.details');
-Route::post('/checkout/place', [CheckoutController::class, 'place'])->name('shop.checkout.place');
+Route::middleware('auth')->group(function () {
+    Route::get('/checkout', [CheckoutController::class, 'index'])->name('shop.checkout');
+    Route::post('/checkout/method', [CheckoutController::class, 'chooseMethod'])->name('shop.checkout.method');
+    Route::get('/checkout/details', [CheckoutController::class, 'details'])->name('shop.checkout.details');
+    Route::post('/checkout/place', [CheckoutController::class, 'place'])->name('shop.checkout.place');
+});
 Route::get('/checkout/processing/{order_number}', [CheckoutController::class, 'processing'])->name('shop.checkout.processing');
 Route::post('/checkout/confirm/{order_number}', [CheckoutController::class, 'confirm'])->name('shop.checkout.confirm');
 Route::get('/order/{order_number}', [CheckoutController::class, 'confirmation'])->name('shop.order.show');

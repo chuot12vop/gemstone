@@ -28,12 +28,12 @@ class AboutAdminController extends Controller
         $validated = $request->validate([
             'page_title' => 'nullable|string|max:200',
             'page_summary' => 'nullable|string|max:500',
-            'page_body' => 'nullable|string|max:50000',
+            'page_body' => 'nullable|string',
             'home_lede' => 'nullable|string|max:2000',
             'home_button_label' => 'nullable|string|max:120',
             'panels' => 'nullable|array',
             'panels.*.title' => 'nullable|string|max:200',
-            'panels.*.body' => 'nullable|string|max:10000',
+            'panels.*.body' => 'nullable|string',
         ]);
 
         AboutPageSettings::store([

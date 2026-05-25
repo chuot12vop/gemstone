@@ -63,16 +63,30 @@
                     <span>{{ number_format($reviewStats['average'], 1) }} ({{ $reviewStats['count'] }} {{ Str::plural('review', $reviewStats['count']) }})</span>
                 </a>
             @endif
+            
+            @if($product->description)
+                <div class="product-detail__description" data-pd-description>
+                    <div class="prose product-detail__description-body is-collapsed" data-pd-description-body itemprop="description">
+                        {!! $product->description !!}
+                    </div>
+                    <button type="button"
+                            class="product-detail__read-more"
+                            data-pd-description-toggle
+                            data-label-more="Read more"
+                            data-label-less="Read less"
+                            hidden>
+                        Read more
+                    </button>
+                </div>
+            @elseif($product->short_description)
+                <p class="lede" itemprop="description">{{ $product->short_description }}</p>
+            @endif
 
             <p class="product-detail__price" itemprop="offers" itemscope itemtype="https://schema.org/Offer">
                 <span class="sr-only" itemprop="priceCurrency" content="USD">USD base</span>
                 <span class="sr-only" itemprop="price" content="{{ $product->price_usd }}"></span>
                 {{ $currency->formatUsd((float) $product->price_usd) }}
             </p>
-
-            @if($product->short_description)
-                <p class="lede" itemprop="description">{{ $product->short_description }}</p>
-            @endif
 
             <form class="add-form" method="post" action="{{ route('shop.cart.add') }}" data-pd-form>
                 @csrf
@@ -90,13 +104,7 @@
             </form>
             <p class="stock-note">{{ $product->stock }} in stock</p>
 
-            @if($product->description)
-                <div class="prose product-detail__description">
-                    <h2 class="product-detail__section-title">Description</h2>
-                    {!! $product->description !!}
-                </div>
-            @endif
-
+            @if($product->productAttributes->isNotEmpty())
             <section class="product-attributes" data-pd-attributes>
                 <h2 class="product-detail__section-title">Product Attribute</h2>
 
@@ -111,17 +119,26 @@
                         </div>
                     </article>
                 @endforeach
-                
             </section>
+            @endif
+
+            @include('shop.partials.product-detail-policies', ['policies' => $productPolicies ?? []])
         </div>
     </div>
 
-    @include('shop.partials.review-list', ['reviews' => $reviews, 'reviewStats' => $reviewStats])
-
-    @include('shop.partials.product-upsell-bundle', ['product' => $product, 'currency' => $currency])
+    @if(isset($bestSellerProducts) && $bestSellerProducts->isNotEmpty())
+        <section class="product-detail__below product-detail__below--bestsellers">
+            <h2 class="section__title section__title--center">Best sellers</h2>
+            <div class="shop-product-grid">
+                @foreach($bestSellerProducts as $bp)
+                    @include('shop.partials.product-card', ['product' => $bp, 'currency' => $currency])
+                @endforeach
+            </div>
+        </section>
+    @endif
 
     @if($relatedProducts->isNotEmpty())
-        <section class="product-related">
+        <section class="product-detail__below product-detail__below--related">
             <h2 class="section__title section__title--center">You may also like</h2>
             <div class="shop-product-grid">
                 @foreach($relatedProducts as $rp)
@@ -130,6 +147,8 @@
             </div>
         </section>
     @endif
+
+    @include('shop.partials.review-list', ['reviews' => $reviews, 'reviewStats' => $reviewStats])
 </article>
 
 <div class="product-cta-bar" data-pd-cta>

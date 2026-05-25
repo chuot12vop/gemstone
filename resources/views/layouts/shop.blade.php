@@ -100,6 +100,7 @@
                     </form>
                 @else
                     <a class="cart-link" href="{{ route('login') }}">Sign in</a>
+                    <a class="cart-link" href="{{ route('register') }}">Register</a>
                 @endauth
             </nav>
         </div>
