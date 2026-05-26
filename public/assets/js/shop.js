@@ -35,7 +35,11 @@
   initCatalogCategoryFilter();
   initProductUpsellBundle();
   initHomeSlider();
+  initHomeStoriesTextToggle();
+  initCheckoutDelivery();
+  initCheckoutVoucher();
   initWelcomePopup();
+  initFooterPromoPopup();
   initContactForm();
 })();
 
@@ -154,6 +158,274 @@ function initCatalogCategoryFilter() {
   });
 }
 
+function initFooterPromoPopup() {
+  const openBtn = document.querySelector('[data-footer-promo-open]');
+  const root = document.querySelector('[data-footer-promo-popup]');
+  if (!openBtn || !root) {
+    return;
+  }
+
+  function openPopup() {
+    root.hidden = false;
+    root.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('welcome-popup-open');
+    const email = root.querySelector('#footer-promo-email');
+    if (email) {
+      email.focus();
+    }
+  }
+
+  function closePopup() {
+    root.hidden = true;
+    root.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('welcome-popup-open');
+  }
+
+  openBtn.addEventListener('click', openPopup);
+
+  root.querySelectorAll('[data-footer-promo-close]').forEach(function (el) {
+    el.addEventListener('click', closePopup);
+  });
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && !root.hidden) {
+      closePopup();
+    }
+  });
+
+  const form = root.querySelector('[data-footer-promo-form]');
+  const success = root.querySelector('[data-footer-promo-success]');
+  if (form) {
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      const submitBtn = form.querySelector('button[type="submit"]');
+      if (submitBtn) {
+        submitBtn.disabled = true;
+      }
+      fetch(form.action, {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
+        },
+        body: new FormData(form),
+      })
+        .then(function (res) {
+          return res.json().then(function (data) {
+            if (!res.ok) {
+              throw new Error(data.message || 'Request failed');
+            }
+            return data;
+          });
+        })
+        .then(function (data) {
+          form.hidden = true;
+          if (success) {
+            success.textContent = data.message || success.textContent;
+            success.hidden = false;
+          }
+          setTimeout(closePopup, 2800);
+        })
+        .catch(function (err) {
+          if (submitBtn) {
+            submitBtn.disabled = false;
+          }
+          window.alert(err.message || 'Please enter a valid email and try again.');
+        });
+    });
+  }
+}
+
+function initCheckoutVoucher() {
+  const section = document.querySelector('[data-checkout-voucher]');
+  if (!section) {
+    return;
+  }
+
+  const form = document.querySelector('[data-checkout-delivery]');
+  const input = section.querySelector('[data-voucher-input]');
+  const applyBtn = section.querySelector('[data-voucher-apply]');
+  const removeBtn = section.querySelector('[data-voucher-remove]');
+  const msg = section.querySelector('[data-voucher-msg]');
+  const discountRow = document.querySelector('[data-checkout-discount-row]');
+  const discountEl = document.querySelector('[data-checkout-discount]');
+  const totalEl = document.querySelector('[data-checkout-total]');
+
+  function csrfToken() {
+    const tokenInput = form && form.querySelector('input[name="_token"]');
+    return tokenInput ? tokenInput.value : '';
+  }
+
+  function customerEmail() {
+    const emailInput = form && form.querySelector('[name="customer_email"]');
+    return emailInput ? String(emailInput.value || '').trim() : '';
+  }
+
+  function setMsg(text, type) {
+    if (!msg) {
+      return;
+    }
+    msg.textContent = text;
+    msg.hidden = !text;
+    msg.classList.remove('checkout-voucher__msg--ok', 'checkout-voucher__msg--err');
+    if (type) {
+      msg.classList.add(type === 'ok' ? 'checkout-voucher__msg--ok' : 'checkout-voucher__msg--err');
+    }
+  }
+
+  function updateTotals(data) {
+    if (discountRow && discountEl) {
+      const discount = parseFloat(data.discount_usd || '0', 10) || 0;
+      if (discount > 0) {
+        discountEl.textContent = '−' + (data.discount_formatted || '');
+        discountRow.hidden = false;
+      } else {
+        discountRow.hidden = true;
+      }
+    }
+    if (totalEl && data.total_formatted) {
+      totalEl.textContent = data.total_formatted;
+    }
+  }
+
+  function swapApplyRemove(applied) {
+    if (applyBtn) {
+      applyBtn.hidden = applied;
+    }
+    if (removeBtn) {
+      removeBtn.hidden = !applied;
+    }
+    if (input) {
+      input.readOnly = applied;
+    }
+  }
+
+  if (applyBtn && input) {
+    applyBtn.addEventListener('click', function () {
+      const code = String(input.value || '').trim();
+      const email = customerEmail();
+      if (!code) {
+        setMsg('Enter a voucher code.', 'err');
+        return;
+      }
+      if (!email) {
+        setMsg('Enter your email above first so we can match your voucher.', 'err');
+        return;
+      }
+      applyBtn.disabled = true;
+      const body = new FormData();
+      body.append('_token', csrfToken());
+      body.append('voucher_code', code);
+      body.append('customer_email', email);
+      fetch(section.getAttribute('data-voucher-apply-url'), {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
+        },
+        body: body,
+      })
+        .then(function (res) {
+          return res.json().then(function (data) {
+            if (!res.ok) {
+              throw new Error(data.message || 'Invalid voucher');
+            }
+            return data;
+          });
+        })
+        .then(function (data) {
+          input.value = data.code || code;
+          setMsg((data.percent || 10) + '% off applied — you save ' + (data.discount_formatted || '') + '.', 'ok');
+          updateTotals(data);
+          swapApplyRemove(true);
+        })
+        .catch(function (err) {
+          setMsg(err.message || 'Invalid voucher.', 'err');
+        })
+        .finally(function () {
+          applyBtn.disabled = false;
+        });
+    });
+  }
+
+  if (removeBtn) {
+    removeBtn.addEventListener('click', function () {
+      removeBtn.disabled = true;
+      fetch(section.getAttribute('data-voucher-remove-url'), {
+        method: 'DELETE',
+        headers: {
+          Accept: 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
+          'X-CSRF-TOKEN': csrfToken(),
+        },
+      })
+        .then(function (res) {
+          return res.json().then(function (data) {
+            if (!res.ok) {
+              throw new Error('Could not remove voucher');
+            }
+            return data;
+          });
+        })
+        .then(function (data) {
+          if (input) {
+            input.value = '';
+            input.readOnly = false;
+          }
+          setMsg('', null);
+          updateTotals({ discount_usd: 0, total_formatted: data.total_formatted });
+          swapApplyRemove(false);
+        })
+        .catch(function () {
+          setMsg('Could not remove voucher. Try again.', 'err');
+        })
+        .finally(function () {
+          removeBtn.disabled = false;
+        });
+    });
+  }
+
+  swapApplyRemove(removeBtn && !removeBtn.hidden);
+}
+
+function initCheckoutDelivery() {
+  const form = document.querySelector('[data-checkout-delivery]');
+  if (!form) {
+    return;
+  }
+  const placeholder = form.querySelector('[data-shipping-placeholder]');
+  const options = form.querySelector('[data-shipping-options]');
+  const requiredNames = [
+    'shipping_country',
+    'shipping_first_name',
+    'shipping_last_name',
+    'shipping_address_line1',
+    'shipping_city',
+    'shipping_postcode',
+  ];
+
+  function isAddressComplete() {
+    return requiredNames.every(function (name) {
+      const el = form.querySelector('[name="' + name + '"]');
+      return el && String(el.value || '').trim() !== '';
+    });
+  }
+
+  function syncShippingMethod() {
+    const complete = isAddressComplete();
+    if (placeholder) {
+      placeholder.hidden = complete;
+    }
+    if (options) {
+      options.hidden = !complete;
+    }
+  }
+
+  form.addEventListener('input', syncShippingMethod);
+  form.addEventListener('change', syncShippingMethod);
+  syncShippingMethod();
+}
+
 function initCatalogFiltersCollapse() {
   const details = document.querySelector('[data-catalog-filters]');
   if (!details) {
@@ -165,9 +437,7 @@ function initCatalogFiltersCollapse() {
       details.open = true;
       return;
     }
-    if (!details.hasAttribute('data-filters-active')) {
-      details.open = false;
-    }
+    details.open = false;
   }
   if (typeof mq.addEventListener === 'function') {
     mq.addEventListener('change', sync);
@@ -381,6 +651,9 @@ function initHomeSlider() {
     let cachedSlideWidth = 0;
     let lastInnerWidth = window.innerWidth;
     let rafId = null;
+    let inView = false;
+    let hoverPaused = false;
+    const autoplayEnabled = root.getAttribute('data-autoplay') !== 'false';
 
     function slidesPerView() {
       const desktopBp = parseInt(String(root.getAttribute('data-slide-breakpoint') || '768'), 10) || 768;
@@ -424,6 +697,13 @@ function initHomeSlider() {
     }
 
     function slideWidth() {
+      const first = slides[0];
+      if (first) {
+        const measured = first.getBoundingClientRect().width;
+        if (measured > 0) {
+          return measured;
+        }
+      }
       return (viewport.clientWidth || 1) / slidesPerView();
     }
 
@@ -496,7 +776,10 @@ function initHomeSlider() {
 
     function start() {
       stop();
-      if (canAdvance()) {
+      if (!autoplayEnabled) {
+        return;
+      }
+      if (canAdvance() && inView && !hoverPaused) {
         timer = setInterval(function () {
           setActive(active + 1, true);
         }, ms);
@@ -578,8 +861,35 @@ function initHomeSlider() {
     viewport.addEventListener('touchend', finishTouchDrag, { passive: true });
     viewport.addEventListener('touchcancel', finishTouchDrag, { passive: true });
 
-    root.addEventListener('mouseenter', stop);
-    root.addEventListener('mouseleave', start);
+    if (autoplayEnabled) {
+      root.addEventListener('pointerenter', function (e) {
+        if (e.pointerType === 'mouse') {
+          hoverPaused = true;
+          stop();
+        }
+      });
+      root.addEventListener('pointerleave', function (e) {
+        if (e.pointerType === 'mouse') {
+          hoverPaused = false;
+          start();
+        }
+      });
+      if ('IntersectionObserver' in globalThis) {
+        const autoplayObserver = new IntersectionObserver(function (entries) {
+          entries.forEach(function (entry) {
+            inView = entry.isIntersecting;
+            if (inView) {
+              start();
+            } else {
+              stop();
+            }
+          });
+        }, { threshold: 0.2 });
+        autoplayObserver.observe(root);
+      } else {
+        inView = true;
+      }
+    }
     window.addEventListener('resize', function () {
       if (dragging) return;
       const w = window.innerWidth;
@@ -593,7 +903,7 @@ function initHomeSlider() {
 
     refreshSlideWidth();
     setActive(0, false);
-    if (canAdvance()) {
+    if (autoplayEnabled && !('IntersectionObserver' in globalThis) && canAdvance()) {
       start();
     }
   });
@@ -780,6 +1090,91 @@ function initProductGallery() {
   });
 
   startAutoplay();
+}
+
+function initHomeStoriesTextToggle() {
+  const root = document.querySelector('[data-home-stories-text]');
+  if (!root) {
+    return;
+  }
+
+  const body = root.querySelector('[data-home-stories-text-body]');
+  const toggle = root.querySelector('[data-home-stories-text-toggle]');
+  if (!body || !toggle) {
+    return;
+  }
+
+  const mq = window.matchMedia('(max-width: 1023px)');
+  const labelMore = toggle.dataset.labelMore || 'Show more';
+  const labelLess = toggle.dataset.labelLess || 'Show less';
+  let expanded = false;
+
+  function isCompactViewport() {
+    return mq.matches;
+  }
+
+  function setCollapsed() {
+    expanded = false;
+    body.classList.add('is-collapsed');
+    body.classList.remove('is-expanded');
+    toggle.textContent = labelMore;
+  }
+
+  function setExpanded() {
+    expanded = true;
+    body.classList.remove('is-collapsed');
+    body.classList.add('is-expanded');
+    toggle.textContent = labelLess;
+  }
+
+  function disableToggle() {
+    expanded = false;
+    body.classList.remove('is-collapsed', 'is-expanded');
+    toggle.hidden = true;
+  }
+
+  function measure() {
+    if (!isCompactViewport()) {
+      disableToggle();
+      return;
+    }
+    if (expanded) {
+      toggle.hidden = false;
+      return;
+    }
+    setCollapsed();
+    const canToggle = body.scrollHeight > body.clientHeight + 1;
+    toggle.hidden = !canToggle;
+    if (!canToggle) {
+      body.classList.remove('is-collapsed');
+    }
+  }
+
+  measure();
+  if (typeof mq.addEventListener === 'function') {
+    mq.addEventListener('change', function () {
+      expanded = false;
+      measure();
+    });
+  } else {
+    mq.addListener(function () {
+      expanded = false;
+      measure();
+    });
+  }
+  window.addEventListener('resize', measure);
+
+  toggle.addEventListener('click', function () {
+    if (!isCompactViewport()) {
+      return;
+    }
+    if (expanded) {
+      setCollapsed();
+      measure();
+    } else {
+      setExpanded();
+    }
+  });
 }
 
 function initProductDescriptionToggle() {

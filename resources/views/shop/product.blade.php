@@ -122,29 +122,31 @@
             </section>
             @endif
 
+            @include('shop.partials.product-upsell-bundle', ['product' => $product, 'currency' => $currency])
+
             @include('shop.partials.product-detail-policies', ['policies' => $productPolicies ?? []])
         </div>
     </div>
 
     @if(isset($bestSellerProducts) && $bestSellerProducts->isNotEmpty())
-        <section class="product-detail__below product-detail__below--bestsellers">
-            <h2 class="section__title section__title--center">Best sellers</h2>
-            <div class="shop-product-grid">
-                @foreach($bestSellerProducts as $bp)
-                    @include('shop.partials.product-card', ['product' => $bp, 'currency' => $currency])
-                @endforeach
-            </div>
+        <section class="product-detail__below product-detail__below--bestsellers" aria-labelledby="product-bestsellers-title">
+            <h2 id="product-bestsellers-title" class="section__title section__title--center">Best sellers</h2>
+            @include('shop.partials.home-product-slider', [
+                'products' => $bestSellerProducts,
+                'currency' => $currency,
+                'sliderLabel' => 'Best sellers',
+            ])
         </section>
     @endif
 
     @if($relatedProducts->isNotEmpty())
-        <section class="product-detail__below product-detail__below--related">
-            <h2 class="section__title section__title--center">You may also like</h2>
-            <div class="shop-product-grid">
-                @foreach($relatedProducts as $rp)
-                    @include('shop.partials.product-card', ['product' => $rp, 'currency' => $currency])
-                @endforeach
-            </div>
+        <section class="product-detail__below product-detail__below--related" aria-labelledby="product-related-title">
+            <h2 id="product-related-title" class="section__title section__title--center">You may also like</h2>
+            @include('shop.partials.home-product-slider', [
+                'products' => $relatedProducts,
+                'currency' => $currency,
+                'sliderLabel' => 'You may also like',
+            ])
         </section>
     @endif
 

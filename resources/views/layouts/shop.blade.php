@@ -117,6 +117,7 @@
         @yield('content')
     </main>
 
+    @include('shop.partials.footer-promo-popup')
     @include('shop.partials.whatsapp-float')
 
     <footer class="site-footer{{ !empty($shopFront['footer_background']) ? ' site-footer--has-bg' : '' }}"
@@ -125,6 +126,7 @@
             <div>
                 <strong>{{ $siteSettings['site_name'] ?? config('app.name') }}</strong>
                 <p>Gemstone jewelry &amp; feng shui pieces for balance and intention — crafted for US customers.</p>
+                <button type="button" class="site-footer__promo-btn" data-footer-promo-open>SIGN UP FOR 10% OFF</button>
             </div>
             <div>
                 <h3 class="site-footer__heading">Shop</h3>

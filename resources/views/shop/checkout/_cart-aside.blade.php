@@ -36,7 +36,16 @@
     </ul>
     <p class="checkout-aside__subtotal">
         <span>Subtotal</span>
-        <strong>{{ $currency->formatUsd((float) $subtotalUsd) }}</strong>
+        <strong data-checkout-subtotal>{{ $currency->formatUsd((float) $subtotalUsd) }}</strong>
+    </p>
+    @php($discountUsd = (float) ($discountUsd ?? 0))
+    <p class="checkout-aside__discount" data-checkout-discount-row @if($discountUsd <= 0) hidden @endif>
+        <span>Discount</span>
+        <strong data-checkout-discount>−{{ $currency->formatUsd($discountUsd) }}</strong>
+    </p>
+    <p class="checkout-aside__total">
+        <span>Total</span>
+        <strong data-checkout-total>{{ $currency->formatUsd((float) ($totalUsd ?? $subtotalUsd)) }}</strong>
     </p>
     @if(!empty($asideNote))
         <p class="checkout-aside__note">{{ $asideNote }}</p>

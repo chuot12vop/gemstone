@@ -3,7 +3,7 @@
 @section('content')
 <header class="page-head">
     <h1 class="page-head__title">Checkout</h1>
-    <p class="page-head__summary">Step 2 of 3 — please tell us where to ship your order.</p>
+    <p class="page-head__summary">Step 2 of 3 — delivery and contact details.</p>
 </header>
 
 @include('shop.checkout._stepper', ['step' => $step])
@@ -19,25 +19,31 @@
             <a class="checkout-summary-banner__change" href="{{ route('shop.checkout') }}">Change</a>
         </div>
 
-        <form class="checkout-form" method="post" action="{{ route('shop.checkout.place') }}">
+        <form class="checkout-form" method="post" action="{{ route('shop.checkout.place') }}" data-checkout-delivery>
             @csrf
-            <div class="form-grid">
-                <label>
-                    Full name
-                    <input type="text" name="customer_name" required value="{{ $checkoutDefaults['customer_name'] ?? old('customer_name') }}">
-                </label>
-                <label>
-                    Email
-                    <input type="email" name="customer_email" required value="{{ $checkoutDefaults['customer_email'] ?? old('customer_email') }}">
-                </label>
-                <label class="full">
-                    Shipping address
-                    <textarea name="shipping_address" rows="4" required>{{ old('shipping_address') }}</textarea>
-                </label>
-                @if($gateway->customerFieldsView())
+
+            <section class="checkout-block" aria-labelledby="checkout-contact-title">
+                <h2 id="checkout-contact-title" class="checkout-block__title">Contact</h2>
+                <div class="checkout-field checkout-field--floating full">
+                    <input type="email" id="customer_email" name="customer_email" required autocomplete="email"
+                           value="{{ $checkoutDefaults['customer_email'] ?? old('customer_email') }}" placeholder=" ">
+                    <label for="customer_email">Email</label>
+                </div>
+            </section>
+
+            @include('shop.checkout._delivery-fields', ['deliveryDefaults' => $deliveryDefaults ?? []])
+
+            @include('shop.checkout._voucher-fields', [
+                'appliedVoucher' => $appliedVoucher ?? null,
+                'discountUsd' => $discountUsd ?? 0,
+                'currency' => $currency,
+            ])
+
+            @if($gateway->customerFieldsView())
+                <section class="checkout-block">
                     @include($gateway->customerFieldsView(), ['gateway' => $gateway])
-                @endif
-            </div>
+                </section>
+            @endif
 
             @if($errors->any())
                 <p class="banner banner--err">{{ $errors->first() }}</p>
@@ -53,6 +59,8 @@
     @include('shop.checkout._cart-aside', [
         'lines' => $lines,
         'subtotalUsd' => $subtotalUsd,
+        'discountUsd' => $discountUsd ?? 0,
+        'totalUsd' => $totalUsd ?? $subtotalUsd,
         'currency' => $currency,
     ])
 </div>

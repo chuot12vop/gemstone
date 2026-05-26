@@ -29,7 +29,7 @@
         $activeFilterCount++;
     }
 @endphp
-<details class="catalog-filters-wrap" data-catalog-filters @if($activeFilterCount > 0) data-filters-active open @endif>
+<details class="catalog-filters-wrap" data-catalog-filters @if($activeFilterCount > 0) data-filters-active @endif>
     <summary class="catalog-filters-wrap__summary">
         Filters
         @if($activeFilterCount > 0)

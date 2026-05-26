@@ -30,6 +30,7 @@ use App\Http\Controllers\Shop\PageController;
 use App\Http\Controllers\Shop\PostController;
 use App\Http\Controllers\Shop\ProductController;
 use App\Http\Controllers\Shop\ReviewController;
+use App\Http\Controllers\Shop\PromoSignupController;
 use App\Http\Controllers\Shop\WelcomeOfferController;
 use Illuminate\Support\Facades\Route;
 
@@ -38,6 +39,7 @@ use Illuminate\Support\Facades\Route;
 */
 Route::get('/', [HomeController::class, 'index'])->name('shop.home');
 Route::post('/welcome-offer', [WelcomeOfferController::class, 'store'])->name('shop.welcome.offer');
+Route::post('/promo-signup', [PromoSignupController::class, 'store'])->name('shop.promo.signup');
 
 Route::middleware('guest')->group(function () {
     Route::get('/login', [LoginController::class, 'show'])->name('login');
@@ -72,6 +74,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/checkout', [CheckoutController::class, 'index'])->name('shop.checkout');
     Route::post('/checkout/method', [CheckoutController::class, 'chooseMethod'])->name('shop.checkout.method');
     Route::get('/checkout/details', [CheckoutController::class, 'details'])->name('shop.checkout.details');
+    Route::post('/checkout/voucher', [CheckoutController::class, 'applyVoucher'])->name('shop.checkout.voucher.apply');
+    Route::delete('/checkout/voucher', [CheckoutController::class, 'removeVoucher'])->name('shop.checkout.voucher.remove');
     Route::post('/checkout/place', [CheckoutController::class, 'place'])->name('shop.checkout.place');
 });
 Route::get('/checkout/processing/{order_number}', [CheckoutController::class, 'processing'])->name('shop.checkout.processing');

@@ -117,21 +117,23 @@
     </section>
 @endif
 
-<section class="home-section home-section--about reveal-on-scroll" aria-labelledby="home-about-title">
-    <h2 id="home-about-title" class="section__title section__title--center">About us</h2>
-    <div class="home-about">
-        @if(!empty($about['home_lede']))
-            <p class="home-about__lede">{{ $about['home_lede'] }}</p>
-        @endif
-
-        @include('shop.partials.about-panels', ['panels' => $about['panels']])
-
-        <a class="btn btn--primary btn--small" href="{{ route('shop.about') }}">{{ $about['home_button_label'] ?: 'Learn more about us' }}</a>
-    </div>
+<section class="home-section home-section--new reveal-on-scroll" aria-labelledby="home-new-title">
+    <h2 id="home-new-title" class="section__title section__title--center">New arrivals</h2>
+    @if($homeNewProducts->isEmpty())
+        <p class="home-section__empty home-section__empty--center">New pieces are on the way — check back soon or <a href="{{ route('shop.products.index') }}">browse the shop</a>.</p>
+    @else
+        @include('shop.partials.home-product-slider', [
+            'products' => $homeNewProducts,
+            'currency' => $currency,
+            'sliderLabel' => 'New arrivals',
+        ])
+    @endif
 </section>
 
 @if($homeJournalPosts->isNotEmpty())
 @php($journalCount = $homeJournalPosts->count())
+@php($journalSlidesDesktop = min(3, max(1, $journalCount - 1)))
+@php($journalBasisDesktop = 100 / $journalSlidesDesktop)
 <section class="home-section home-section--journal reveal-on-scroll" aria-labelledby="home-journal-title">
     <div class="home-section__head-row">
         <h2 id="home-journal-title" class="section__title">Journal</h2>
@@ -139,13 +141,14 @@
     </div>
     <div class="home-journal-slider"
          data-home-slider
+         data-autoplay="false"
          data-slide-interval="3000"
          data-slides-mobile="1"
          data-slides-tablet="2"
-         data-slides-desktop="3"
+         data-slides-desktop="{{ $journalSlidesDesktop }}"
          data-slide-breakpoint-tablet="480"
          data-slide-breakpoint="961"
-         style="--slide-basis-mobile: 100%; --slide-basis-tablet: 50%; --slide-basis-desktop: 33.333%;"
+         style="--slide-basis-mobile: 100%; --slide-basis-tablet: 50%; --slide-basis-desktop: {{ $journalBasisDesktop }}%;"
          aria-roledescription="carousel"
          aria-label="Journal articles">
         <div class="home-journal-slider__viewport" data-slider-viewport>
@@ -180,19 +183,6 @@
     </div>
 </section>
 @endif
-
-<section class="home-section home-section--new reveal-on-scroll" aria-labelledby="home-new-title">
-    <h2 id="home-new-title" class="section__title section__title--center">New arrivals</h2>
-    @if($homeNewProducts->isEmpty())
-        <p class="home-section__empty home-section__empty--center">New pieces are on the way — check back soon or <a href="{{ route('shop.products.index') }}">browse the shop</a>.</p>
-    @else
-        @include('shop.partials.home-product-slider', [
-            'products' => $homeNewProducts,
-            'currency' => $currency,
-            'sliderLabel' => 'New arrivals',
-        ])
-    @endif
-</section>
 
 @if($homeStoryPage)
     @include('shop.partials.home-stories', ['storyPage' => $homeStoryPage])

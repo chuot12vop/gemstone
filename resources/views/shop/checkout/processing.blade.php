@@ -31,6 +31,8 @@
     @include('shop.checkout._cart-aside', [
         'lines' => $lines,
         'subtotalUsd' => $subtotalUsd,
+        'discountUsd' => $discountUsd ?? 0,
+        'totalUsd' => $totalUsd ?? $subtotalUsd,
         'currency' => $currency,
         'asideNote' => 'Total at checkout: '.strtoupper($order->currency_code).' '.number_format((float) $order->total_display, 2),
     ])

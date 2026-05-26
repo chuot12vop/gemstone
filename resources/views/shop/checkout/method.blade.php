@@ -47,6 +47,8 @@
     @include('shop.checkout._cart-aside', [
         'lines' => $lines,
         'subtotalUsd' => $subtotalUsd,
+        'discountUsd' => $discountUsd ?? 0,
+        'totalUsd' => $totalUsd ?? $subtotalUsd,
         'currency' => $currency,
     ])
 </div>

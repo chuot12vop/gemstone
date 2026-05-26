@@ -14,7 +14,14 @@
         @endforeach
     </ul>
     <p><strong>Subtotal:</strong> {{ $currency->formatUsd((float) $order->subtotal_usd) }}</p>
+    @if((float) ($order->discount_usd ?? 0) > 0)
+        <p><strong>Discount</strong> @if($order->voucher_code)({{ $order->voucher_code }})@endif: −{{ $currency->formatUsd((float) $order->discount_usd) }}</p>
+        <p><strong>Total:</strong> {{ $currency->formatUsd(max(0, (float) $order->subtotal_usd - (float) $order->discount_usd)) }}</p>
+    @endif
     <p><strong>Shipping to:</strong><br>{!! nl2br(e($order->shipping_address)) !!}</p>
+    @if($order->shipping_phone)
+        <p><strong>Phone:</strong> {{ $order->shipping_phone }}</p>
+    @endif
 </section>
 
 <p><a href="{{ route('shop.account.orders') }}">← All orders</a></p>
