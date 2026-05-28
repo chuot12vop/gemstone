@@ -39,7 +39,7 @@
   initCheckoutDelivery();
   initCheckoutVoucher();
   initWelcomePopup();
-  initFooterPromoPopup();
+  initFooterNewsletter();
   initContactForm();
 })();
 
@@ -158,82 +158,76 @@ function initCatalogCategoryFilter() {
   });
 }
 
-function initFooterPromoPopup() {
-  const openBtn = document.querySelector('[data-footer-promo-open]');
-  const root = document.querySelector('[data-footer-promo-popup]');
-  if (!openBtn || !root) {
+function initFooterNewsletter() {
+  const root = document.querySelector('[data-footer-newsletter]');
+  if (!root) {
     return;
   }
 
-  function openPopup() {
-    root.hidden = false;
-    root.setAttribute('aria-hidden', 'false');
-    document.body.classList.add('welcome-popup-open');
-    const email = root.querySelector('#footer-promo-email');
-    if (email) {
-      email.focus();
-    }
-  }
-
-  function closePopup() {
-    root.hidden = true;
-    root.setAttribute('aria-hidden', 'true');
-    document.body.classList.remove('welcome-popup-open');
-  }
-
-  openBtn.addEventListener('click', openPopup);
-
-  root.querySelectorAll('[data-footer-promo-close]').forEach(function (el) {
-    el.addEventListener('click', closePopup);
-  });
-
-  document.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape' && !root.hidden) {
-      closePopup();
-    }
-  });
-
   const form = root.querySelector('[data-footer-promo-form]');
-  const success = root.querySelector('[data-footer-promo-success]');
-  if (form) {
-    form.addEventListener('submit', function (e) {
-      e.preventDefault();
-      const submitBtn = form.querySelector('button[type="submit"]');
-      if (submitBtn) {
-        submitBtn.disabled = true;
-      }
-      fetch(form.action, {
-        method: 'POST',
-        headers: {
-          Accept: 'application/json',
-          'X-Requested-With': 'XMLHttpRequest',
-        },
-        body: new FormData(form),
-      })
-        .then(function (res) {
-          return res.json().then(function (data) {
-            if (!res.ok) {
-              throw new Error(data.message || 'Request failed');
-            }
-            return data;
-          });
-        })
-        .then(function (data) {
-          form.hidden = true;
-          if (success) {
-            success.textContent = data.message || success.textContent;
-            success.hidden = false;
-          }
-          setTimeout(closePopup, 2800);
-        })
-        .catch(function (err) {
-          if (submitBtn) {
-            submitBtn.disabled = false;
-          }
-          window.alert(err.message || 'Please enter a valid email and try again.');
-        });
-    });
+  const message = root.querySelector('[data-footer-promo-message]');
+  if (!form) {
+    return;
   }
+
+  function showMessage(text, isError) {
+    if (!message) {
+      return;
+    }
+    message.textContent = text;
+    message.hidden = false;
+    message.classList.toggle('footer-newsletter__message--err', !!isError);
+    message.classList.toggle('footer-newsletter__message--ok', !isError);
+  }
+
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    const consent = form.querySelector('input[name="promo_consent"]');
+    if (consent && !consent.checked) {
+      showMessage('Please agree to our Security and Privacy policies to continue.', true);
+      return;
+    }
+
+    const submitBtn = form.querySelector('button[type="submit"]');
+    if (submitBtn) {
+      submitBtn.disabled = true;
+    }
+    if (message) {
+      message.hidden = true;
+    }
+
+    const body = new FormData(form);
+    body.delete('promo_consent');
+
+    fetch(form.action, {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+      },
+      body: body,
+    })
+      .then(function (res) {
+        return res.json().then(function (data) {
+          if (!res.ok) {
+            throw new Error(data.message || 'Request failed');
+          }
+          return data;
+        });
+      })
+      .then(function (data) {
+        form.reset();
+        showMessage(data.message || 'Thank you — check your inbox for your 10% off code.', false);
+      })
+      .catch(function (err) {
+        showMessage(err.message || 'Please enter a valid email and try again.', true);
+      })
+      .finally(function () {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+        }
+      });
+  });
 }
 
 function initCheckoutVoucher() {
@@ -631,17 +625,25 @@ function initContactForm() {
 }
 
 function initHomeSlider() {
+  const reduceMotion = globalThis.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
   document.querySelectorAll('[data-home-slider]').forEach(function (root) {
     const viewport = root.querySelector('[data-slider-viewport]') || root.querySelector('.home-hero__viewport');
     const track = root.querySelector('[data-home-slider-track]');
-    const slides = Array.from(root.querySelectorAll('[data-slide]'));
+    const realSlides = Array.from(root.querySelectorAll('[data-slide]:not([data-slide-clone])'));
     const dots = Array.from(root.querySelectorAll('[data-dot]'));
-    if (!viewport || !track || slides.length === 0) {
+    if (!viewport || !track || realSlides.length === 0) {
       return;
     }
 
-    let active = 0;
+    const loopRequested = root.getAttribute('data-slider-loop') === 'true';
     const ms = parseInt(String(root.getAttribute('data-slide-interval') || '4000'), 10) || 4000;
+    const autoplayEnabled = root.getAttribute('data-autoplay') !== 'false' && !reduceMotion;
+
+    let slides = realSlides.slice();
+    let active = 0;
+    let cloneLead = 0;
+    let loopActive = false;
     let timer = null;
     let touchStartX = 0;
     let touchStartY = 0;
@@ -653,7 +655,6 @@ function initHomeSlider() {
     let rafId = null;
     let inView = false;
     let hoverPaused = false;
-    const autoplayEnabled = root.getAttribute('data-autoplay') !== 'false';
 
     function slidesPerView() {
       const desktopBp = parseInt(String(root.getAttribute('data-slide-breakpoint') || '768'), 10) || 768;
@@ -674,18 +675,24 @@ function initHomeSlider() {
       return mobile;
     }
 
-    function maxActiveIndex() {
-      return Math.max(0, slides.length - slidesPerView());
+    function canAdvance() {
+      return realSlides.length > slidesPerView();
     }
 
-    function canAdvance() {
-      return slides.length > slidesPerView();
+    function maxActiveIndex() {
+      if (loopActive) {
+        return cloneLead + realSlides.length - 1;
+      }
+      return Math.max(0, slides.length - slidesPerView());
     }
 
     function normalizeIndex(idx) {
       const max = maxActiveIndex();
-      if (max === 0) {
+      if (max === 0 && !loopActive) {
         return 0;
+      }
+      if (loopActive) {
+        return idx;
       }
       if (idx < 0) {
         return max;
@@ -694,6 +701,65 @@ function initHomeSlider() {
         return 0;
       }
       return idx;
+    }
+
+    function realIndexFromActive() {
+      if (!loopActive) {
+        return active;
+      }
+      let ri = active - cloneLead;
+      const n = realSlides.length;
+      ri = ((ri % n) + n) % n;
+      return ri;
+    }
+
+    function clearLoopClones() {
+      track.querySelectorAll('[data-slide-clone]').forEach(function (el) {
+        el.remove();
+      });
+      cloneLead = 0;
+      loopActive = false;
+      slides = realSlides.slice();
+    }
+
+    function setupLoopClones() {
+      clearLoopClones();
+      if (!loopRequested || !canAdvance()) {
+        return;
+      }
+      const per = Math.min(slidesPerView(), realSlides.length);
+      for (let i = realSlides.length - per; i < realSlides.length; i++) {
+        const clone = realSlides[i].cloneNode(true);
+        clone.setAttribute('data-slide-clone', 'lead');
+        clone.setAttribute('aria-hidden', 'true');
+        clone.classList.remove('is-active');
+        track.insertBefore(clone, realSlides[0]);
+      }
+      for (let i = 0; i < per; i++) {
+        const clone = realSlides[i].cloneNode(true);
+        clone.setAttribute('data-slide-clone', 'tail');
+        clone.setAttribute('aria-hidden', 'true');
+        clone.classList.remove('is-active');
+        track.appendChild(clone);
+      }
+      cloneLead = per;
+      loopActive = true;
+      slides = Array.from(track.querySelectorAll('[data-slide]'));
+    }
+
+    function fixLoopPosition() {
+      if (!loopActive) {
+        return;
+      }
+      const firstReal = cloneLead;
+      const lastReal = cloneLead + realSlides.length - 1;
+      if (active > lastReal) {
+        active = firstReal;
+        applyPosition(false);
+      } else if (active < firstReal) {
+        active = lastReal;
+        applyPosition(false);
+      }
     }
 
     function slideWidth() {
@@ -711,18 +777,37 @@ function initHomeSlider() {
       cachedSlideWidth = slideWidth();
     }
 
-    function syncStaticState() {
+    function rebuildSliderState(resetRealIndex) {
       const isStatic = !canAdvance();
       root.classList.toggle('is-static', isStatic);
       if (isStatic) {
         stop();
+        clearLoopClones();
         active = 0;
         track.style.transform = 'translate3d(0, 0, 0)';
+        return;
+      }
+      let ri = 0;
+      if (resetRealIndex !== undefined && resetRealIndex !== null) {
+        ri = resetRealIndex;
+      } else if (loopActive) {
+        ri = realIndexFromActive();
+      } else {
+        ri = active;
+      }
+      if (loopRequested) {
+        setupLoopClones();
+        active = loopActive ? cloneLead + ri : ri;
+      } else {
+        clearLoopClones();
+        active = ri;
       }
     }
 
     function applyPosition(animate) {
-      if (animate === undefined) animate = true;
+      if (animate === undefined) {
+        animate = true;
+      }
       const w = dragging ? cachedSlideWidth : slideWidth();
       const x = Math.round(-(active * w) + dragOffset);
       track.style.transition = animate && !dragging ? '' : 'none';
@@ -730,10 +815,14 @@ function initHomeSlider() {
     }
 
     function queueApplyPosition() {
-      if (rafId !== null) return;
+      if (rafId !== null) {
+        return;
+      }
       rafId = requestAnimationFrame(function () {
         rafId = null;
-        if (dragging) applyPosition(false);
+        if (dragging) {
+          applyPosition(false);
+        }
       });
     }
 
@@ -742,29 +831,6 @@ function initHomeSlider() {
         cancelAnimationFrame(rafId);
         rafId = null;
       }
-    }
-
-    function finishTouchDrag() {
-      if (!dragging) return;
-      cancelQueuedPosition();
-      const wasHorizontal = lockAxis === true;
-      dragging = false;
-      lockAxis = null;
-      if (!wasHorizontal) {
-        dragOffset = 0;
-        setActive(active, true);
-        start();
-        return;
-      }
-      const threshold = cachedSlideWidth * 0.16;
-      if (dragOffset < -threshold) {
-        setActive(active + 1, true);
-      } else if (dragOffset > threshold) {
-        setActive(active - 1, true);
-      } else {
-        setActive(active, true);
-      }
-      start();
     }
 
     function stop() {
@@ -788,34 +854,84 @@ function initHomeSlider() {
 
     function updateSlideAria() {
       const per = slidesPerView();
-      slides.forEach(function (el, i) {
-        const visible = i >= active && i < active + per;
-        el.classList.toggle('is-active', i === active);
-        if (slides.length > 1) {
+      const ri = realIndexFromActive();
+      realSlides.forEach(function (el, i) {
+        const visible = i >= ri && i < ri + per;
+        el.classList.toggle('is-active', i === ri);
+        if (realSlides.length > 1) {
           el.setAttribute('aria-hidden', visible ? 'false' : 'true');
         }
       });
     }
 
+    function updateDots() {
+      const ri = realIndexFromActive();
+      dots.forEach(function (d, i) {
+        d.classList.toggle('is-active', i === ri);
+        d.setAttribute('aria-selected', i === ri ? 'true' : 'false');
+      });
+    }
+
     function setActive(idx, animate) {
-      if (animate === undefined) animate = true;
-      active = normalizeIndex(idx);
+      if (animate === undefined) {
+        animate = true;
+      }
+      if (loopActive) {
+        active = idx;
+      } else {
+        active = normalizeIndex(idx);
+      }
       dragOffset = 0;
       dragging = false;
       updateSlideAria();
-      dots.forEach(function (d, i) {
-        d.classList.toggle('is-active', i === active);
-        d.setAttribute('aria-selected', i === active ? 'true' : 'false');
-      });
+      updateDots();
       applyPosition(animate);
-      syncStaticState();
+      if (!loopActive) {
+        return;
+      }
+      if (!animate) {
+        fixLoopPosition();
+        return;
+      }
+      const onEnd = function () {
+        track.removeEventListener('transitionend', onEnd);
+        fixLoopPosition();
+        updateSlideAria();
+        updateDots();
+      };
+      track.addEventListener('transitionend', onEnd);
+    }
+
+    function finishTouchDrag() {
+      if (!dragging) {
+        return;
+      }
+      cancelQueuedPosition();
+      const wasHorizontal = lockAxis === true;
+      dragging = false;
+      lockAxis = null;
+      if (!wasHorizontal) {
+        dragOffset = 0;
+        setActive(active, true);
+        start();
+        return;
+      }
+      const threshold = cachedSlideWidth * 0.16;
+      if (dragOffset < -threshold) {
+        setActive(active + 1, true);
+      } else if (dragOffset > threshold) {
+        setActive(active - 1, true);
+      } else {
+        setActive(active, true);
+      }
+      start();
     }
 
     dots.forEach(function (d) {
       d.addEventListener('click', function () {
         const to = parseInt(String(d.getAttribute('data-slide-to') || '0'), 10);
         if (!Number.isNaN(to)) {
-          setActive(to, true);
+          setActive(loopActive ? cloneLead + to : to, true);
           start();
         }
       });
@@ -831,7 +947,9 @@ function initHomeSlider() {
     });
 
     viewport.addEventListener('touchstart', function (e) {
-      if (!canAdvance() || e.touches.length !== 1) return;
+      if (!canAdvance() || e.touches.length !== 1) {
+        return;
+      }
       stop();
       refreshSlideWidth();
       dragging = true;
@@ -843,16 +961,22 @@ function initHomeSlider() {
     }, { passive: true });
 
     viewport.addEventListener('touchmove', function (e) {
-      if (!dragging || e.touches.length !== 1) return;
+      if (!dragging || e.touches.length !== 1) {
+        return;
+      }
       const x = e.touches[0].clientX;
       const y = e.touches[0].clientY;
       const dx = x - touchStartX;
       const dy = y - touchStartY;
       if (lockAxis === null) {
-        if (Math.abs(dx) < 6 && Math.abs(dy) < 6) return;
+        if (Math.abs(dx) < 6 && Math.abs(dy) < 6) {
+          return;
+        }
         lockAxis = Math.abs(dx) >= Math.abs(dy);
       }
-      if (!lockAxis) return;
+      if (!lockAxis) {
+        return;
+      }
       e.preventDefault();
       dragOffset = dx;
       queueApplyPosition();
@@ -890,19 +1014,30 @@ function initHomeSlider() {
         inView = true;
       }
     }
+
     window.addEventListener('resize', function () {
-      if (dragging) return;
+      if (dragging) {
+        return;
+      }
       const w = window.innerWidth;
-      if (Math.abs(w - lastInnerWidth) < 2) return;
+      if (Math.abs(w - lastInnerWidth) < 2) {
+        return;
+      }
       lastInnerWidth = w;
+      const ri = realIndexFromActive();
+      rebuildSliderState(ri);
       refreshSlideWidth();
-      active = normalizeIndex(active);
-      setActive(active, false);
+      applyPosition(false);
+      updateSlideAria();
+      updateDots();
       start();
     });
 
+    rebuildSliderState(0);
     refreshSlideWidth();
-    setActive(0, false);
+    applyPosition(false);
+    updateSlideAria();
+    updateDots();
     if (autoplayEnabled && !('IntersectionObserver' in globalThis) && canAdvance()) {
       start();
     }

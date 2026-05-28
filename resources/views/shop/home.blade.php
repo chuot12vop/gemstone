@@ -6,6 +6,7 @@
 @php($slideCount = count($bannerSlides))
 <section class="home-hero home-hero--slider reveal-on-scroll"
          data-home-slider
+         data-slider-loop="true"
          data-slide-interval="4000"
          aria-roledescription="carousel"
          aria-label="Home highlights">

@@ -1113,42 +1113,109 @@ body.site { margin: 0; font-family: "Source Sans 3", system-ui, sans-serif; colo
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 3.4rem;
-  padding: 0.35rem 0.55rem;
+  width: 3.25rem;
+  height: 2rem;
+  padding: 0.2rem 0.35rem;
   border-radius: 6px;
   border: 1px solid var(--border);
-  background: rgba(255, 255, 255, 0.85);
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--muted);
+  background: rgba(255, 255, 255, 0.92);
 }
-.payment-icons__item--visa { color: #1a1f71; }
-.payment-icons__item--mc { color: #eb001b; }
-.payment-icons__item--paypal { color: #003087; }
+.payment-icons__img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
 .site-footer__grid { max-width: 1100px; margin: 0 auto; display: grid; gap: 1.5rem; }
 @media (min-width: 768px) { .site-footer__grid { grid-template-columns: 2fr 1fr 1fr; } }
 .site-footer__heading { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.12em; margin: 0 0 0.5rem; color: var(--gold-deep); }
 .site-footer__links { list-style: none; margin: 0; padding: 0; }
 .site-footer__links a { color: var(--muted); text-decoration: none; }
 .site-footer__copy { max-width: 1100px; margin: 1.5rem auto 0; font-size: 0.85rem; color: var(--muted); }
-.site-footer__promo-btn {
-  display: inline-block;
-  margin-top: 1rem;
-  padding: 0.65rem 1.1rem;
-  border: 1px solid var(--gold-deep);
-  background: transparent;
-  color: var(--gold-deep);
-  font-size: 0.72rem;
-  font-weight: 600;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  cursor: pointer;
-  transition: background 0.2s, color 0.2s;
+.site-footer__newsletter-col {
+  max-width: 22rem;
 }
-.site-footer__promo-btn:hover { background: var(--gold-deep); color: #fffdf8; }
-.footer-promo-popup__lede { margin: 0 0 1rem; font-size: 0.95rem; color: var(--muted); line-height: 1.5; }
+.footer-newsletter__title {
+  margin: 0 0 1rem;
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-size: clamp(1.35rem, 2.5vw, 1.65rem);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink);
+  line-height: 1.2;
+}
+.footer-newsletter__form {
+  display: grid;
+  gap: 0.85rem;
+}
+.footer-newsletter__field {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-bottom: 1px solid var(--ink);
+  padding-bottom: 0.35rem;
+}
+.footer-newsletter__input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  padding: 0.35rem 0;
+  font: inherit;
+  font-size: 0.95rem;
+  color: var(--ink);
+}
+.footer-newsletter__input::placeholder {
+  color: var(--muted);
+  opacity: 0.85;
+}
+.footer-newsletter__input:focus {
+  outline: none;
+}
+.footer-newsletter__submit {
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  padding: 0.25rem 0.15rem;
+  font-size: 1.35rem;
+  line-height: 1;
+  color: var(--ink);
+  cursor: pointer;
+}
+.footer-newsletter__submit:hover { color: var(--gold-deep); }
+.footer-newsletter__submit:disabled {
+  opacity: 0.45;
+  cursor: wait;
+}
+.footer-newsletter__consent {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: 0.5rem;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: var(--muted);
+  cursor: pointer;
+}
+.footer-newsletter__consent input {
+  margin-top: 0.15rem;
+  accent-color: var(--gold-deep);
+}
+.footer-newsletter__consent a {
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.footer-newsletter__consent a:hover { color: var(--gold-deep); }
+.footer-newsletter__message {
+  margin: 0.65rem 0 0;
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+.footer-newsletter__message--ok { color: #2d6a4f; }
+.footer-newsletter__message--err { color: #9b2c2c; }
+.footer-newsletter__message[hidden] { display: none; }
 .welcome-popup__card--compact { max-width: 420px; margin: 0 auto; }
 .welcome-popup__card--compact .welcome-popup__content { padding: 1.75rem 1.5rem 1.5rem; }
 .checkout-voucher__hint { margin: 0 0 0.75rem; font-size: 0.9rem; color: var(--muted); }
@@ -1202,6 +1269,12 @@ body.site { margin: 0; font-family: "Source Sans 3", system-ui, sans-serif; colo
   margin-left: auto;
   margin-right: auto;
   box-sizing: border-box;
+}
+.site-main--home > .home-section--bestsellers + .home-section--new {
+  margin-top: clamp(1.5rem, 4vw, 2.75rem);
+}
+.site-main--home .section__title {
+  font-size: clamp(1.85rem, 3.2vw, 2.35rem);
 }
 .site-main--home > .home-section.home-section--reviews{
   max-width: 100%;
@@ -2957,7 +3030,13 @@ body.site { margin: 0; font-family: "Source Sans 3", system-ui, sans-serif; colo
 @media (max-width: 699px) {
   .home-product-slider__nav { display: none; }
 }
-@media (min-width: 700px) {
+@media (min-width: 700px) and (max-width: 959px) {
+  .home-product-slider__slide {
+    flex: 0 0 50%;
+    width: 50%;
+  }
+}
+@media (min-width: 960px) {
   .home-product-slider__viewport {
     overflow: visible;
   }

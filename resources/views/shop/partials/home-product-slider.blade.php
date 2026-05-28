@@ -5,10 +5,13 @@
 @if($count > 0)
     <div class="home-product-slider"
          data-home-slider
+         data-slider-loop="true"
          data-slide-interval="4000"
          data-slides-mobile="1"
+         data-slides-tablet="2"
          data-slides-desktop="{{ $count }}"
-         data-slide-breakpoint="700"
+         data-slide-breakpoint-tablet="700"
+         data-slide-breakpoint="960"
          aria-roledescription="carousel"
          aria-label="{{ $sliderLabel }}">
         <div class="home-product-slider__viewport" data-slider-viewport>
