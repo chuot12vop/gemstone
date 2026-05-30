@@ -43,7 +43,7 @@ class AccountController extends Controller
         $user = Auth::user();
         $validated = $request->validate([
             'name' => 'required|string|max:160',
-            'phone' => 'nullable|string|max:30',
+            'phone' => 'nullable|string|max:30|min_digits:9',
         ]);
 
         $user->update([
@@ -59,7 +59,9 @@ class AccountController extends Controller
         return view('shop.account.orders', [
             'title' => 'Order history',
             'metaDescription' => 'Your past orders.',
-            'orders' => $this->ordersForUser(Auth::user())->paginate(10),
+            'orders' => $this->ordersForUser(Auth::user())
+                ->with(['items.product'])
+                ->paginate(10),
             'currency' => $currency,
         ]);
     }
@@ -68,7 +70,7 @@ class AccountController extends Controller
     {
         $order = $this->ordersForUser(Auth::user())
             ->where('order_number', $order_number)
-            ->with('items')
+            ->with(['items.product'])
             ->firstOrFail();
 
         return view('shop.account.order-show', [

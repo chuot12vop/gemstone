@@ -15,7 +15,7 @@ class Product extends Model
     }
 
     protected $fillable = [
-        'category_id', 'brand_id', 'name', 'slug', 'short_description', 'description',
+        'category_id', 'brand_id', 'name', 'slug', 'short_description', 'card_badge_label', 'description',
         'price_usd', 'image', 'thumbnail', 'stock', 'is_active', 'meta_title', 'meta_description',
     ];
 
@@ -47,6 +47,34 @@ class Product extends Model
     public function productImages(): HasMany
     {
         return $this->hasMany(ProductImage::class)->orderBy('sort_order')->orderBy('id');
+    }
+
+    /** @return HasMany<ProductVariant, Product> */
+    public function variants(): HasMany
+    {
+        return $this->hasMany(ProductVariant::class)->orderBy('sort_order')->orderBy('id');
+    }
+
+    /** @return HasMany<ProductVariant, Product> */
+    public function activeVariants(): HasMany
+    {
+        return $this->variants()->where('is_active', true);
+    }
+
+    public function defaultVariant(): ?ProductVariant
+    {
+        if ($this->relationLoaded('variants')) {
+            return $this->variants->firstWhere('is_default', true)
+                ?: $this->variants->firstWhere('is_active', true)
+                ?: $this->variants->first();
+        }
+
+        return $this->variants()
+            ->where('is_active', true)
+            ->orderByDesc('is_default')
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->first();
     }
 
     /** @return HasMany<Review> */

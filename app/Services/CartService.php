@@ -3,11 +3,12 @@
 namespace App\Services;
 
 use App\Models\Product;
+use App\Models\ProductVariant;
 
 class CartService
 {
     /**
-     * @return array<int, array{qty: int, unit_price_usd: float|null}>
+     * @return array<int, array{qty: int, unit_price_usd: float|null, product_id: int}>
      */
     public function all(): array
     {
@@ -18,11 +19,11 @@ class CartService
 
         $out = [];
         foreach ($c as $k => $v) {
-            $pid = (int) $k;
-            if ($pid < 1) {
+            $variantId = (int) $k;
+            if ($variantId < 1) {
                 continue;
             }
-            $out[$pid] = $this->normalizeEntry($v);
+            $out[$variantId] = $this->normalizeEntry($v);
         }
 
         return $out;
@@ -34,49 +35,85 @@ class CartService
     }
 
     /**
-     * @return array{qty: int, unit_price_usd: float|null}|null
+     * @return array{qty: int, unit_price_usd: float|null, product_id: int}|null
      */
-    public function get(int $productId): ?array
+    public function get(int $variantId): ?array
     {
-        return $this->all()[$productId] ?? null;
+        return $this->all()[$variantId] ?? null;
     }
 
-    public function add(int $productId, int $quantity, ?float $unitPriceUsd = null): void
+    public function add(int $variantId, int $quantity, ?float $unitPriceUsd = null): void
     {
         $cart = $this->all();
-        $existing = $cart[$productId] ?? ['qty' => 0, 'unit_price_usd' => null];
-        $entry = ['qty' => $existing['qty'] + $quantity];
+        $existing = $cart[$variantId] ?? ['qty' => 0, 'unit_price_usd' => null, 'product_id' => 0];
+        $variant = ProductVariant::query()
+            ->where('id', $variantId)
+            ->where('is_active', true)
+            ->with('product')
+            ->first();
+
+        if (! $variant || ! $variant->product || ! $variant->product->is_active) {
+            return;
+        }
+
+        $entry = [
+            'qty' => $existing['qty'] + $quantity,
+            'product_id' => $variant->product_id,
+        ];
         if ($unitPriceUsd !== null) {
             $entry['unit_price_usd'] = $unitPriceUsd;
+        } elseif ($existing['unit_price_usd'] !== null) {
+            $entry['unit_price_usd'] = $existing['unit_price_usd'];
         }
-        $cart[$productId] = $entry;
-        $this->persist($cart, $productId);
+        $cart[$variantId] = $entry;
+        $this->persist($cart, $variantId);
     }
 
-    public function set(int $productId, int $quantity, ?float $unitPriceUsd = null): void
+    public function addProduct(int $productId, int $quantity, ?float $unitPriceUsd = null): void
+    {
+        $variant = ProductVariant::query()
+            ->where('product_id', $productId)
+            ->where('is_active', true)
+            ->orderByDesc('is_default')
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->first();
+
+        if (! $variant) {
+            return;
+        }
+
+        $this->add($variant->id, $quantity, $unitPriceUsd);
+    }
+
+    public function set(int $variantId, int $quantity, ?float $unitPriceUsd = null): void
     {
         $cart = $this->all();
         if ($quantity < 1) {
-            unset($cart[$productId]);
+            unset($cart[$variantId]);
             session(['cart' => $cart]);
 
             return;
         }
 
-        $existing = $cart[$productId] ?? ['qty' => 0, 'unit_price_usd' => null];
-        $entry = ['qty' => $quantity];
+        $existing = $cart[$variantId] ?? ['qty' => 0, 'unit_price_usd' => null, 'product_id' => 0];
+        $variant = ProductVariant::query()->where('id', $variantId)->first();
+        $entry = [
+            'qty' => $quantity,
+            'product_id' => $variant?->product_id ?: ($existing['product_id'] ?? 0),
+        ];
         $price = $unitPriceUsd ?? ($existing['unit_price_usd'] ?? null);
         if ($price !== null) {
             $entry['unit_price_usd'] = $price;
         }
-        $cart[$productId] = $entry;
+        $cart[$variantId] = $entry;
         session(['cart' => $cart]);
     }
 
-    public function remove(int $productId): void
+    public function remove(int $variantId): void
     {
         $cart = $this->all();
-        unset($cart[$productId]);
+        unset($cart[$variantId]);
         session(['cart' => $cart]);
     }
 
@@ -85,36 +122,52 @@ class CartService
         session()->forget('cart');
     }
 
-    public function unitPriceUsd(Product $product, ?float $stored = null): float
+    public function unitPriceUsd(ProductVariant $variant, ?float $stored = null): float
     {
         if ($stored !== null && $stored >= 0) {
             return (float) $stored;
         }
 
-        return (float) $product->price_usd;
+        return (float) $variant->price_usd;
     }
 
     /**
-     * @return array<int, array{product: Product, quantity: int, unit_price_usd: float, line_usd: float}>
+     * @return array<int, array{
+     *     product: Product,
+     *     variant: ProductVariant,
+     *     quantity: int,
+     *     unit_price_usd: float,
+     *     line_usd: float,
+     *     variant_label: string
+     * }>
      */
     public function buildLines(): array
     {
         $lines = [];
-        foreach ($this->all() as $pid => $entry) {
-            $p = Product::query()->where('id', $pid)->where('is_active', true)->first();
-            if (! $p) {
+        foreach ($this->all() as $variantId => $entry) {
+            $variant = ProductVariant::query()
+                ->where('id', $variantId)
+                ->where('is_active', true)
+                ->with(['product.category'])
+                ->first();
+
+            if (! $variant || ! $variant->product || ! $variant->product->is_active) {
                 continue;
             }
-            $q = min((int) $entry['qty'], max(0, $p->stock));
+
+            $q = min((int) $entry['qty'], max(0, $variant->stock));
             if ($q < 1) {
                 continue;
             }
-            $unit = $this->unitPriceUsd($p, $entry['unit_price_usd'] ?? null);
+
+            $unit = $this->unitPriceUsd($variant, $entry['unit_price_usd'] ?? null);
             $lines[] = [
-                'product' => $p,
+                'product' => $variant->product,
+                'variant' => $variant,
                 'quantity' => $q,
                 'unit_price_usd' => $unit,
                 'line_usd' => $unit * $q,
+                'variant_label' => $variant->label(),
             ];
         }
 
@@ -123,38 +176,48 @@ class CartService
 
     /**
      * @param mixed $value
-     * @return array{qty: int, unit_price_usd: float|null}
+     * @return array{qty: int, unit_price_usd: float|null, product_id: int}
      */
     private function normalizeEntry(mixed $value): array
     {
         if (is_array($value)) {
             $qty = max(0, (int) ($value['qty'] ?? $value['quantity'] ?? 0));
             $price = isset($value['unit_price_usd']) ? (float) $value['unit_price_usd'] : null;
+            $productId = (int) ($value['product_id'] ?? 0);
 
             return [
                 'qty' => $qty,
                 'unit_price_usd' => $price !== null && $price >= 0 ? $price : null,
+                'product_id' => $productId,
             ];
         }
 
         return [
             'qty' => max(0, (int) $value),
             'unit_price_usd' => null,
+            'product_id' => 0,
         ];
     }
 
     /**
-     * @param array<int, array{qty: int, unit_price_usd?: float|null}> $cart
+     * @param array<int, array{qty: int, unit_price_usd?: float|null, product_id?: int}> $cart
      */
-    private function persist(array $cart, int $productId): void
+    private function persist(array $cart, int $variantId): void
     {
-        $p = Product::query()->where('id', $productId)->where('is_active', true)->first();
-        if ($p) {
-            $cart[$productId]['qty'] = min((int) $cart[$productId]['qty'], max(0, $p->stock));
+        $variant = ProductVariant::query()
+            ->where('id', $variantId)
+            ->where('is_active', true)
+            ->first();
+
+        if ($variant) {
+            $cart[$variantId]['product_id'] = $variant->product_id;
+            $cart[$variantId]['qty'] = min((int) $cart[$variantId]['qty'], max(0, $variant->stock));
         }
-        if ($cart[$productId]['qty'] < 1) {
-            unset($cart[$productId]);
+
+        if (($cart[$variantId]['qty'] ?? 0) < 1) {
+            unset($cart[$variantId]);
         }
+
         session(['cart' => $cart]);
     }
 }

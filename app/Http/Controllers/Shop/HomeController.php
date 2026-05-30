@@ -47,7 +47,7 @@ class HomeController extends Controller
 
         $homeNewProducts = Product::query()
             ->where('is_active', true)
-            ->with('category')
+            ->with(['category', 'variants' => fn ($q) => $q->where('is_active', true)->orderBy('sort_order')->orderBy('id'), 'upsellProducts' => fn ($q) => $q->where('is_active', true)->with(['variants' => fn ($vq) => $vq->where('is_active', true)->orderBy('sort_order')->orderBy('id')])])
             ->latest('id')
             ->limit(6)
             ->get();
@@ -59,7 +59,7 @@ class HomeController extends Controller
             $homeBestSellers = Product::query()
                 ->where('is_active', true)
                 ->where('category_id', $bestSellers->id)
-                ->with('category')
+                ->with(['category', 'variants' => fn ($q) => $q->where('is_active', true)->orderBy('sort_order')->orderBy('id'), 'upsellProducts' => fn ($q) => $q->where('is_active', true)->with(['variants' => fn ($vq) => $vq->where('is_active', true)->orderBy('sort_order')->orderBy('id')])])
                 ->limit(6)
                 ->get();
         } else {
@@ -137,12 +137,17 @@ class HomeController extends Controller
                         continue;
                     }
                     $cid = isset($item['category_id']) ? (int) $item['category_id'] : 0;
-                    $slides[] = [
+                    $imageMobile = trim((string) ($item['image_mobile'] ?? ''));
+                    $slideData = [
                         'image' => PublicAssetUrl::to($image),
                         'title' => (string) ($item['title'] ?? ''),
                         'content' => (string) ($item['content'] ?? ''),
                         'category_id' => $cid > 0 ? $cid : null,
                     ];
+                    if ($imageMobile !== '') {
+                        $slideData['image_mobile'] = PublicAssetUrl::to($imageMobile);
+                    }
+                    $slides[] = $slideData;
                 }
             }
         }

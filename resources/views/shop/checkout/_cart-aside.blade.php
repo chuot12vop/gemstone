@@ -4,8 +4,9 @@
         @foreach($lines as $row)
             @php
                 $p = $row['product'];
+                $variant = $row['variant'] ?? null;
                 $name = $p->name ?? 'Item';
-                $image = $p->image ?? null;
+                $image = $variant?->frontImage($p) ?: ($p->image ?? null);
                 $productUrl = $p instanceof \App\Models\Product && $p->getKey()
                     ? route('shop.product', $p)
                     : null;
@@ -25,6 +26,9 @@
                         <p class="checkout-aside__name"><a href="{{ $productUrl }}">{{ $name }}</a></p>
                     @else
                         <p class="checkout-aside__name">{{ $name }}</p>
+                    @endif
+                    @if(!empty($row['variant_label']) && $row['variant_label'] !== 'Default')
+                        <p class="checkout-aside__variant">{{ $row['variant_label'] }}</p>
                     @endif
                     <p class="checkout-aside__meta">
                         <span class="checkout-aside__qty">× {{ $row['quantity'] }}</span>

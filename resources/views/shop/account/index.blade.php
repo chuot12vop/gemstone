@@ -9,10 +9,16 @@
 <div class="account-grid">
     <section class="account-card">
         <h2 class="account-card__title">Profile</h2>
-        <dl class="account-dl">
-            <dt>Name</dt><dd>{{ $user->name }}</dd>
-            <dt>Email</dt><dd>{{ $user->email }}</dd>
-            <dt>Phone</dt><dd>{{ $user->phone ?: '—' }}</dd>
+        <dl class="account-dl account-dl--lined">
+            <div class="account-dl__row">
+                <dt>Name</dt><dd>{{ $user->name }}</dd>
+            </div>
+            <div class="account-dl__row">
+                <dt>Email</dt><dd>{{ $user->email }}</dd>
+            </div>
+            <div class="account-dl__row">
+                <dt>Phone</dt><dd>{{ $user->phone ?: '—' }}</dd>
+            </div>
         </dl>
         <a class="btn btn--small" href="{{ route('shop.account.profile') }}">Edit profile</a>
     </section>
@@ -26,7 +32,7 @@
                 @foreach($recentOrders as $order)
                     <li>
                         <a href="{{ route('shop.account.orders.show', $order->order_number) }}">
-                            <strong>{{ $order->order_number }}</strong>
+                            <strong class="account-order-no">{{ $order->order_number }}</strong>
                             <span>{{ ucfirst($order->status) }}</span>
                             <span>{{ $order->created_at->format('M j, Y') }}</span>
                         </a>

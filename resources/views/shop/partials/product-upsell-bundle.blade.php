@@ -2,10 +2,12 @@
     use App\Models\CurrencyRate;
     use App\Support\ProductPricing;
 
-    $mainImage = $product->thumbnail ?: ($product->image ?: asset('assets/img/placeholder.svg'));
-    $mainBase = (float) $product->price_usd;
+    $parentVariant = $product->defaultVariant();
+    $mainImage = $parentVariant?->frontImage($product) ?: ($product->thumbnail ?: ($product->image ?: asset('assets/img/placeholder.svg')));
+    $mainBase = $parentVariant ? (float) $parentVariant->price_usd : (float) $product->price_usd;
     $mainDisplay = $mainBase;
     $mainCart = $mainBase;
+    $mainStock = $parentVariant ? (int) $parentVariant->stock : (int) $product->stock;
     $currencyCode = $currency->currentCode();
     $currencyRate = CurrencyRate::query()->where('code', $currencyCode)->where('is_active', true)->first();
     $ratePerUsd = $currencyRate ? (float) $currencyRate->rate_per_usd : 1.0;
@@ -42,6 +44,9 @@
                            data-display-usd="{{ $mainDisplay }}"
                            data-cart-usd="{{ $mainCart }}">
                     <input type="hidden" name="items[{{ $product->id }}][product_id]" value="{{ $product->id }}">
+                    @if($parentVariant)
+                        <input type="hidden" name="items[{{ $product->id }}][variant_id]" value="{{ $parentVariant->id }}">
+                    @endif
                     <input type="hidden" name="items[{{ $product->id }}][quantity]" value="1">
                     <span class="product-upsell__thumb">
                         <img src="{{ $mainImage }}" alt="" width="72" height="72" loading="lazy">
@@ -58,13 +63,14 @@
 
             @foreach($product->upsellProducts as $upsell)
                 @php
-                    $upsellImage = $upsell->thumbnail ?: ($upsell->image ?: asset('assets/img/placeholder.svg'));
-                    $base = (float) $upsell->price_usd;
+                    $upsellVariant = $upsell->defaultVariant();
+                    $upsellImage = $upsellVariant?->frontImage($upsell) ?: ($upsell->thumbnail ?: ($upsell->image ?: asset('assets/img/placeholder.svg')));
+                    $base = $upsellVariant ? (float) $upsellVariant->price_usd : (float) $upsell->price_usd;
                     $discountPct = (float) ($upsell->pivot->discount ?? 0);
                     $upsalePct = (float) ($upsell->pivot->upsale_discount ?? 0);
                     $displayUsd = ProductPricing::afterPercentDiscount($base, $discountPct > 0 ? $discountPct : null);
                     $cartUsd = ProductPricing::afterPercentDiscount($base, $upsalePct > 0 ? $upsalePct : ($discountPct > 0 ? $discountPct : null));
-                    $inStock = $upsell->stock > 0;
+                    $inStock = ($upsellVariant?->stock ?? $upsell->stock) > 0;
                 @endphp
                 <li class="product-upsell__item">
                     <label class="product-upsell__row">
@@ -79,6 +85,9 @@
                                data-display-usd="{{ $displayUsd }}"
                                data-cart-usd="{{ $cartUsd }}">
                         <input type="hidden" name="items[{{ $upsell->id }}][product_id]" value="{{ $upsell->id }}" data-upsell-product-id disabled>
+                        @if($upsellVariant)
+                            <input type="hidden" name="items[{{ $upsell->id }}][variant_id]" value="{{ $upsellVariant->id }}" data-upsell-variant-id disabled>
+                        @endif
                         <input type="hidden" name="items[{{ $upsell->id }}][quantity]" value="1" data-upsell-qty disabled>
                         <span class="product-upsell__thumb">
                             <img src="{{ $upsellImage }}" alt="" width="72" height="72" loading="lazy">
@@ -104,10 +113,11 @@
             $bundleSaleUsd = $mainCart;
             $bundleBaseUsd = $mainBase;
             foreach ($product->upsellProducts as $upsell) {
-                if ($upsell->stock < 1) {
+                $upsellVariant = $upsell->defaultVariant();
+                if (($upsellVariant?->stock ?? $upsell->stock) < 1) {
                     continue;
                 }
-                $base = (float) $upsell->price_usd;
+                $base = $upsellVariant ? (float) $upsellVariant->price_usd : (float) $upsell->price_usd;
                 $discountPct = (float) ($upsell->pivot->discount ?? 0);
                 $upsalePct = (float) ($upsell->pivot->upsale_discount ?? 0);
                 $pct = $upsalePct > 0 ? $upsalePct : $discountPct;
@@ -115,7 +125,7 @@
                 $bundleBaseUsd += $base;
             }
         @endphp
-        <button type="submit" class="product-upsell__claim" data-upsell-submit {{ $product->stock < 1 ? 'disabled' : '' }}>
+        <button type="submit" class="product-upsell__claim" data-upsell-submit {{ $mainStock < 1 ? 'disabled' : '' }}>
             <span class="product-upsell__claim-label">Claim Offer</span>
             <span class="product-upsell__claim-prices">
                 <span class="product-upsell__claim-total" data-upsell-total-sale>{{ $currency->formatUsd($bundleSaleUsd) }}</span>

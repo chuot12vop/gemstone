@@ -1,0 +1,100 @@
+@php
+    $navPrefix = $navPrefix ?? 'nav';
+    $megaTriggerId = 'catalog-mega-trigger-' . $navPrefix;
+    $megaPanelId = 'catalog-mega-panel-' . $navPrefix;
+    $currencyId = 'currency-' . $navPrefix;
+@endphp
+<ul class="site-nav__list">
+    <li><a href="{{ route('shop.home') }}">Home</a></li>
+    <li class="site-nav__item site-nav__item--mega" data-nav-mega>
+        <a href="{{ route('shop.catalog') }}"
+           class="site-nav__mega-trigger"
+           data-catalog-trigger
+           aria-expanded="false"
+           aria-controls="{{ $megaPanelId }}"
+           id="{{ $megaTriggerId }}">
+            <span>Collections</span>
+            <svg class="site-nav__expand-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">
+                <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        </a>
+        <div class="catalog-mega"
+             id="{{ $megaPanelId }}"
+             role="region"
+             aria-labelledby="{{ $megaTriggerId }}"
+             data-catalog-mega-panel>
+            <div class="catalog-mega__inner">
+                <p class="catalog-mega__lede"><a href="{{ route('shop.catalog') }}">Collections</a></p>
+                @if($catalogNavCategories->isEmpty())
+                    <p class="catalog-mega__empty">No categories yet.</p>
+                @else
+                    <div class="catalog-mega__list">
+                        @foreach($catalogNavCategories as $cat)
+                            @if($cat->products->count() > 1)
+                                <details class="catalog-mega__group catalog-mega__group--expandable">
+                                    <summary class="catalog-mega__summary">
+                                        <span class="catalog-mega__summary-label">{{ $cat->name }}</span>
+                                        <svg class="catalog-mega__expand-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">
+                                            <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                        </svg>
+                                    </summary>
+                                    <div class="catalog-mega__panel">
+                                        <p class="catalog-mega__panel-head">
+                                            <a href="{{ route('shop.catalog.category', $cat) }}">View all {{ $cat->name }}</a>
+                                        </p>
+                                        <ul class="catalog-mega__products">
+                                            @foreach($cat->products as $product)
+                                                @php
+                                                    $navThumb = $product->thumbnail ?: ($product->image ?: asset('assets/img/placeholder.svg'));
+                                                @endphp
+                                                <li>
+                                                    <a class="catalog-mega__product-link" href="{{ route('shop.product', $product) }}">
+                                                        <span class="catalog-mega__product-thumb" aria-hidden="true">
+                                                            <img src="{{ $navThumb }}" alt="" width="36" height="36" loading="lazy">
+                                                        </span>
+                                                        <span class="catalog-mega__product-name">{{ $product->name }}</span>
+                                                    </a>
+                                                </li>
+                                            @endforeach
+                                        </ul>
+                                    </div>
+                                </details>
+                            @else
+                                <div class="catalog-mega__group catalog-mega__group--link">
+                                    <a class="catalog-mega__direct" href="{{ route('shop.catalog.category', $cat) }}">{{ $cat->name }}</a>
+                                </div>
+                            @endif
+                        @endforeach
+                    </div>
+                @endif
+            </div>
+        </div>
+    </li>
+    <li><a href="{{ route('shop.news.index') }}">News</a></li>
+    <li><a href="{{ route('shop.about') }}">About</a></li>
+    <li><a href="{{ route('shop.contact') }}">Contact</a></li>
+</ul>
+<form class="currency-form" method="post" action="{{ route('shop.currency') }}">
+    @csrf
+    <label class="sr-only" for="{{ $currencyId }}">Currency</label>
+    <select name="currency" id="{{ $currencyId }}" onchange="this.form.submit()">
+        @foreach($currency->activeCurrencies() as $c)
+            <option value="{{ $c['code'] }}" @selected($currency->currentCode() === $c['code'])>
+                {{ $c['code'] }} ({{ $c['symbol'] }})
+            </option>
+        @endforeach
+    </select>
+</form>
+<a class="btn btn--small btn--header-buy" href="{{ route('shop.products.index') }}">Buy now</a>
+<div class="site-nav__account">
+    @auth
+        <a class="cart-link" href="{{ route('shop.account.index') }}" title="My account">{{ Auth::user()->name }}</a>
+        <form method="post" action="{{ route('shop.logout') }}" class="site-logout-form">
+            @csrf
+            <button type="submit" class="site-signout">Sign out</button>
+        </form>
+    @else
+        <a class="cart-link" href="{{ route('login') }}">Sign in</a>
+        <a class="cart-link" href="{{ route('register') }}">Register</a>
+    @endauth
+</div>

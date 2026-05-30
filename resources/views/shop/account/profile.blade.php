@@ -6,24 +6,42 @@
     <p class="page-head__summary">Update your name and phone number for checkout and order updates.</p>
 </header>
 
-<form class="contact-form" method="post" action="{{ route('shop.account.profile.update') }}" style="max-width:520px;margin:0 auto;">
-    @csrf
-    <label>
-        Full name
-        <input type="text" name="name" required value="{{ old('name', $user->name) }}">
-    </label>
-    <label>
-        Email
-        <input type="email" value="{{ $user->email }}" disabled>
-        <small class="muted">Email is managed through Google sign-in.</small>
-    </label>
-    <label>
-        Phone
-        <input type="tel" name="phone" value="{{ old('phone', $user->phone) }}" placeholder="+1 555 000 0000">
-    </label>
-    <div class="form-actions">
-        <button class="btn btn--primary" type="submit">Save profile</button>
-        <a class="btn" href="{{ route('shop.account.index') }}">Back</a>
-    </div>
-</form>
+<section class="account-card account-profile-card">
+    <form class="account-profile-form" method="post" action="{{ route('shop.account.profile.update') }}">
+        @csrf
+        <div class="account-profile-form__row">
+            <label class="account-profile-form__label" for="profile_name">Full name</label>
+            <div class="account-profile-form__field">
+                <input id="profile_name" type="text" name="name" required value="{{ old('name', $user->name) }}">
+            </div>
+        </div>
+        <div class="account-profile-form__row">
+            <label class="account-profile-form__label" for="profile_email">Email</label>
+            <div class="account-profile-form__field">
+                <input id="profile_email" type="email" value="{{ $user->email }}" disabled>
+                <small class="muted">Email is managed through Google sign-in.</small>
+            </div>
+        </div>
+        <div class="account-profile-form__row">
+            <label class="account-profile-form__label" for="profile_phone">Phone</label>
+            <div class="account-profile-form__field">
+                <input
+                    id="profile_phone"
+                    type="tel"
+                    name="phone"
+                    inputmode="tel"
+                    minlength="9"
+                    value="{{ old('phone', $user->phone) }}"
+                    placeholder="+1 555 000 0000"
+                    title="Enter at least 9 digits"
+                >
+                <small class="muted">Minimum 9 digits.</small>
+            </div>
+        </div>
+        <div class="account-profile-form__actions">
+            <button class="btn btn--primary" type="submit">Save profile</button>
+            <a class="btn" href="{{ route('shop.account.index') }}">Back</a>
+        </div>
+    </form>
+</section>
 @endsection

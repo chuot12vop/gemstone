@@ -9,7 +9,8 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 class OrderItem extends Model
 {
     protected $fillable = [
-        'order_id', 'product_id', 'product_name', 'quantity', 'unit_price_usd', 'line_total_usd',
+        'order_id', 'product_id', 'product_variant_id', 'variant_label',
+        'product_name', 'quantity', 'unit_price_usd', 'line_total_usd',
     ];
 
     protected $casts = [
@@ -26,6 +27,11 @@ class OrderItem extends Model
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);
+    }
+
+    public function productVariant(): BelongsTo
+    {
+        return $this->belongsTo(ProductVariant::class);
     }
 
     /** @return HasOne<Review> */

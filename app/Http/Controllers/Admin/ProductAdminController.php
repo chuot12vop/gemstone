@@ -7,7 +7,9 @@ use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductImage;
+use App\Models\ProductVariant;
 use App\Services\PublicImageStore;
+use App\Support\ProductVariantOptions;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
@@ -83,7 +85,9 @@ class ProductAdminController extends Controller
             $data['image'] = $thumbnailUrl;
         }
 
-        DB::transaction(function () use ($data, $attributes, $galleryImageUrls, $request): void {
+        $variants = $this->extractVariants($request);
+
+        DB::transaction(function () use ($data, $attributes, $galleryImageUrls, $request, $variants): void {
             $createPayload = $data;
             // Use a temporary unique slug to avoid violating unique index before final slug resolution.
             $createPayload['slug'] = $this->makeTemporarySlug($data['slug']);
@@ -94,6 +98,7 @@ class ProductAdminController extends Controller
             ]);
             $this->syncAttributes($product, $attributes);
             $this->syncGalleryImages($product, $galleryImageUrls);
+            $this->syncVariants($product, $variants, $request);
             $this->syncUpsellProducts($product, $this->extractUpsells($request), $product->id);
         });
 
@@ -102,7 +107,7 @@ class ProductAdminController extends Controller
 
     public function edit(Product $product)
     {
-        $product->load('productAttributes', 'productImages', 'upsellProducts');
+        $product->load('productAttributes', 'productImages', 'upsellProducts', 'variants');
 
         return view('admin.products.form', [
             'title' => 'Edit product',
@@ -130,12 +135,15 @@ class ProductAdminController extends Controller
             $data['image'] = $thumbnailUrl;
         }
 
-        DB::transaction(function () use ($product, $data, $attributes, $galleryImageUrls, $request): void {
+        $variants = $this->extractVariants($request);
+
+        DB::transaction(function () use ($product, $data, $attributes, $galleryImageUrls, $request, $variants): void {
             $product->update($data);
             $this->syncAttributes($product, $attributes);
             if ($galleryImageUrls->isNotEmpty()) {
                 $this->syncGalleryImages($product, $galleryImageUrls);
             }
+            $this->syncVariants($product, $variants, $request);
             $this->syncUpsellProducts($product, $this->extractUpsells($request), $product->id);
         });
 
@@ -198,6 +206,7 @@ class ProductAdminController extends Controller
             'category_id' => 'required|exists:categories,id',
             'brand_id' => 'required|exists:brands,id',
             'short_description' => 'nullable|string|max:500',
+            'card_badge_label' => 'nullable|string|max:50',
             'description' => 'nullable|string',
             'price_usd' => 'required|numeric|min:0',
             'stock' => 'required|integer|min:0',
@@ -214,6 +223,18 @@ class ProductAdminController extends Controller
             'upsells.*.product_id' => 'required|integer|exists:products,id|distinct',
             'upsells.*.discount' => 'nullable|numeric|min:0|max:100',
             'upsells.*.upsale_discount' => 'nullable|numeric|min:0|max:100',
+            'variants' => 'required|array|min:1',
+            'variants.*.id' => 'nullable|integer|exists:product_variants,id',
+            'variants.*.option_color' => 'nullable|string|max:100',
+            'variants.*.option_size' => 'nullable|string|max:100',
+            'variants.*.price_usd' => 'required|numeric|min:0',
+            'variants.*.compare_at_price_usd' => 'nullable|numeric|min:0',
+            'variants.*.stock' => 'required|integer|min:0',
+            'variants.*.sku' => 'nullable|string|max:100',
+            'variants.*.is_default' => 'nullable|boolean',
+            'variants.*.is_active' => 'nullable|boolean',
+            'variants.*.image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:6144',
+            'variants.*.image_hover' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:6144',
         ]);
 
         $slug = $validated['slug'] ?? '';
@@ -227,6 +248,7 @@ class ProductAdminController extends Controller
             'category_id' => (int) $validated['category_id'],
             'brand_id' => (int) $validated['brand_id'],
             'short_description' => $validated['short_description'] ?? null,
+            'card_badge_label' => trim((string) ($validated['card_badge_label'] ?? '')) ?: null,
             'description' => $validated['description'] ?? null,
             'price_usd' => (float) $validated['price_usd'],
             'stock' => (int) $validated['stock'],
@@ -234,6 +256,119 @@ class ProductAdminController extends Controller
             'meta_description' => $validated['meta_description'] ?? null,
             'is_active' => $request->boolean('is_active'),
         ];
+    }
+
+    /**
+     * @return Collection<int, array<string, mixed>>
+     */
+    private function extractVariants(Request $request): Collection
+    {
+        return collect($request->input('variants', []))
+            ->map(static function ($row, int $index): array {
+                return [
+                    'id' => isset($row['id']) ? (int) $row['id'] : null,
+                    'option_color' => trim((string) ($row['option_color'] ?? '')) ?: null,
+                    'option_size' => trim((string) ($row['option_size'] ?? '')) ?: null,
+                    'price_usd' => (float) ($row['price_usd'] ?? 0),
+                    'compare_at_price_usd' => isset($row['compare_at_price_usd']) && $row['compare_at_price_usd'] !== ''
+                        ? (float) $row['compare_at_price_usd']
+                        : null,
+                    'stock' => (int) ($row['stock'] ?? 0),
+                    'sku' => trim((string) ($row['sku'] ?? '')) ?: null,
+                    'is_default' => ! empty($row['is_default']),
+                    'is_active' => ! array_key_exists('is_active', $row) || ! empty($row['is_active']),
+                    'sort_order' => $index,
+                ];
+            })
+            ->values();
+    }
+
+    /**
+     * @param  Collection<int, array<string, mixed>>  $variants
+     */
+    private function syncVariants(Product $product, Collection $variants, Request $request): void
+    {
+        if ($variants->isEmpty()) {
+            return;
+        }
+
+        $defaultCount = $variants->where('is_default', true)->count();
+        if ($defaultCount !== 1) {
+            $variants = $variants->map(function (array $row, int $index) {
+                $row['is_default'] = $index === 0;
+
+                return $row;
+            });
+        }
+
+        $existingIds = $product->variants()->pluck('id')->all();
+        $keptIds = [];
+
+        foreach ($variants as $index => $row) {
+            $variantId = $row['id'] ?? null;
+            $variant = null;
+
+            if ($variantId && in_array($variantId, $existingIds, true)) {
+                $variant = ProductVariant::query()
+                    ->where('product_id', $product->id)
+                    ->where('id', $variantId)
+                    ->first();
+            }
+
+            $imageFile = $request->file("variants.{$index}.image");
+            $hoverFile = $request->file("variants.{$index}.image_hover");
+            $imageUrl = $this->images->store($imageFile, 'products/variants', asWebp: true);
+            $hoverUrl = $this->images->store($hoverFile, 'products/variants', asWebp: true);
+
+            $payload = [
+                'option_color' => $row['option_color'],
+                'option_size' => $row['option_size'],
+                'price_usd' => $row['price_usd'],
+                'compare_at_price_usd' => $row['compare_at_price_usd'],
+                'stock' => $row['stock'],
+                'sku' => $row['sku'],
+                'is_default' => (bool) $row['is_default'],
+                'is_active' => (bool) $row['is_active'],
+                'sort_order' => (int) $row['sort_order'],
+            ];
+
+            if ($variant) {
+                if ($imageUrl !== null) {
+                    $this->images->delete($variant->image);
+                    $payload['image'] = $imageUrl;
+                }
+                if ($hoverUrl !== null) {
+                    $this->images->delete($variant->image_hover);
+                    $payload['image_hover'] = $hoverUrl;
+                }
+                $variant->update($payload);
+                $keptIds[] = $variant->id;
+            } else {
+                if ($imageUrl !== null) {
+                    $payload['image'] = $imageUrl;
+                } elseif ($product->image) {
+                    $payload['image'] = $product->image;
+                }
+                if ($hoverUrl !== null) {
+                    $payload['image_hover'] = $hoverUrl;
+                }
+                $variant = $product->variants()->create($payload);
+                $keptIds[] = $variant->id;
+            }
+        }
+
+        $removeIds = array_diff($existingIds, $keptIds);
+        if ($removeIds !== []) {
+            $toRemove = ProductVariant::query()->whereIn('id', $removeIds)->get();
+            foreach ($toRemove as $variant) {
+                $this->images->delete($variant->image);
+                $this->images->delete($variant->image_hover);
+                $variant->delete();
+            }
+        }
+
+        $product->load('variants');
+        ProductVariantOptions::syncProductDenormalized($product, $product->variants);
     }
 
     /**

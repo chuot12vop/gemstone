@@ -4,6 +4,7 @@
      data-welcome-popup
      data-welcome-delay="{{ (int) ($wp['delay_seconds'] ?? 10) }}"
      hidden
+     inert
      aria-hidden="true">
     <div class="welcome-popup__backdrop" data-welcome-close tabindex="-1"></div>
     <div class="welcome-popup__dialog" role="dialog" aria-modal="true" aria-labelledby="welcome-popup-title">

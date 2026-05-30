@@ -53,6 +53,20 @@ class CurrencyService
         return $rate->symbol.number_format($local, 2).' '.$code;
     }
 
+    public function currentSymbol(): string
+    {
+        $rate = CurrencyRate::query()->where('code', $this->currentCode())->where('is_active', true)->first();
+
+        return $rate?->symbol ?? '$';
+    }
+
+    public function currentRatePerUsd(): float
+    {
+        $rate = CurrencyRate::query()->where('code', $this->currentCode())->where('is_active', true)->first();
+
+        return $rate ? (float) $rate->rate_per_usd : 1.0;
+    }
+
     public function convertUsdToCurrent(float $amountUsd): float
     {
         $code = $this->currentCode();

@@ -1,55 +1,62 @@
 @extends('layouts.shop')
 
+@section('mainClass', 'site-main--cart')
+
 @section('content')
-<header class="page-head">
-    <h1 class="page-head__title">Your cart</h1>
-</header>
+<div class="cart-page" data-cart-page>
+    <header class="cart-page__head">
+        <h1 class="cart-page__title" data-cart-page-title>
+            @if($cartCount > 0)
+                Your bag ({{ $cartCount }})
+            @else
+                Your bag
+            @endif
+        </h1>
+    </header>
 
-@if(count($lines) === 0)
-    <p class="empty-state">Your cart is empty. <a href="{{ route('shop.products.index') }}">Continue shopping</a></p>
-@else
-    <ul class="cart-list">
-        @foreach($lines as $row)
-            @php $p = $row['product']; @endphp
-            <li class="cart-line">
-                <a class="cart-line__thumb" href="{{ route('shop.product', $p) }}">
-                    <img src="{{ $p->image ?: asset('assets/img/placeholder.svg') }}" alt="" width="96" height="96">
-                </a>
-                <div class="cart-line__body">
-                    <h2 class="cart-line__title"><a href="{{ route('shop.product', $p) }}">{{ $p->name }}</a></h2>
-                    <p class="cart-line__price">{{ $currency->formatUsd((float) $row['unit_price_usd']) }} each</p>
-                    <label>
-                        Qty
-                        <input form="cart-update" type="number" name="qty[{{ $p->id }}]" value="{{ $row['quantity'] }}" min="0" max="{{ $p->stock }}">
-                    </label>
+    @include('shop.checkout._free-shipping-bar', [
+        'shippingProgress' => $shippingProgress,
+        'currency' => $currency,
+    ])
+
+    @if(count($lines) === 0)
+        <div class="cart-page__empty">
+            <p class="cart-page__empty-msg">Your bag is empty.</p>
+            @guest
+                <p class="cart-page__empty-auth">
+                    Have an account? <a href="{{ route('login') }}">Log in</a> to check out faster.
+                </p>
+            @endguest
+            <a class="btn btn--primary cart-page__empty-cta" href="{{ route('shop.products.index') }}">Continue shopping</a>
+        </div>
+        @include('shop.cart._trust-badges')
+    @else
+        <div class="cart-page__layout" data-cart-page-layout>
+            <div class="cart-page__main">
+                <div data-cart-page-lines-wrap>
+                    @include('shop.cart._line-items', ['lines' => $lines, 'currency' => $currency])
                 </div>
-                <div class="cart-line__total">{{ $currency->formatUsd((float) $row['line_usd']) }}</div>
-                <div class="cart-line__remove">
-                    <form method="post" action="{{ route('shop.cart.remove') }}">
-                        @csrf
-                        <input type="hidden" name="product_id" value="{{ $p->id }}">
-                        <button type="submit" class="link-btn">Remove</button>
-                    </form>
-                </div>
-            </li>
-        @endforeach
-    </ul>
+                <a class="cart-page__continue" href="{{ route('shop.products.index') }}">Continue shopping</a>
+            </div>
+            <div data-cart-page-summary-wrap>
+                @include('shop.cart._summary', [
+                    'subtotalUsd' => $subtotalUsd,
+                    'currency' => $currency,
+                ])
+            </div>
+        </div>
+        @include('shop.cart._trust-badges')
+    @endif
 
-    <form id="cart-update" method="post" action="{{ route('shop.cart.update') }}">
-        @csrf
-    </form>
-    <div class="cart-actions">
-        <button class="btn btn--ghost" type="submit" form="cart-update">Update cart</button>
-        @auth
-            <a class="btn btn--primary" href="{{ route('shop.checkout') }}">Checkout</a>
-        @else
-            <a class="btn btn--primary" href="{{ route('login') }}">Sign in to checkout</a>
-        @endauth
-    </div>
-    @guest
-        <p class="cart-auth-note">You need an account to checkout and pay. <a href="{{ route('register') }}">Create account</a> or <a href="{{ route('login') }}">sign in</a>.</p>
-    @endguest
-
-    <p class="cart-subtotal">Subtotal (USD basis): <strong>${{ number_format($subtotalUsd, 2) }}</strong> · Display: <strong>{{ $currency->formatUsd((float) $subtotalUsd) }}</strong></p>
-@endif
+    @if(isset($bestSellers) && $bestSellers->isNotEmpty())
+        <section class="cart-page__bestsellers home-section home-section--bestsellers reveal-on-scroll" aria-labelledby="cart-bestsellers-title">
+            <h2 id="cart-bestsellers-title" class="section__title section__title--center">Best sellers</h2>
+            @include('shop.partials.home-product-slider', [
+                'products' => $bestSellers,
+                'currency' => $currency,
+                'sliderLabel' => 'Best sellers',
+            ])
+        </section>
+    @endif
+</div>
 @endsection

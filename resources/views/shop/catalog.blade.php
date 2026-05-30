@@ -1,87 +1,258 @@
 @extends('layouts.shop')
 
+
+
 @section('mainClass', 'site-main--catalog')
 
+
+
 @section('content')
-<header class="page-head">
-    <h1 class="page-head__title">{{ $currentCategory ? $currentCategory->name : ($currentBrand ? $currentBrand->name : 'Products') }}</h1>
-    @if($currentCategory && $currentCategory->description)
-        <p class="page-head__summary">{{ $currentCategory->description }}</p>
-    @elseif($currentBrand)
-        <p class="page-head__summary">Pieces from {{ $currentBrand->name }}. Browse healing gemstones, lucky motifs, and limited designs.</p>
-    @else
-        <p class="page-head__summary">Browse healing gemstones, lucky motifs, and limited designs.</p>
-    @endif
-</header>
 
 @php
-    $activeFilterCount = 0;
-    if (!empty($filters['brand_slug'])) {
-        $activeFilterCount++;
-    }
-    if (!empty($filters['category_id'])) {
-        $activeFilterCount++;
-    }
-    if (($filters['min_price'] ?? '') !== '' && ($filters['min_price'] ?? '') !== null) {
-        $activeFilterCount++;
-    }
-    if (($filters['max_price'] ?? '') !== '' && ($filters['max_price'] ?? '') !== null) {
-        $activeFilterCount++;
-    }
-@endphp
-<details class="catalog-filters-wrap" data-catalog-filters @if($activeFilterCount > 0) data-filters-active @endif>
-    <summary class="catalog-filters-wrap__summary">
-        Filters
-        @if($activeFilterCount > 0)
-            <span class="catalog-filters-wrap__badge">{{ $activeFilterCount }}</span>
-        @endif
-    </summary>
-    <form class="catalog-filters" method="get" action="{{ route('shop.products.index') }}" data-catalog-filter-form>
-        <label>
-            Category
-            <select name="category_id" data-catalog-category-filter>
-                <option value="">All categories</option>
-                @foreach($categories as $c)
-                    <option value="{{ $c->id }}" @selected((int) ($filters['category_id'] ?? 0) === $c->id)>{{ $c->name }}</option>
-                @endforeach
-            </select>
-        </label>
-        <label>
-            Brand
-            <select name="brand">
-                <option value="">All brands</option>
-                @foreach($brands as $b)
-                    <option value="{{ $b->slug }}" @selected(($filters['brand_slug'] ?? '') === $b->slug)>{{ $b->name }}</option>
-                @endforeach
-            </select>
-        </label>
-        <label>
-            Min price (USD)
-            <input type="number" step="0.01" min="0" name="min_price" value="{{ $filters['min_price'] }}">
-        </label>
-        <label>
-            Max price (USD)
-            <input type="number" step="0.01" min="0" name="max_price" value="{{ $filters['max_price'] }}">
-        </label>
-        <div class="catalog-filters__actions">
-            <button class="btn btn--primary btn--small" type="submit">Apply</button>
-            <a class="btn btn--ghost btn--small" href="{{ route('shop.products.index') }}">Reset</a>
-        </div>
-    </form>
-</details>
 
-<div class="shop-product-grid">
-    @foreach($products as $p)
-        @include('shop.partials.product-card', ['product' => $p, 'currency' => $currency])
-    @endforeach
+    $pageTitle = ! empty($filters['q'])
+        ? 'Search: '.$filters['q']
+        : ($currentCategory ? $currentCategory->name : ($currentBrand ? $currentBrand->name : 'Products'));
+
+    $pageSummary = $currentCategory && $currentCategory->description
+
+        ? $currentCategory->description
+
+        : ($currentBrand
+
+            ? 'Pieces from '.$currentBrand->name.'. Browse healing gemstones, lucky motifs, and limited designs.'
+
+            : 'Browse healing gemstones, lucky motifs, and limited designs.');
+
+
+
+    $activeFilterCount = 0;
+
+    if (!empty($filters['brand_slug'])) {
+
+        $activeFilterCount++;
+
+    }
+
+    if (!empty($filters['category_id'])) {
+
+        $activeFilterCount++;
+
+    }
+
+    if (($filters['sort'] ?? 'related') !== 'related') {
+
+        $activeFilterCount++;
+
+    }
+
+    if (! empty($filters['q'])) {
+
+        $activeFilterCount++;
+
+    }
+
+@endphp
+
+
+
+<header class="catalog-page-head page-head">
+
+    <h1 class="catalog-page-head__title page-head__title">{{ $pageTitle }}</h1>
+
+    @if($pageSummary)
+
+        <p class="catalog-page-head__summary page-head__summary is-collapsed" data-catalog-desc>{{ $pageSummary }}</p>
+
+        <button type="button" class="catalog-page-head__toggle" data-catalog-desc-toggle hidden>Show more</button>
+
+    @endif
+
+</header>
+
+
+
+<div class="catalog-toolbar">
+
+    <button type="button"
+
+            class="catalog-toolbar__filters-btn"
+
+            data-catalog-open-filters
+
+            aria-expanded="false"
+
+            aria-controls="catalog-filters-panel">
+
+        Filter
+
+        @if($activeFilterCount > 0)
+
+            <span class="catalog-toolbar__badge">{{ $activeFilterCount }}</span>
+
+        @endif
+
+    </button>
+
+
+
+    <form class="catalog-toolbar__sort" method="get" action="{{ route('shop.products.index') }}">
+
+        @if(!empty($filters['category_id']))
+
+            <input type="hidden" name="category_id" value="{{ $filters['category_id'] }}">
+
+        @endif
+
+        @if(!empty($filters['brand_slug']))
+
+            <input type="hidden" name="brand" value="{{ $filters['brand_slug'] }}">
+
+        @endif
+
+        @if(!empty($filters['q']))
+
+            <input type="hidden" name="q" value="{{ $filters['q'] }}">
+
+        @endif
+
+        <label>
+
+            Sort by
+
+            <select name="sort" onchange="this.form.submit()">
+
+                <option value="newest" @selected(($filters['sort'] ?? 'related') === 'newest')>Newest</option>
+
+                <option value="related" @selected(($filters['sort'] ?? 'related') === 'related')>Featured</option>
+
+                <option value="price_desc" @selected(($filters['sort'] ?? 'related') === 'price_desc')>Price: high to low</option>
+
+                <option value="price_asc" @selected(($filters['sort'] ?? 'related') === 'price_asc')>Price: low to high</option>
+
+            </select>
+
+        </label>
+
+    </form>
+
+
+
+    <p class="catalog-toolbar__count">{{ $products->total() }} {{ Str::plural('product', $products->total()) }}</p>
+
 </div>
 
-@if($products->hasPages())
-    <nav class="pagination" aria-label="Pagination">
-        @for($i = 1; $i <= $products->lastPage(); $i++)
-            <a class="pagination__link {{ $i === $products->currentPage() ? 'is-active' : '' }}"
-               href="{{ $products->url($i) }}">{{ $i }}</a>
-        @endfor
-    </nav>
+
+
+<div id="catalog-filters-panel" class="catalog-filters-panel" data-catalog-filters-panel hidden>
+
+    <form class="catalog-filters" method="get" action="{{ route('shop.products.index') }}" data-catalog-filter-form>
+
+        @if(!empty($filters['q']))
+
+            <input type="hidden" name="q" value="{{ $filters['q'] }}">
+
+        @endif
+
+        <label>
+
+            Category
+
+            <select name="category_id" data-catalog-category-filter>
+
+                <option value="">All categories</option>
+
+                @foreach($categories as $c)
+
+                    <option value="{{ $c->id }}" @selected((int) ($filters['category_id'] ?? 0) === $c->id)>{{ $c->name }}</option>
+
+                @endforeach
+
+            </select>
+
+        </label>
+
+        <label>
+
+            Brand
+
+            <select name="brand">
+
+                <option value="">All brands</option>
+
+                @foreach($brands as $b)
+
+                    <option value="{{ $b->slug }}" @selected(($filters['brand_slug'] ?? '') === $b->slug)>{{ $b->name }}</option>
+
+                @endforeach
+
+            </select>
+
+        </label>
+
+        <label>
+
+            Sort by
+
+            <select name="sort" data-catalog-sort-filter>
+
+                <option value="newest" @selected(($filters['sort'] ?? 'related') === 'newest')>Newest</option>
+
+                <option value="related" @selected(($filters['sort'] ?? 'related') === 'related')>Featured</option>
+
+                <option value="price_desc" @selected(($filters['sort'] ?? 'related') === 'price_desc')>Price: high to low</option>
+
+                <option value="price_asc" @selected(($filters['sort'] ?? 'related') === 'price_asc')>Price: low to high</option>
+
+            </select>
+
+        </label>
+
+        <div class="catalog-filters__actions">
+
+            <button class="btn btn--primary btn--small" type="submit">Apply</button>
+
+            <a class="btn btn--ghost btn--small" href="{{ route('shop.products.index') }}">Reset</a>
+
+        </div>
+
+    </form>
+
+</div>
+
+
+
+<div class="shop-product-grid" data-catalog-grid>
+
+    @foreach($products as $p)
+
+        @include('shop.partials.product-card', ['product' => $p, 'currency' => $currency])
+
+    @endforeach
+
+</div>
+
+
+
+@if($products->hasMorePages())
+
+    <div class="catalog-show-more-wrap">
+
+        <button type="button"
+
+                class="btn btn--ghost catalog-show-more"
+
+                data-catalog-show-more
+
+                data-next-url="{{ $products->nextPageUrl() }}">
+
+            Show more
+
+        </button>
+
+    </div>
+
 @endif
+
 @endsection
+

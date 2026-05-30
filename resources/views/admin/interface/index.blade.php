@@ -6,7 +6,7 @@
 @endsection
 
 @section('module-meta')
-    Configure the storefront home hero slideshow: image, title, content, and optional category link for each slide.
+    Configure the storefront home hero slideshow: desktop and mobile images, title, content, and optional category link for each slide.
 @endsection
 
 @section('content')
@@ -20,11 +20,12 @@
 
     <fieldset class="form-fieldset">
         <legend>Home banner slides</legend>
-        <p style="margin:0 0 12px;color:#5c6470;font-size:0.95rem;">Each slide needs an image. Choose a category so the whole banner links to that catalog view (or leave blank for the full product list).</p>
+        <p style="margin:0 0 12px;color:#5c6470;font-size:0.95rem;">Each slide needs a desktop image. Upload a separate mobile image for phones (optional — desktop image is used when blank). Choose a category so the whole banner links to that catalog view (or leave blank for the full product list).</p>
         <div id="slides-list">
             @foreach($slides as $i => $slide)
                 <div class="js-slide-row form-fieldset" style="margin-top:14px;padding:14px;border:1px solid #e2e6ec;border-radius:10px;background:#fff;">
                     <input type="hidden" class="js-existing-image" name="slides[{{ $i }}][existing_image]" value="{{ old('slides.'.$i.'.existing_image', $slide['image'] ?? '') }}">
+                    <input type="hidden" class="js-existing-image-mobile" name="slides[{{ $i }}][existing_image_mobile]" value="{{ old('slides.'.$i.'.existing_image_mobile', $slide['image_mobile'] ?? '') }}">
                     <div class="form-grid">
                         <label style="grid-column: 1 / -1;">
                             Title
@@ -44,18 +45,38 @@
                             </select>
                         </label>
                     </div>
-                    <p style="margin:10px 0 6px;font-weight:600;font-size:0.9rem;">Slide image</p>
-                    <div class="js-slide-dropzone" style="padding:14px;border:2px dashed #c8d1dc;border-radius:10px;background:#f8fafc;text-align:center;cursor:pointer;">
-                        <strong>Drop image here</strong><br>
-                        <small>or click to choose</small>
+                    <div class="form-grid" style="margin-top:12px;gap:16px;">
+                        <div>
+                            <p style="margin:0 0 6px;font-weight:600;font-size:0.9rem;">Desktop image <span style="color:#b33a3a;">*</span></p>
+                            <p style="margin:0 0 8px;color:#5c6470;font-size:0.85rem;">Wide banner for tablets and desktop (recommended ~1400×788).</p>
+                            <div class="js-slide-dropzone" data-image-role="desktop" style="padding:14px;border:2px dashed #c8d1dc;border-radius:10px;background:#f8fafc;text-align:center;cursor:pointer;">
+                                <strong>Drop desktop image</strong><br>
+                                <small>or click to choose</small>
+                            </div>
+                            <div style="margin-top:10px;">
+                                <img class="js-slide-preview" data-image-role="desktop" src="{{ !empty($slide['image']) ? \App\Support\PublicAssetUrl::to($slide['image']) : asset('assets/img/placeholder.svg') }}" alt="Desktop preview" width="280" height="158" style="object-fit:cover;border:1px solid #d7dbe2;border-radius:8px;background:#fff;">
+                            </div>
+                            <input class="display-none js-slide-file" data-image-role="desktop" type="file" name="slides[{{ $i }}][image]" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp">
+                            @error('slides.'.$i.'.image')
+                                <p style="margin:8px 0 0;color:#b33a3a;">{{ $message }}</p>
+                            @enderror
+                        </div>
+                        <div>
+                            <p style="margin:0 0 6px;font-weight:600;font-size:0.9rem;">Mobile image</p>
+                            <p style="margin:0 0 8px;color:#5c6470;font-size:0.85rem;">Portrait banner for phones (optional; uses desktop image if empty).</p>
+                            <div class="js-slide-dropzone" data-image-role="mobile" style="padding:14px;border:2px dashed #c8d1dc;border-radius:10px;background:#f8fafc;text-align:center;cursor:pointer;">
+                                <strong>Drop mobile image</strong><br>
+                                <small>or click to choose</small>
+                            </div>
+                            <div style="margin-top:10px;">
+                                <img class="js-slide-preview" data-image-role="mobile" src="{{ !empty($slide['image_mobile']) ? \App\Support\PublicAssetUrl::to($slide['image_mobile']) : asset('assets/img/placeholder.svg') }}" alt="Mobile preview" width="280" height="160" style="object-fit:cover;border:1px solid #d7dbe2;border-radius:8px;background:#fff;">
+                            </div>
+                            <input class="display-none js-slide-file" data-image-role="mobile" type="file" name="slides[{{ $i }}][image_mobile]" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp">
+                            @error('slides.'.$i.'.image_mobile')
+                                <p style="margin:8px 0 0;color:#b33a3a;">{{ $message }}</p>
+                            @enderror
+                        </div>
                     </div>
-                    <div style="margin-top:10px;">
-                        <img class="js-slide-preview" src="{{ !empty($slide['image']) ? \App\Support\PublicAssetUrl::to($slide['image']) : asset('assets/img/placeholder.svg') }}" alt="Preview" width="280" height="158" style="object-fit:cover;border:1px solid #d7dbe2;border-radius:8px;background:#fff;">
-                    </div>
-                    <input class="display-none js-slide-file" type="file" name="slides[{{ $i }}][image]" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp">
-                    @error('slides.'.$i.'.image')
-                        <p style="margin:8px 0 0;color:#b33a3a;">{{ $message }}</p>
-                    @enderror
                     <div class="form-actions" style="margin-top:12px;">
                         <button class="btn-admin" type="button" data-action="remove-slide">Remove slide</button>
                     </div>
@@ -73,6 +94,7 @@
 <template id="slide-row-template">
     <div class="js-slide-row form-fieldset" style="margin-top:14px;padding:14px;border:1px solid #e2e6ec;border-radius:10px;background:#fff;">
         <input type="hidden" class="js-existing-image" name="" value="">
+        <input type="hidden" class="js-existing-image-mobile" name="" value="">
         <div class="form-grid">
             <label style="grid-column: 1 / -1;">
                 Title
@@ -92,15 +114,32 @@
                 </select>
             </label>
         </div>
-        <p style="margin:10px 0 6px;font-weight:600;font-size:0.9rem;">Slide image</p>
-        <div class="js-slide-dropzone" style="padding:14px;border:2px dashed #c8d1dc;border-radius:10px;background:#f8fafc;text-align:center;cursor:pointer;">
-            <strong>Drop image here</strong><br>
-            <small>or click to choose</small>
+        <div class="form-grid" style="margin-top:12px;gap:16px;">
+            <div>
+                <p style="margin:0 0 6px;font-weight:600;font-size:0.9rem;">Desktop image <span style="color:#b33a3a;">*</span></p>
+                <p style="margin:0 0 8px;color:#5c6470;font-size:0.85rem;">Wide banner for tablets and desktop (recommended ~1400×788).</p>
+                <div class="js-slide-dropzone" data-image-role="desktop" style="padding:14px;border:2px dashed #c8d1dc;border-radius:10px;background:#f8fafc;text-align:center;cursor:pointer;">
+                    <strong>Drop desktop image</strong><br>
+                    <small>or click to choose</small>
+                </div>
+                <div style="margin-top:10px;">
+                    <img class="js-slide-preview" data-image-role="desktop" src="{{ asset('assets/img/placeholder.svg') }}" alt="Desktop preview" width="280" height="158" style="object-fit:cover;border:1px solid #d7dbe2;border-radius:8px;background:#fff;">
+                </div>
+                <input class="display-none js-slide-file" data-image-role="desktop" type="file" name="" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp">
+            </div>
+            <div>
+                <p style="margin:0 0 6px;font-weight:600;font-size:0.9rem;">Mobile image</p>
+                <p style="margin:0 0 8px;color:#5c6470;font-size:0.85rem;">Portrait banner for phones (optional; uses desktop image if empty).</p>
+                <div class="js-slide-dropzone" data-image-role="mobile" style="padding:14px;border:2px dashed #c8d1dc;border-radius:10px;background:#f8fafc;text-align:center;cursor:pointer;">
+                    <strong>Drop mobile image</strong><br>
+                    <small>or click to choose</small>
+                </div>
+                <div style="margin-top:10px;">
+                    <img class="js-slide-preview" data-image-role="mobile" src="{{ asset('assets/img/placeholder.svg') }}" alt="Mobile preview" width="160" height="280" style="object-fit:cover;border:1px solid #d7dbe2;border-radius:8px;background:#fff;">
+                </div>
+                <input class="display-none js-slide-file" data-image-role="mobile" type="file" name="" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp">
+            </div>
         </div>
-        <div style="margin-top:10px;">
-            <img class="js-slide-preview" src="{{ asset('assets/img/placeholder.svg') }}" alt="Preview" width="280" height="158" style="object-fit:cover;border:1px solid #d7dbe2;border-radius:8px;background:#fff;">
-        </div>
-        <input class="display-none js-slide-file" type="file" name="" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp">
         <div class="form-actions" style="margin-top:12px;">
             <button class="btn-admin" type="button" data-action="remove-slide">Remove slide</button>
         </div>
@@ -121,15 +160,19 @@
         const rows = list.querySelectorAll('.js-slide-row');
         rows.forEach((row, index) => {
             const existing = row.querySelector('.js-existing-image');
+            const existingMobile = row.querySelector('.js-existing-image-mobile');
             const title = row.querySelector('.js-slide-title');
             const content = row.querySelector('.js-slide-content');
             const category = row.querySelector('.js-slide-category');
-            const file = row.querySelector('.js-slide-file');
+            const fileDesktop = row.querySelector('.js-slide-file[data-image-role="desktop"]');
+            const fileMobile = row.querySelector('.js-slide-file[data-image-role="mobile"]');
             if (existing instanceof HTMLInputElement) existing.setAttribute('name', `slides[${index}][existing_image]`);
+            if (existingMobile instanceof HTMLInputElement) existingMobile.setAttribute('name', `slides[${index}][existing_image_mobile]`);
             if (title instanceof HTMLInputElement) title.setAttribute('name', `slides[${index}][title]`);
             if (content instanceof HTMLTextAreaElement) content.setAttribute('name', `slides[${index}][content]`);
             if (category instanceof HTMLSelectElement) category.setAttribute('name', `slides[${index}][category_id]`);
-            if (file instanceof HTMLInputElement) file.setAttribute('name', `slides[${index}][image]`);
+            if (fileDesktop instanceof HTMLInputElement) fileDesktop.setAttribute('name', `slides[${index}][image]`);
+            if (fileMobile instanceof HTMLInputElement) fileMobile.setAttribute('name', `slides[${index}][image_mobile]`);
         });
     };
 
@@ -138,11 +181,11 @@
         addButton.click();
     };
 
-    const bindRow = (row) => {
-        const fileInput = row.querySelector('.js-slide-file');
-        const preview = row.querySelector('.js-slide-preview');
-        const dropzone = row.querySelector('.js-slide-dropzone');
-        const existing = row.querySelector('.js-existing-image');
+    const bindImageUpload = (row, role) => {
+        const fileInput = row.querySelector(`.js-slide-file[data-image-role="${role}"]`);
+        const preview = row.querySelector(`.js-slide-preview[data-image-role="${role}"]`);
+        const dropzone = row.querySelector(`.js-slide-dropzone[data-image-role="${role}"]`);
+        const existing = row.querySelector(role === 'desktop' ? '.js-existing-image' : '.js-existing-image-mobile');
         if (!(fileInput instanceof HTMLInputElement) || !(preview instanceof HTMLImageElement) || !(dropzone instanceof HTMLElement)) return;
 
         const setFile = (file) => {
@@ -180,6 +223,11 @@
             setFile(files[0]);
         });
         dropzone.addEventListener('click', () => fileInput.click());
+    };
+
+    const bindRow = (row) => {
+        bindImageUpload(row, 'desktop');
+        bindImageUpload(row, 'mobile');
     };
 
     addButton.addEventListener('click', () => {

@@ -6,6 +6,7 @@ use App\Models\Category;
 use App\Models\Order;
 use App\Models\Setting;
 use App\Services\CurrencyService;
+use App\Support\PaymentMethodLogos;
 use App\Support\PublicAssetUrl;
 use App\Support\ShopFrontSettings;
 use Illuminate\Support\Facades\Auth;
@@ -31,7 +32,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot()
     {
-        View::composer('layouts.shop', function ($view) {
+        View::composer(['layouts.shop', 'layouts.checkout'], function ($view) {
             $defaults = [
                 'site_name' => config('app.name'),
                 'site_logo' => '',
@@ -53,7 +54,8 @@ class AppServiceProvider extends ServiceProvider
                 }
             }
 
-            $defaults['site_logo'] = PublicAssetUrl::to($defaults['site_logo']);
+            $siteLogoPath = (string) ($storedSettings['site_logo'] ?? $defaults['site_logo']);
+            $defaults['site_logo'] = PublicAssetUrl::to($siteLogoPath);
 
             $catalogNavCategories = Category::query()
                 ->orderBy('sort_order')
@@ -61,13 +63,14 @@ class AppServiceProvider extends ServiceProvider
                 ->with(['products' => function ($q) {
                     $q->where('is_active', true)
                         ->orderBy('name')
-                        ->select('id', 'category_id', 'name', 'slug');
+                        ->select('id', 'category_id', 'name', 'slug', 'thumbnail', 'image');
                 }])
                 ->get(['id', 'name', 'slug', 'sort_order']);
 
             $view->with('currency', app(CurrencyService::class))
                 ->with('siteSettings', $defaults)
                 ->with('shopFront', ShopFrontSettings::resolve())
+                ->with('paymentLogos', PaymentMethodLogos::all($siteLogoPath))
                 ->with('catalogNavCategories', $catalogNavCategories);
         });
 

@@ -1,10 +1,17 @@
 @extends('layouts.shop')
 
 @php
-    $mainImage = $product->image ?: ($product->thumbnail ?: asset('assets/img/placeholder.svg'));
-    $attributeMap = $product->productAttributes
-        ->pluck('value', 'name')
-        ->mapWithKeys(fn ($value, $name) => [strtolower((string) $name) => $value]);
+    use App\Support\ProductVariantOptions;
+
+    $activeVariants = $product->variants->where('is_active', true)->values();
+    $defaultVariant = $activeVariants->firstWhere('is_default', true) ?: $activeVariants->first();
+    $pickerVariants = ProductVariantOptions::toPickerJson($product, $activeVariants);
+    $colors = $activeVariants->pluck('option_color')->filter(fn (?string $c) => $c !== null && trim($c) !== '')->unique()->values();
+    $sizes = ProductVariantOptions::sizes($activeVariants);
+    $initialColor = $defaultVariant?->option_color ?? '';
+    $initialSize = $defaultVariant?->option_size ?? '';
+
+    $mainImage = $defaultVariant?->frontImage($product) ?: ($product->image ?: ($product->thumbnail ?: asset('assets/img/placeholder.svg')));
     $galleryImages = collect();
     if ($mainImage) {
         $galleryImages->push($mainImage);
@@ -14,13 +21,22 @@
             $galleryImages->push($img->path);
         }
     }
+    foreach ($activeVariants as $variant) {
+        $front = $variant->frontImage($product);
+        if ($front && ! $galleryImages->contains($front)) {
+            $galleryImages->push($front);
+        }
+    }
     if ($galleryImages->isEmpty()) {
         $galleryImages->push(asset('assets/img/placeholder.svg'));
     }
+
+    $displayPrice = $defaultVariant ? (float) $defaultVariant->price_usd : (float) $product->price_usd;
+    $displayStock = $defaultVariant ? (int) $defaultVariant->stock : (int) $product->stock;
 @endphp
 
 @section('content')
-<article class="product-detail" itemscope itemtype="https://schema.org/Product" data-product-detail>
+<article class="product-detail product-detail--missoma" itemscope itemtype="https://schema.org/Product" data-product-detail>
     <div class="product-detail__grid">
         <div class="product-detail__media">
             <div class="pd-gallery" data-pd-gallery>
@@ -63,68 +79,119 @@
                     <span>{{ number_format($reviewStats['average'], 1) }} ({{ $reviewStats['count'] }} {{ Str::plural('review', $reviewStats['count']) }})</span>
                 </a>
             @endif
-            
-            @if($product->description)
-                <div class="product-detail__description" data-pd-description>
-                    <div class="prose product-detail__description-body is-collapsed" data-pd-description-body itemprop="description">
-                        {!! $product->description !!}
-                    </div>
-                    <button type="button"
-                            class="product-detail__read-more"
-                            data-pd-description-toggle
-                            data-label-more="Read more"
-                            data-label-less="Read less"
-                            hidden>
-                        Read more
-                    </button>
-                </div>
-            @elseif($product->short_description)
-                <p class="lede" itemprop="description">{{ $product->short_description }}</p>
+
+            @if($product->short_description)
+                <p class="lede">{{ $product->short_description }}</p>
             @endif
 
-            <p class="product-detail__price" itemprop="offers" itemscope itemtype="https://schema.org/Offer">
+            <p class="product-detail__price" itemprop="offers" itemscope itemtype="https://schema.org/Offer" data-pd-price>
                 <span class="sr-only" itemprop="priceCurrency" content="USD">USD base</span>
-                <span class="sr-only" itemprop="price" content="{{ $product->price_usd }}"></span>
-                {{ $currency->formatUsd((float) $product->price_usd) }}
+                <span class="sr-only" itemprop="price" content="{{ $displayPrice }}"></span>
+                {{ $currency->formatUsd($displayPrice) }}
             </p>
+
+            @if($activeVariants->isNotEmpty())
+                <div class="pd-variant-picker"
+                     data-pd-variant-picker
+                     data-variants='@json($pickerVariants)'
+                     data-initial-color="{{ $initialColor }}"
+                     data-initial-size="{{ $initialSize }}">
+                    @if($colors->isNotEmpty())
+                        <div class="pd-variant-picker__group">
+                            <span class="pd-variant-picker__label">Colour</span>
+                            <div class="pd-variant-picker__swatches">
+                                @foreach($colors as $i => $color)
+                                    <button type="button"
+                                            class="pd-variant-picker__swatch {{ ($initialColor === $color) || ($i === 0 && $initialColor === '') ? 'is-active' : '' }}"
+                                            data-pd-color="{{ $color }}">
+                                        {{ $color }}
+                                    </button>
+                                @endforeach
+                            </div>
+                        </div>
+                    @endif
+                    @if($sizes !== [])
+                        <div class="pd-variant-picker__group">
+                            <span class="pd-variant-picker__label">Size</span>
+                            <div class="pd-variant-picker__sizes">
+                                @foreach($sizes as $i => $size)
+                                    <button type="button"
+                                            class="pd-variant-picker__size {{ ($initialSize === $size) || ($i === 0 && $initialSize === '') ? 'is-active' : '' }}"
+                                            data-pd-size="{{ $size }}">
+                                        {{ $size }}
+                                    </button>
+                                @endforeach
+                            </div>
+                        </div>
+                    @endif
+                </div>
+            @endif
 
             <form class="add-form" method="post" action="{{ route('shop.cart.add') }}" data-pd-form>
                 @csrf
-                <input type="hidden" name="product_id" value="{{ $product->id }}">
+                <input type="hidden" name="variant_id" value="{{ $defaultVariant?->id }}" data-pd-variant-id>
                 <label class="qty">
                     <span class="sr-only">Quantity</span>
-                    <input type="number" name="quantity" value="1" min="1" max="{{ max(1, $product->stock) }}" data-pd-qty>
+                    <input type="number" name="quantity" value="1" min="1" max="{{ max(1, $displayStock) }}" data-pd-qty>
                 </label>
-                <button class="btn btn--primary" type="submit" {{ $product->stock < 1 ? 'disabled' : '' }}>
-                    {{ $product->stock < 1 ? 'Out of stock' : 'Add to cart' }}
+                <button class="btn btn--primary"
+                        type="submit"
+                        data-pd-submit
+                        data-label-default="Add to Bag"
+                        {{ $displayStock < 1 ? 'disabled' : '' }}>
+                    {{ $displayStock < 1 ? 'Out of stock' : 'Add to Bag' }}
                 </button>
-                <button class="btn btn--buy-now" type="submit" name="buy_now" value="1" {{ $product->stock < 1 ? 'disabled' : '' }}>
+                <button class="btn btn--buy-now"
+                        type="submit"
+                        name="buy_now"
+                        value="1"
+                        data-pd-submit
+                        data-label-default="Buy now"
+                        {{ $displayStock < 1 ? 'disabled' : '' }}>
                     Buy now
                 </button>
             </form>
-            <p class="stock-note">{{ $product->stock }} in stock</p>
+            <p class="stock-note" data-pd-stock>{{ $displayStock }} in stock</p>
 
-            @if($product->productAttributes->isNotEmpty())
-            <section class="product-attributes" data-pd-attributes>
-                <h2 class="product-detail__section-title">Product Attribute</h2>
-
-                @foreach($product->productAttributes as $attribute)
-                    <article class="pd-attribute-item">
-                        <button type="button" class="pd-attribute-item__btn" data-pd-attr-btn aria-expanded="false">
-                            <span>{{ $attribute->name }}</span>
-                            <span class="pd-attribute-item__icon" aria-hidden="true"></span>
+            <div class="pd-accordion" data-pd-accordion>
+                @if($product->description)
+                    <article class="pd-accordion__item">
+                        <button type="button" class="pd-accordion__btn" data-pd-acc-btn aria-expanded="false">
+                            <span>Description</span>
+                            <span class="pd-accordion__icon" aria-hidden="true"></span>
                         </button>
-                        <div class="pd-attribute-item__panel" data-pd-attr-panel hidden>
-                            <p>{!! nl2br(e($attribute->value)) !!}</p>
+                        <div class="pd-accordion__panel" data-pd-acc-panel hidden itemprop="description">
+                            <div class="prose">{!! $product->description !!}</div>
                         </div>
                     </article>
-                @endforeach
-            </section>
-            @endif
+                @endif
+
+                @if($product->productAttributes->isNotEmpty())
+                    <article class="pd-accordion__item">
+                        <button type="button" class="pd-accordion__btn" data-pd-acc-btn aria-expanded="false">
+                            <span>Details</span>
+                            <span class="pd-accordion__icon" aria-hidden="true"></span>
+                        </button>
+                        <div class="pd-accordion__panel" data-pd-acc-panel hidden>
+                            @foreach($product->productAttributes as $attribute)
+                                <p><strong>{{ $attribute->name }}:</strong> {!! nl2br(e($attribute->value)) !!}</p>
+                            @endforeach
+                        </div>
+                    </article>
+                @endif
+
+                <article class="pd-accordion__item">
+                    <button type="button" class="pd-accordion__btn" data-pd-acc-btn aria-expanded="false">
+                        <span>Delivery &amp; Returns</span>
+                        <span class="pd-accordion__icon" aria-hidden="true"></span>
+                    </button>
+                    <div class="pd-accordion__panel" data-pd-acc-panel hidden>
+                        @include('shop.partials.product-detail-policies', ['policies' => $productPolicies ?? []])
+                    </div>
+                </article>
+            </div>
 
             @include('shop.partials.product-upsell-bundle', ['product' => $product, 'currency' => $currency])
-
-            @include('shop.partials.product-detail-policies', ['policies' => $productPolicies ?? []])
         </div>
     </div>
 
@@ -159,21 +226,22 @@
             <img class="product-cta-bar__thumb" src="{{ $galleryImages->first() }}" alt="">
             <div class="product-cta-bar__meta">
                 <p class="product-cta-bar__name">{{ $product->name }}</p>
-                <p class="product-cta-bar__price">{{ $currency->formatUsd((float) $product->price_usd) }}</p>
+                <p class="product-cta-bar__price" data-pd-cta-price>{{ $currency->formatUsd($displayPrice) }}</p>
             </div>
         </div>
         <form class="product-cta-bar__form" method="post" action="{{ route('shop.cart.add') }}">
             @csrf
-            <input type="hidden" name="product_id" value="{{ $product->id }}">
+            <input type="hidden" name="variant_id" value="{{ $defaultVariant?->id }}" data-pd-cta-variant-id>
             <label class="qty product-cta-bar__qty">
                 <span class="sr-only">Quantity</span>
-                <input type="number" name="quantity" value="1" min="1" max="{{ max(1, $product->stock) }}" data-pd-cta-qty>
+                <input type="number" name="quantity" value="1" min="1" max="{{ max(1, $displayStock) }}" data-pd-cta-qty>
             </label>
-            <button class="btn btn--primary product-cta-bar__btn" type="submit" {{ $product->stock < 1 ? 'disabled' : '' }}>
-                {{ $product->stock < 1 ? 'Out of stock' : 'Add to cart' }}
-            </button>
-            <button class="btn btn--buy-now product-cta-bar__btn" type="submit" name="buy_now" value="1" {{ $product->stock < 1 ? 'disabled' : '' }}>
-                Buy now
+            <button class="btn btn--primary product-cta-bar__btn"
+                    type="submit"
+                    data-pd-submit
+                    data-label-default="Add to Bag"
+                    {{ $displayStock < 1 ? 'disabled' : '' }}>
+                {{ $displayStock < 1 ? 'Out of stock' : 'Add to Bag' }}
             </button>
         </form>
     </div>

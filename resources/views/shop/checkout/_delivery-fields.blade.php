@@ -90,7 +90,7 @@
             <input type="radio" name="shipping_method" value="standard" checked>
             <span class="checkout-shipping-option__body">
                 <span class="checkout-shipping-option__label">Standard Shipping</span>
-                <span class="checkout-shipping-option__meta">$5.99 · FREE on orders over $100 (UPS/USPS)</span>
+                <span class="checkout-shipping-option__meta">$5.99 · FREE on orders over ${{ number_format(\App\Support\CheckoutShipping::freeShippingThresholdUsd(), 0) }} (UPS/USPS)</span>
             </span>
         </label>
     </div>

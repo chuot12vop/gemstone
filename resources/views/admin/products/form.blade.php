@@ -57,9 +57,106 @@
         <label>
             Stock
             <input type="number" name="stock" min="0" value="{{ old('stock', $product ? (string) $product->stock : '0') }}">
+            <small>Synced from variants on save.</small>
         </label>
-        
+
     </div>
+
+    @php
+        $variantRows = old('variants');
+        if (! is_array($variantRows) && $product) {
+            $variantRows = $product->variants->map(fn ($v) => [
+                'id' => $v->id,
+                'option_color' => $v->option_color,
+                'option_size' => $v->option_size,
+                'price_usd' => (string) $v->price_usd,
+                'compare_at_price_usd' => $v->compare_at_price_usd !== null ? (string) $v->compare_at_price_usd : '',
+                'stock' => (string) $v->stock,
+                'sku' => $v->sku,
+                'is_default' => $v->is_default,
+                'is_active' => $v->is_active,
+                'image' => $v->image,
+                'image_hover' => $v->image_hover,
+            ])->all();
+        }
+        if (! is_array($variantRows) || count($variantRows) === 0) {
+            $variantRows = [[
+                'option_color' => '',
+                'option_size' => '',
+                'price_usd' => old('price_usd', $product ? (string) $product->price_usd : '0'),
+                'compare_at_price_usd' => '',
+                'stock' => old('stock', $product ? (string) $product->stock : '0'),
+                'sku' => '',
+                'is_default' => true,
+                'is_active' => true,
+            ]];
+        }
+    @endphp
+    <fieldset class="form-fieldset">
+        <legend>Variants</legend>
+        <p class="admin-hint">Each row is a purchasable variant (color, size, price, stock). Exactly one must be default.</p>
+        <div id="variant-list">
+            @foreach($variantRows as $i => $row)
+                <div class="form-grid form-grid--variants js-variant-row" style="margin-bottom:1rem;padding-bottom:1rem;border-bottom:1px solid #e5e7eb;">
+                    @if(!empty($row['id']))
+                        <input type="hidden" name="variants[{{ $i }}][id]" value="{{ $row['id'] }}">
+                    @endif
+                    <label>
+                        Color
+                        <input type="text" name="variants[{{ $i }}][option_color]" value="{{ $row['option_color'] ?? '' }}" placeholder="Gold">
+                    </label>
+                    <label>
+                        Size
+                        <input type="text" name="variants[{{ $i }}][option_size]" value="{{ $row['option_size'] ?? '' }}" placeholder="One Size">
+                    </label>
+                    <label>
+                        Price (USD)
+                        <input type="text" name="variants[{{ $i }}][price_usd]" required value="{{ $row['price_usd'] ?? '0' }}">
+                    </label>
+                    <label>
+                        Compare at price
+                        <input type="text" name="variants[{{ $i }}][compare_at_price_usd]" value="{{ $row['compare_at_price_usd'] ?? '' }}">
+                    </label>
+                    <label>
+                        Stock
+                        <input type="number" name="variants[{{ $i }}][stock]" min="0" required value="{{ $row['stock'] ?? '0' }}">
+                    </label>
+                    <label>
+                        SKU
+                        <input type="text" name="variants[{{ $i }}][sku]" value="{{ $row['sku'] ?? '' }}">
+                    </label>
+                    <label>
+                        Front image
+                        <input type="file" name="variants[{{ $i }}][image]" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp">
+                        @if(!empty($row['image']))
+                            <img src="{{ $row['image'] }}" alt="" width="60" height="60" style="object-fit:cover;margin-top:6px;border-radius:6px;">
+                        @endif
+                    </label>
+                    <label>
+                        Hover image
+                        <input type="file" name="variants[{{ $i }}][image_hover]" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp">
+                        @if(!empty($row['image_hover']))
+                            <img src="{{ $row['image_hover'] }}" alt="" width="60" height="60" style="object-fit:cover;margin-top:6px;border-radius:6px;">
+                        @endif
+                    </label>
+                    <label class="checkbox">
+                        <input type="checkbox" name="variants[{{ $i }}][is_default]" value="1" @checked(!empty($row['is_default']))>
+                        Default variant
+                    </label>
+                    <label class="checkbox">
+                        <input type="checkbox" name="variants[{{ $i }}][is_active]" value="1" @checked(!array_key_exists('is_active', $row) || !empty($row['is_active']))>
+                        Active
+                    </label>
+                    <div class="form-actions">
+                        <button class="btn-admin" type="button" data-action="remove-variant">Remove</button>
+                    </div>
+                </div>
+            @endforeach
+        </div>
+        <button class="btn-admin" type="button" id="add-variant">+ Add variant</button>
+    </fieldset>
+
+    <div class="form-grid">
 
     <fieldset class="form-fieldset">
         <legend>Thumbnail upload</legend>
@@ -96,6 +193,11 @@
     <label>
         Short description
         <textarea name="short_description" rows="2">{{ old('short_description', $product->short_description ?? '') }}</textarea>
+    </label>
+    <label>
+        Card badge label
+        <input type="text" name="card_badge_label" maxlength="50" placeholder="e.g. HOT, -20%" value="{{ old('card_badge_label', $product->card_badge_label ?? '') }}">
+        <small>Animated tilted badge on the top-right of the product card image. Leave empty to hide.</small>
     </label>
     <label>
         Full description
@@ -197,6 +299,53 @@
         <a class="btn-admin" href="{{ route('admin.products.index') }}">Cancel</a>
     </div>
 </form>
+<template id="variant-row-template">
+    <div class="form-grid form-grid--variants js-variant-row" style="margin-bottom:1rem;padding-bottom:1rem;border-bottom:1px solid #e5e7eb;">
+        <label>
+            Color
+            <input type="text" data-name="variant-color" placeholder="Gold">
+        </label>
+        <label>
+            Size
+            <input type="text" data-name="variant-size" placeholder="One Size">
+        </label>
+        <label>
+            Price (USD)
+            <input type="text" data-name="variant-price" required value="0">
+        </label>
+        <label>
+            Compare at price
+            <input type="text" data-name="variant-compare-price">
+        </label>
+        <label>
+            Stock
+            <input type="number" data-name="variant-stock" min="0" required value="0">
+        </label>
+        <label>
+            SKU
+            <input type="text" data-name="variant-sku">
+        </label>
+        <label>
+            Front image
+            <input type="file" data-name="variant-image" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp">
+        </label>
+        <label>
+            Hover image
+            <input type="file" data-name="variant-image-hover" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp">
+        </label>
+        <label class="checkbox">
+            <input type="checkbox" data-name="variant-default" value="1">
+            Default variant
+        </label>
+        <label class="checkbox">
+            <input type="checkbox" data-name="variant-active" value="1" checked>
+            Active
+        </label>
+        <div class="form-actions">
+            <button class="btn-admin" type="button" data-action="remove-variant">Remove</button>
+        </div>
+    </div>
+</template>
 <template id="attribute-row-template">
     <div class="form-grid form-grid--attributes js-attribute-row">
         <label>
@@ -214,6 +363,58 @@
 </template>
 <script>
 (() => {
+    const setupVariants = () => {
+        const list = document.getElementById('variant-list');
+        const addButton = document.getElementById('add-variant');
+        const template = document.getElementById('variant-row-template');
+        if (!list || !addButton || !template) return;
+
+        const updateNames = () => {
+            const rows = list.querySelectorAll('.js-variant-row');
+            rows.forEach((row, index) => {
+                const map = [
+                    ['variant-color', `variants[${index}][option_color]`],
+                    ['variant-size', `variants[${index}][option_size]`],
+                    ['variant-price', `variants[${index}][price_usd]`],
+                    ['variant-compare-price', `variants[${index}][compare_at_price_usd]`],
+                    ['variant-stock', `variants[${index}][stock]`],
+                    ['variant-sku', `variants[${index}][sku]`],
+                    ['variant-image', `variants[${index}][image]`],
+                    ['variant-image-hover', `variants[${index}][image_hover]`],
+                    ['variant-default', `variants[${index}][is_default]`],
+                    ['variant-active', `variants[${index}][is_active]`],
+                ];
+                map.forEach(([dataName, fieldName]) => {
+                    const input = row.querySelector(`[data-name="${dataName}"], [name*="[${dataName.replace('variant-', '')}]"]`);
+                    if (input) input.setAttribute('name', fieldName);
+                });
+                row.querySelectorAll('input[type="hidden"]').forEach((hidden) => {
+                    if (hidden.name && hidden.name.includes('[id]')) {
+                        hidden.setAttribute('name', `variants[${index}][id]`);
+                    }
+                });
+            });
+        };
+
+        addButton.addEventListener('click', () => {
+            list.appendChild(template.content.cloneNode(true));
+            updateNames();
+        });
+
+        list.addEventListener('click', (event) => {
+            const target = event.target;
+            if (!(target instanceof HTMLElement)) return;
+            if (target.dataset.action !== 'remove-variant') return;
+            const row = target.closest('.js-variant-row');
+            if (!row) return;
+            if (list.querySelectorAll('.js-variant-row').length <= 1) return;
+            row.remove();
+            updateNames();
+        });
+
+        updateNames();
+    };
+
     const setupAttributes = () => {
         const list = document.getElementById('attribute-list');
         const addButton = document.getElementById('add-attribute');
@@ -495,6 +696,7 @@
         });
     };
 
+    setupVariants();
     setupAttributes();
     setupGalleryPreview();
     setupThumbnailDropzone();

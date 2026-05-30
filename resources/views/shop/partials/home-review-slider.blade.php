@@ -12,6 +12,7 @@
 @if($count > 0)
     <div class="home-review-slider"
          data-home-slider
+         data-slider-loop="true"
          data-slide-interval="5000"
          data-slides-mobile="{{ $slidesMobile }}"
          data-slides-tablet="{{ $slidesTablet }}"

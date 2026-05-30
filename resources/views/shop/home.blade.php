@@ -20,7 +20,11 @@
                      aria-label="Slide {{ $i + 1 }} of {{ $slideCount }}"
                      @if($slideCount > 1) aria-hidden="{{ $i === 0 ? 'false' : 'true' }}" @endif>
                     <a class="home-hero__slide-hit" href="{{ $slide['cta_url'] }}">
-                        <img class="home-hero__bg" src="{{ $slide['image'] }}" alt="" loading="{{ $i === 0 ? 'eager' : 'lazy' }}" width="1400" height="788" draggable="false">
+                        @php($mobileImage = $slide['image_mobile'] ?? $slide['image'])
+                        <picture>
+                            <source media="(max-width: 767px)" srcset="{{ $mobileImage }}">
+                            <img class="home-hero__bg" src="{{ $slide['image'] }}" alt="" loading="{{ $i === 0 ? 'eager' : 'lazy' }}" width="1400" height="788" draggable="false">
+                        </picture>
                         <div class="home-hero__overlay">
                             @if(($slide['title'] ?? '') !== '')
                                 <h1 class="home-hero__title">{{ $slide['title'] }}</h1>
@@ -142,6 +146,7 @@
     </div>
     <div class="home-journal-slider"
          data-home-slider
+         data-slider-loop="true"
          data-autoplay="false"
          data-slide-interval="3000"
          data-slides-mobile="1"

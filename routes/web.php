@@ -66,6 +66,7 @@ Route::get('/product/{product}', [ProductController::class, 'show'])->name('shop
 Route::get('/news', [PostController::class, 'index'])->name('shop.news.index');
 Route::get('/news/{post}', [PostController::class, 'show'])->name('shop.post.show');
 Route::get('/cart', [CartController::class, 'index'])->name('shop.cart');
+Route::get('/cart/bag-fragment', [CartController::class, 'bagFragment'])->name('shop.cart.bag-fragment');
 Route::post('/cart/add', [CartController::class, 'add'])->name('shop.cart.add');
 Route::post('/cart/add-bundle', [CartController::class, 'addBundle'])->name('shop.cart.add-bundle');
 Route::post('/cart/update', [CartController::class, 'update'])->name('shop.cart.update');

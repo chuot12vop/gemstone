@@ -13,10 +13,6 @@
     </p>
 </header>
 
-@if(session('success'))
-    <p class="banner banner--ok">{{ session('success') }}</p>
-@endif
-
 @if($order->status === 'pending')
     <p class="banner banner--info">Your payment proof is being reviewed. We will email you at <strong>{{ $order->customer_email }}</strong> once confirmed.</p>
 @endif

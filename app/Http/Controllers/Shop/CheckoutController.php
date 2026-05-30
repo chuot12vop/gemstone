@@ -15,6 +15,7 @@ use App\Services\Payment\Contracts\PaymentGateway;
 use App\Services\Payment\Data\PaymentInitiationResult;
 use App\Services\Payment\PaymentMethodRegistry;
 use App\Support\CheckoutCountries;
+use App\Support\CheckoutShipping;
 use App\Support\ShippingAddressFormatter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -24,21 +25,14 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 /**
- * Three-step checkout flow:
- *   1) GET  /checkout                  — pick a payment method (loaded from DB)
- *   2) GET  /checkout/details          — fill in customer / shipping info
- *   3) POST /checkout/place            — create the order + delegate to gateway
- *      GET  /checkout/processing/{n}   — gateway-specific UI (button, link, ...)
- *      POST /checkout/confirm/{n}      — gateway return / customer confirmation
- *
- * Payment gateways are resolved through {@see PaymentMethodRegistry} which uses
- * the Strategy pattern, so the controller never needs to know about specific
- * methods. Adding a new method requires zero changes here.
+ * Single-page checkout:
+ *   GET  /checkout                  — contact, delivery, payment method, voucher
+ *   POST /checkout/place            — create order + delegate to gateway
+ *   GET  /checkout/processing/{n}   — gateway-specific UI
+ *   POST /checkout/confirm/{n}      — gateway return / customer confirmation
  */
 class CheckoutController extends Controller
 {
-    private const SESSION_METHOD_KEY = 'checkout.method';
-
     private const SESSION_VOUCHER_KEY = 'checkout.voucher_id';
 
     private const ERR_EMPTY_CART = 'Your cart is empty.';
@@ -49,8 +43,8 @@ class CheckoutController extends Controller
         private VoucherService $vouchers,
     ) {}
 
-    /** Step 1 — choose payment method. */
-    public function index(): RedirectResponse|View
+    /** Unified checkout page. */
+    public function index(CurrencyService $currency): RedirectResponse|View
     {
         if ($this->buildLines() === []) {
             return redirect()->route('shop.cart')->with('error', self::ERR_EMPTY_CART);
@@ -66,64 +60,24 @@ class CheckoutController extends Controller
         $subtotalUsd = (float) array_sum(array_column($lines, 'line_usd'));
         $totals = $this->checkoutTotals($subtotalUsd);
 
-        return view('shop.checkout.method', [
-            'title' => 'Checkout — Choose payment',
-            'metaDescription' => 'Choose how you want to pay.',
-            'methods' => $methods,
-            'selected' => session(self::SESSION_METHOD_KEY),
-            'step' => 1,
-            'lines' => $lines,
-            'subtotalUsd' => $subtotalUsd,
-            'discountUsd' => $totals['discountUsd'],
-            'totalUsd' => $totals['totalUsd'],
-            'appliedVoucher' => $totals['voucher'],
-            'currency' => app(CurrencyService::class),
-        ]);
-    }
-
-    /** Step 1 → 2 transition: persist the selected method in session. */
-    public function chooseMethod(Request $request): RedirectResponse
-    {
-        $code = (string) $request->input('payment_method', '');
-        if ($this->registry->findEnabled($code) === null) {
-            return redirect()->route('shop.checkout')
-                ->withErrors(['payment_method' => 'Please choose a valid payment method.']);
-        }
-        session([self::SESSION_METHOD_KEY => $code]);
-
-        return redirect()->route('shop.checkout.details');
-    }
-
-    /** Step 2 — collect customer info + render any gateway-specific extras. */
-    public function details(CurrencyService $currency): RedirectResponse|View
-    {
-        [$gateway, $redirect] = $this->resolveSelectedGateway();
-        if ($redirect !== null) {
-            return $redirect;
-        }
-
-        $lines = $this->buildLines();
-        if ($lines === []) {
-            return redirect()->route('shop.cart')->with('error', self::ERR_EMPTY_CART);
-        }
-
-        $subtotalUsd = (float) array_sum(array_column($lines, 'line_usd'));
-        $totals = $this->checkoutTotals($subtotalUsd);
-
         $user = Auth::user();
         [$firstName, $lastName] = $this->splitName($user?->name ?? '');
 
-        return view('shop.checkout.details', [
-            'title' => 'Checkout — Your details',
-            'metaDescription' => 'Enter shipping and contact details.',
+        $defaultMethod = $methods[0]->code();
+        $selected = (string) old('payment_method', session('checkout.method', $defaultMethod));
+
+        return view('shop.checkout.index', [
+            'title' => 'Checkout',
+            'metaDescription' => 'Complete your order.',
+            'methods' => $methods,
+            'selected' => $selected,
             'lines' => $lines,
             'subtotalUsd' => $subtotalUsd,
             'discountUsd' => $totals['discountUsd'],
             'totalUsd' => $totals['totalUsd'],
             'appliedVoucher' => $totals['voucher'],
-            'gateway' => $gateway,
+            'shippingProgress' => CheckoutShipping::progress($subtotalUsd),
             'currency' => $currency,
-            'step' => 2,
             'checkoutDefaults' => [
                 'customer_email' => old('customer_email', $user?->email ?? ''),
             ],
@@ -141,17 +95,33 @@ class CheckoutController extends Controller
         ]);
     }
 
-    /** Step 2 → 3: validate, create order + transaction, hand off to gateway. */
+    /** @deprecated Redirect to unified checkout. */
+    public function chooseMethod(): RedirectResponse
+    {
+        return redirect()->route('shop.checkout');
+    }
+
+    /** @deprecated Redirect to unified checkout. */
+    public function details(): RedirectResponse
+    {
+        return redirect()->route('shop.checkout');
+    }
+
+    /** Validate, create order + transaction, hand off to gateway. */
     public function place(Request $request, CurrencyService $currency): RedirectResponse
     {
-        [$gateway, $redirect] = $this->resolveSelectedGateway();
-        if ($redirect !== null) {
-            return $redirect;
+        $code = (string) $request->input('payment_method', '');
+        $gateway = $this->registry->findEnabled($code);
+        if ($gateway === null) {
+            return redirect()->route('shop.checkout')
+                ->withInput()
+                ->withErrors(['payment_method' => 'Please choose a valid payment method.']);
         }
 
         $countryCodes = implode(',', array_keys(CheckoutCountries::options()));
 
         $rules = array_merge([
+            'payment_method' => 'required|string',
             'customer_email' => 'required|email|max:190',
             'shipping_country' => 'required|string|in:'.$countryCodes,
             'shipping_first_name' => 'required|string|max:80',
@@ -186,14 +156,14 @@ class CheckoutController extends Controller
         }
 
         $subtotalUsd = (float) array_sum(array_column($lines, 'line_usd'));
-        $code = $currency->currentCode();
+        $currencyCode = $currency->currentCode();
 
         $voucher = $this->resolveVoucherForCheckout(
             (string) ($validated['voucher_code'] ?? ''),
             (string) $validated['customer_email'],
         );
         if ($voucher === false) {
-            return redirect()->route('shop.checkout.details')
+            return redirect()->route('shop.checkout')
                 ->withInput()
                 ->withErrors(['voucher_code' => 'This voucher code is invalid, already used, or does not match your email.']);
         }
@@ -204,7 +174,7 @@ class CheckoutController extends Controller
 
         $userId = Auth::id();
 
-        $order = DB::transaction(function () use ($validated, $customerName, $shippingAddress, $lines, $subtotalUsd, $discountUsd, $totalDisplay, $code, $gateway, $userId, $request, $voucher) {
+        $order = DB::transaction(function () use ($validated, $customerName, $shippingAddress, $lines, $subtotalUsd, $discountUsd, $totalDisplay, $currencyCode, $gateway, $userId, $request, $voucher) {
             $order = Order::query()->create([
                 'user_id' => $userId,
                 'order_number' => $this->makeOrderNumber(),
@@ -213,7 +183,7 @@ class CheckoutController extends Controller
                 'shipping_address' => $shippingAddress,
                 'shipping_phone' => $validated['shipping_phone'],
                 'marketing_sms_opt_in' => $request->boolean('marketing_sms_opt_in'),
-                'currency_code' => $code,
+                'currency_code' => $currencyCode,
                 'subtotal_usd' => $subtotalUsd,
                 'voucher_code' => $voucher?->code,
                 'discount_usd' => $discountUsd,
@@ -228,25 +198,33 @@ class CheckoutController extends Controller
             foreach ($lines as $row) {
                 /** @var Product $p */
                 $p = $row['product'];
+                /** @var \App\Models\ProductVariant $variant */
+                $variant = $row['variant'];
                 $q = (int) $row['quantity'];
                 $unit = (float) $row['unit_price_usd'];
                 OrderItem::query()->create([
                     'order_id' => $order->id,
                     'product_id' => $p->id,
+                    'product_variant_id' => $variant->id,
+                    'variant_label' => $row['variant_label'],
                     'product_name' => $p->name,
                     'quantity' => $q,
                     'unit_price_usd' => $unit,
                     'line_total_usd' => $unit * $q,
                 ]);
-                $p->stock = max(0, $p->stock - $q);
-                $p->save();
+
+                $variant->stock = max(0, $variant->stock - $q);
+                $variant->save();
+
+                $p->load('variants');
+                \App\Support\ProductVariantOptions::syncProductDenormalized($p, $p->variants);
             }
 
             PaymentTransaction::query()->create([
                 'order_id' => $order->id,
                 'payment_method' => $gateway->code(),
                 'amount' => $totalDisplay,
-                'currency_code' => $code,
+                'currency_code' => $currencyCode,
                 'status' => 'pending',
                 'notes' => 'Awaiting gateway initiation',
             ]);
@@ -261,7 +239,7 @@ class CheckoutController extends Controller
         ]);
 
         $this->cart->clear();
-        session()->forget([self::SESSION_METHOD_KEY, self::SESSION_VOUCHER_KEY]);
+        session()->forget(self::SESSION_VOUCHER_KEY);
 
         return match ($result->type) {
             PaymentInitiationResult::TYPE_REDIRECT => redirect()->away((string) $result->redirectUrl),
@@ -270,7 +248,7 @@ class CheckoutController extends Controller
         };
     }
 
-    /** Gateway-specific UI page (Step 3 — performing the payment). */
+    /** Gateway-specific UI page (performing the payment). */
     public function processing(Request $request, string $order_number): View|RedirectResponse
     {
         $order = Order::query()->where('order_number', $order_number)->firstOrFail();
@@ -314,7 +292,6 @@ class CheckoutController extends Controller
             'order' => $order,
             'gateway' => $gateway,
             'gatewayData' => $initiation->viewData,
-            'step' => 3,
             'lines' => $lines,
             'subtotalUsd' => $subtotalUsd,
             'discountUsd' => $discountUsd,
@@ -323,7 +300,7 @@ class CheckoutController extends Controller
         ]);
     }
 
-    public function applyVoucher(Request $request): JsonResponse
+    public function applyVoucher(Request $request, CurrencyService $currency): JsonResponse
     {
         if ($this->buildLines() === []) {
             return response()->json(['ok' => false, 'message' => self::ERR_EMPTY_CART], 422);
@@ -352,28 +329,37 @@ class CheckoutController extends Controller
 
         $subtotalUsd = (float) array_sum(array_column($this->buildLines(), 'line_usd'));
         $discountUsd = $voucher->discountUsd($subtotalUsd);
+        $totalUsd = max(0, $subtotalUsd - $discountUsd);
 
-        return response()->json([
-            'ok' => true,
-            'code' => $voucher->code,
-            'percent' => $voucher->percent,
-            'discount_usd' => $discountUsd,
-            'total_usd' => max(0, $subtotalUsd - $discountUsd),
-            'discount_formatted' => app(CurrencyService::class)->formatUsd($discountUsd),
-            'total_formatted' => app(CurrencyService::class)->formatUsd(max(0, $subtotalUsd - $discountUsd)),
-        ]);
+        return response()->json(array_merge(
+            $this->shippingProgressPayload($subtotalUsd, $currency),
+            [
+                'ok' => true,
+                'code' => $voucher->code,
+                'percent' => $voucher->percent,
+                'discount_usd' => $discountUsd,
+                'total_usd' => $totalUsd,
+                'subtotal_usd' => $subtotalUsd,
+                'discount_formatted' => $currency->formatUsd($discountUsd),
+                'total_formatted' => $currency->formatUsd($totalUsd),
+            ],
+        ));
     }
 
-    public function removeVoucher(): JsonResponse
+    public function removeVoucher(CurrencyService $currency): JsonResponse
     {
         session()->forget(self::SESSION_VOUCHER_KEY);
         $subtotalUsd = (float) array_sum(array_column($this->buildLines(), 'line_usd'));
 
-        return response()->json([
-            'ok' => true,
-            'total_usd' => $subtotalUsd,
-            'total_formatted' => app(CurrencyService::class)->formatUsd($subtotalUsd),
-        ]);
+        return response()->json(array_merge(
+            $this->shippingProgressPayload($subtotalUsd, $currency),
+            [
+                'ok' => true,
+                'total_usd' => $subtotalUsd,
+                'subtotal_usd' => $subtotalUsd,
+                'total_formatted' => $currency->formatUsd($subtotalUsd),
+            ],
+        ));
     }
 
     /** Gateway return / "I have paid" confirmation. */
@@ -416,23 +402,6 @@ class CheckoutController extends Controller
             'metaDescription' => 'Your order confirmation.',
             'order' => $order,
         ]);
-    }
-
-    /**
-     * Resolve the gateway saved in session and bail out to step 1 if missing.
-     *
-     * @return array{0: ?PaymentGateway, 1: ?RedirectResponse}
-     */
-    private function resolveSelectedGateway(): array
-    {
-        $code = (string) session(self::SESSION_METHOD_KEY, '');
-        $gateway = $this->registry->findEnabled($code);
-        if ($gateway === null) {
-            return [null, redirect()->route('shop.checkout')
-                ->with('error', 'Please choose a payment method first.')];
-        }
-
-        return [$gateway, null];
     }
 
     private function markOrderPaid(Order $order, PaymentGateway $gateway, ?string $txId): RedirectResponse
@@ -519,7 +488,6 @@ class CheckoutController extends Controller
     /**
      * @return Voucher|null|false null = no voucher; false = invalid
      */
-    /** @return Voucher|null|false */
     private function resolveVoucherForCheckout(string $code, string $email)
     {
         $code = trim($code);
@@ -553,6 +521,22 @@ class CheckoutController extends Controller
         return [
             $parts[0] ?? '',
             $parts[1] ?? '',
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function shippingProgressPayload(float $subtotalUsd, CurrencyService $currency): array
+    {
+        $progress = CheckoutShipping::progress($subtotalUsd);
+
+        return [
+            'shipping_qualified' => $progress['qualified'],
+            'shipping_percent' => $progress['percent'],
+            'shipping_remaining_usd' => $progress['remaining'],
+            'shipping_remaining_formatted' => $currency->formatUsd($progress['remaining']),
+            'shipping_threshold_usd' => $progress['threshold'],
         ];
     }
 }

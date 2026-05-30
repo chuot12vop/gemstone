@@ -43,6 +43,8 @@ class InterfaceAdminController extends Controller
             'slides.*.content' => 'nullable|string|max:4000',
             'slides.*.existing_image' => 'nullable|string|max:512',
             'slides.*.image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:8192',
+            'slides.*.existing_image_mobile' => 'nullable|string|max:512',
+            'slides.*.image_mobile' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:8192',
             'slides.*.category_id' => 'nullable|integer|exists:categories,id',
         ]);
 
@@ -59,13 +61,11 @@ class InterfaceAdminController extends Controller
             }
             $existing = trim((string) ($row['existing_image'] ?? ''));
             $file = $request->file('slides.'.$index.'.image');
+            $existingMobile = trim((string) ($row['existing_image_mobile'] ?? ''));
+            $fileMobile = $request->file('slides.'.$index.'.image_mobile');
 
-            $imagePath = null;
-            if ($file instanceof UploadedFile) {
-                $imagePath = $this->images->store($file, 'settings/banner-slides', asWebp: true);
-            } elseif ($existing !== '') {
-                $imagePath = $existing;
-            }
+            $imagePath = $this->resolveSlideImagePath($file, $existing);
+            $imageMobilePath = $this->resolveSlideImagePath($fileMobile, $existingMobile);
 
             if ($imagePath === null || $imagePath === '') {
                 continue;
@@ -76,6 +76,9 @@ class InterfaceAdminController extends Controller
                 'title' => $title !== '' ? $title : 'Welcome',
                 'content' => $content,
             ];
+            if ($imageMobilePath !== null && $imageMobilePath !== '') {
+                $slidePayload['image_mobile'] = $imageMobilePath;
+            }
             if ($categoryId > 0) {
                 $slidePayload['category_id'] = $categoryId;
             }
@@ -97,20 +100,20 @@ class InterfaceAdminController extends Controller
     }
 
     /**
-     * @return list<array{image: string, title: string, content: string, category_id: int|null}>
+     * @return list<array{image: string, image_mobile: string, title: string, content: string, category_id: int|null}>
      */
     private function slidesForForm(): array
     {
         $slides = $this->decodedSlidesFromDb();
         if ($slides === []) {
-            return [['image' => '', 'title' => '', 'content' => '', 'category_id' => null]];
+            return [['image' => '', 'image_mobile' => '', 'title' => '', 'content' => '', 'category_id' => null]];
         }
 
         return $slides;
     }
 
     /**
-     * @return list<array{image: string, title: string, content: string, category_id: int|null}>
+     * @return list<array{image: string, image_mobile: string, title: string, content: string, category_id: int|null}>
      */
     private function decodedSlidesFromDb(): array
     {
@@ -136,6 +139,7 @@ class InterfaceAdminController extends Controller
             $cid = isset($item['category_id']) ? (int) $item['category_id'] : 0;
             $out[] = [
                 'image' => $image,
+                'image_mobile' => trim((string) ($item['image_mobile'] ?? '')),
                 'title' => (string) ($item['title'] ?? ''),
                 'content' => (string) ($item['content'] ?? ''),
                 'category_id' => $cid > 0 ? $cid : null,
@@ -146,15 +150,31 @@ class InterfaceAdminController extends Controller
     }
 
     /**
-     * @param list<array{image: string}> $slides
+     * @param list<array{image?: string, image_mobile?: string}> $slides
      * @return list<string>
      */
     private function collectImagePaths(array $slides): array
     {
-        return array_values(array_filter(array_map(
-            static fn (array $s): string => trim((string) ($s['image'] ?? '')),
-            $slides
-        )));
+        $paths = [];
+        foreach ($slides as $slide) {
+            foreach (['image', 'image_mobile'] as $key) {
+                $path = trim((string) ($slide[$key] ?? ''));
+                if ($path !== '') {
+                    $paths[] = $path;
+                }
+            }
+        }
+
+        return array_values(array_unique($paths));
+    }
+
+    private function resolveSlideImagePath(?UploadedFile $file, string $existing): ?string
+    {
+        if ($file instanceof UploadedFile) {
+            return $this->images->store($file, 'settings/banner-slides', asWebp: true);
+        }
+
+        return $existing !== '' ? $existing : null;
     }
 
     private function deleteBannerPath(?string $path): void
