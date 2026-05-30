@@ -51,7 +51,7 @@ class SettingAdminController extends Controller
 
         $settings = $this->getSettingsMap();
 
-        $logoPath = $this->storeImage($request->file('site_logo'), 'settings/logo');
+        $logoPath = $this->storeImage($request->file('site_logo'), 'logo');
         if ($logoPath !== null) {
             $this->deletePublicPath($settings['site_logo'] ?? null);
             $settings['site_logo'] = $logoPath;

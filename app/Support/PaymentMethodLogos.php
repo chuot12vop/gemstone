@@ -7,7 +7,7 @@ use Illuminate\Support\Str;
 
 class PaymentMethodLogos
 {
-    private const DIRECTORY = 'settings/logo';
+    private const DIRECTORY = 'logo';
 
     /** @var list<string> */
     private const IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'];
