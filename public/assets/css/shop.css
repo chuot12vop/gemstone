@@ -675,6 +675,7 @@ body.site-nav-open {
   .site-nav--mobile .site-nav__item--mega.is-mega-open .catalog-mega {
     max-height: min(70vh, 28rem);
     opacity: 1;
+    overflow: scroll;
     margin-top: 0.4rem;
     padding: 0.85rem 1rem 1rem;
     border-width: 1px;
@@ -995,6 +996,18 @@ body.site-nav-open {
 .btn { display: inline-flex; align-items: center; justify-content: center; padding: 0.65rem 1.35rem; border-radius: 999px; font-weight: 600; text-decoration: none; border: 1px solid transparent; cursor: pointer; font-family: inherit; font-size: inherit; line-height: inherit; }
 .btn--primary { background: linear-gradient(135deg, var(--gold) 0%, var(--gold-deep) 100%); color: #fff; box-shadow: 0 10px 24px rgba(166, 124, 61, 0.28); }
 .btn--ghost { background: #fff; border-color: var(--border); color: var(--ink); }
+.btn--header-buy {
+  background: var(--ink);
+  color: #fff;
+  border-color: var(--ink);
+  border-radius: var(--radius);
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.btn--header-buy:hover {
+  background: #1f1a14;
+  border-color: #1f1a14;
+  color: #fff;
+}
 .section { margin-bottom: 2.5rem; }
 .section--soft { background: #fff; border-radius: var(--radius); padding: 1.5rem 1rem; border: 1px solid var(--border); }
 .section__title { font-family: "Cormorant Garamond", Georgia, serif; font-size: 1.6rem; margin: 0 0 1rem; }
@@ -4677,7 +4690,7 @@ body.pc-drawer-open {
     padding: 0 0.4rem;
   }
   .home-journal-slider__slide .home-news-card__media img {
-    height: 220px;
+    height: 350px !important;
     min-height: 0;
   }
   .home-journal-slider__slide .home-news-card__body {

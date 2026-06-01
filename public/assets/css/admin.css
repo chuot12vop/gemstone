@@ -505,7 +505,7 @@ body.admin {
 .muted { color: var(--muted); }
 
 /* Form helpers */
-.form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0 1rem; }
+.form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(100%, 1fr)); gap: 0 1rem; }
 .form-grid--attributes {
   grid-template-columns: minmax(160px, 1fr) minmax(200px, 2fr) auto;
   align-items: start;
