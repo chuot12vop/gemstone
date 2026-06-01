@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Setting;
 use App\Services\PublicImageStore;
+use App\Support\HomeSectionSettings;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Str;
@@ -15,6 +16,8 @@ class InterfaceAdminController extends Controller
     private const PUBLIC_STORAGE_PREFIX = '/storage/';
 
     private const SLIDES_KEY = 'home_banner_slides';
+
+    private const SECTION_IMAGE_PREFIX = 'settings/home-sections/';
 
     private PublicImageStore $images;
 
@@ -32,6 +35,9 @@ class InterfaceAdminController extends Controller
             ],
             'slides' => $this->slidesForForm(),
             'categories' => Category::query()->orderBy('sort_order')->orderBy('name')->get(),
+            'sectionStyles' => HomeSectionSettings::resolveForForm(),
+            'sectionLabels' => HomeSectionSettings::SECTION_LABELS,
+            'sectionKeys' => HomeSectionSettings::SECTION_KEYS,
         ]);
     }
 
@@ -46,6 +52,11 @@ class InterfaceAdminController extends Controller
             'slides.*.existing_image_mobile' => 'nullable|string|max:512',
             'slides.*.image_mobile' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:8192',
             'slides.*.category_id' => 'nullable|integer|exists:categories,id',
+            'sections' => 'nullable|array',
+            'sections.*.background_color' => ['nullable', 'string', 'regex:/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/'],
+            'sections.*.existing_background_image' => 'nullable|string|max:512',
+            'sections.*.background_image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:8192',
+            'sections.*.remove_background_image' => 'nullable|boolean',
         ]);
 
         $inputRows = $validated['slides'] ?? [];
@@ -96,7 +107,9 @@ class InterfaceAdminController extends Controller
             ['value' => json_encode($newSlides, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)]
         );
 
-        return redirect()->route('admin.interface.index')->with('success', 'Home banner slides updated.');
+        $this->saveSectionStyles($request, $validated['sections'] ?? []);
+
+        return redirect()->route('admin.interface.index')->with('success', 'Home interface updated.');
     }
 
     /**
@@ -188,6 +201,75 @@ class InterfaceAdminController extends Controller
             : ltrim($path, '/');
 
         if ($relativePath !== '' && Str::startsWith($relativePath, 'settings/banner-slides/')) {
+            $this->images->delete($path);
+        }
+    }
+
+    /**
+     * @param  array<string, array{background_color?: string, existing_background_image?: string, remove_background_image?: bool}>  $inputRows
+     */
+    private function saveSectionStyles(Request $request, array $inputRows): void
+    {
+        $oldStyles = HomeSectionSettings::resolveForForm();
+        $newStyles = [];
+
+        foreach (HomeSectionSettings::SECTION_KEYS as $key) {
+            $row = $inputRows[$key] ?? [];
+            $existing = trim((string) ($row['existing_background_image'] ?? ($oldStyles[$key]['background_image'] ?? '')));
+            $remove = filter_var($row['remove_background_image'] ?? false, FILTER_VALIDATE_BOOLEAN);
+            $file = $request->file('sections.'.$key.'.background_image');
+
+            $imagePath = $existing;
+            if ($remove) {
+                $imagePath = '';
+            }
+            if ($file instanceof UploadedFile) {
+                $imagePath = $this->images->store($file, 'settings/home-sections', asWebp: true) ?? '';
+            }
+
+            $newStyles[$key] = [
+                'background_color' => (string) ($row['background_color'] ?? ($oldStyles[$key]['background_color'] ?? '#ffffff')),
+                'background_image' => $imagePath,
+            ];
+        }
+
+        $oldPaths = $this->collectSectionImagePaths($oldStyles);
+        $newPaths = $this->collectSectionImagePaths($newStyles);
+        foreach (array_diff($oldPaths, $newPaths) as $removed) {
+            $this->deleteSectionImagePath($removed);
+        }
+
+        HomeSectionSettings::store($newStyles);
+    }
+
+    /**
+     * @param  array<string, array{background_image?: string}>  $styles
+     * @return list<string>
+     */
+    private function collectSectionImagePaths(array $styles): array
+    {
+        $paths = [];
+        foreach ($styles as $style) {
+            $path = trim((string) ($style['background_image'] ?? ''));
+            if ($path !== '') {
+                $paths[] = $path;
+            }
+        }
+
+        return array_values(array_unique($paths));
+    }
+
+    private function deleteSectionImagePath(?string $path): void
+    {
+        if ($path === null || $path === '') {
+            return;
+        }
+
+        $relativePath = Str::startsWith($path, self::PUBLIC_STORAGE_PREFIX)
+            ? Str::after($path, self::PUBLIC_STORAGE_PREFIX)
+            : ltrim($path, '/');
+
+        if ($relativePath !== '' && Str::startsWith($relativePath, self::SECTION_IMAGE_PREFIX)) {
             $this->images->delete($path);
         }
     }

@@ -56,6 +56,11 @@ body.site-nav-open .site-top {
   cursor: pointer;
   transition: opacity 0.15s ease;
 }
+@media (max-width: 1024px) {
+  .site-promo-bar__link{
+    font-size: 0.8rem;
+  }
+}
 .site-promo-bar__link:hover,
 .site-promo-bar__link:focus-visible { opacity: 0.85; outline: none; }
 .site-promo-bar__close {
@@ -2494,7 +2499,7 @@ body.site-nav-open {
 }
 
 .site-main--home > .home-section {
-  --home-section-bg: #fffdf9;
+  --home-section-bg: #ffffff;
   --home-section-border: rgba(64, 55, 42, 0.1);
   --home-section-shadow: 0 10px 30px rgba(31, 26, 20, 0.08);
   max-width: 1400px;
@@ -2503,11 +2508,23 @@ body.site-nav-open {
   margin-left: auto;
   margin-right: auto;
   padding: clamp(1.1rem, 2vw, 1.7rem) clamp(0.9rem, 2.2vw, 1.5rem);
-  background: var(--home-section-bg);
+  background-color: var(--home-section-bg);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
   border: 1px solid var(--home-section-border);
   border-radius: clamp(12px, 1.2vw, 18px);
   box-shadow: var(--home-section-shadow);
   box-sizing: border-box;
+  position: relative;
+  overflow: hidden;
+}
+.site-main--home > .home-section--has-bg-image {
+  isolation: isolate;
+}
+.site-main--home > .home-section--has-bg-image > * {
+  position: relative;
+  z-index: 1;
 }
 .site-main--home > .home-section:first-of-type {
   margin-top: 0;
@@ -2527,11 +2544,6 @@ body.site-nav-open {
 }
 .site-main--home > .home-section.home-section--reviews{
   max-width: 100%;
-  background: transparent;
-  border: 0;
-  box-shadow: none;
-  padding-left: 0;
-  padding-right: 0;
 }
 @keyframes home-title-wave {
   0%,
@@ -3774,7 +3786,9 @@ body.pc-drawer-open {
   inset: 0;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: end;
+  align-items: center;
+  text-align: center;
   gap: 0.75rem;
   padding: 1.5rem;
   color: #fff;

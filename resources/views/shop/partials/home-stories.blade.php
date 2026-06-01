@@ -1,7 +1,7 @@
 @php
     $storyImage = $storyPage->image ? \App\Support\PublicAssetUrl::to($storyPage->image) : null;
 @endphp
-<section class="home-section home-section--stories reveal-on-scroll" aria-labelledby="home-stories-title">
+<section class="home-section home-section--stories reveal-on-scroll{{ !empty(($homeSectionStyles['stories'] ?? [])['background_image_url']) ? ' home-section--has-bg-image' : '' }}" aria-labelledby="home-stories-title" style="{{ \App\Support\HomeSectionSettings::inlineStyle($homeSectionStyles['stories'] ?? []) }}">
     <div class="home-stories">
         <div class="home-stories__layout">
             @if($storyImage)

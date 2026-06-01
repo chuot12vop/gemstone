@@ -86,6 +86,45 @@
         <button class="btn-admin" type="button" id="add-slide" style="margin-top:12px;">+ Add slide</button>
     </fieldset>
 
+    <fieldset class="form-fieldset" style="margin-top:24px;">
+        <legend>Home section backgrounds</legend>
+        <p style="margin:0 0 12px;color:#5c6470;font-size:0.95rem;">Set a background color and optional background image for each homepage section. Hero slider is configured separately above.</p>
+        <div class="form-grid">
+            @foreach($sectionKeys as $sectionKey)
+                @php($style = $sectionStyles[$sectionKey] ?? ['background_color' => '#ffffff', 'background_image' => ''])
+                <div class="js-section-style-row form-fieldset" style="grid-column:1 / -1;margin-top:14px;padding:14px;border:1px solid #e2e6ec;border-radius:10px;background:#fff;">
+                    <h3 style="margin:0 0 12px;font-size:1rem;">{{ $sectionLabels[$sectionKey] ?? $sectionKey }}</h3>
+                    <input type="hidden" class="js-section-existing-image" name="sections[{{ $sectionKey }}][existing_background_image]" value="{{ old('sections.'.$sectionKey.'.existing_background_image', $style['background_image'] ?? '') }}">
+                    <div class="form-grid">
+                        <label>
+                            Background color
+                            <input type="color" class="js-section-color" name="sections[{{ $sectionKey }}][background_color]" value="{{ old('sections.'.$sectionKey.'.background_color', $style['background_color'] ?? '#ffffff') }}">
+                        </label>
+                        <label style="display:flex;align-items:center;gap:8px;margin-top:1.6rem;">
+                            <input type="checkbox" class="js-section-remove-image" name="sections[{{ $sectionKey }}][remove_background_image]" value="1" @checked(old('sections.'.$sectionKey.'.remove_background_image'))>
+                            Remove background image
+                        </label>
+                    </div>
+                    <div style="margin-top:12px;">
+                        <p style="margin:0 0 6px;font-weight:600;font-size:0.9rem;">Background image</p>
+                        <p style="margin:0 0 8px;color:#5c6470;font-size:0.85rem;">Optional decorative background for this section.</p>
+                        <div class="js-section-dropzone" style="padding:14px;border:2px dashed #c8d1dc;border-radius:10px;background:#f8fafc;text-align:center;cursor:pointer;">
+                            <strong>Drop background image</strong><br>
+                            <small>or click to choose</small>
+                        </div>
+                        <div style="margin-top:10px;">
+                            <img class="js-section-preview" src="{{ !empty($style['background_image']) ? \App\Support\PublicAssetUrl::to($style['background_image']) : asset('assets/img/placeholder.svg') }}" alt="{{ $sectionLabels[$sectionKey] ?? $sectionKey }} background preview" width="280" height="120" style="object-fit:cover;border:1px solid #d7dbe2;border-radius:8px;background:#fff;">
+                        </div>
+                        <input class="display-none js-section-file" type="file" name="sections[{{ $sectionKey }}][background_image]" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp">
+                        @error('sections.'.$sectionKey.'.background_image')
+                            <p style="margin:8px 0 0;color:#b33a3a;">{{ $message }}</p>
+                        @enderror
+                    </div>
+                </div>
+            @endforeach
+        </div>
+    </fieldset>
+
     <div class="form-actions">
         <button class="btn-admin btn-admin--primary" type="submit">Save interface</button>
     </div>
@@ -257,6 +296,68 @@
     });
 
     updateSlideNames();
+})();
+</script>
+<script>
+(() => {
+    const placeholderSrc = @json(asset('assets/img/placeholder.svg'));
+
+    const bindSectionRow = (row) => {
+        const fileInput = row.querySelector('.js-section-file');
+        const preview = row.querySelector('.js-section-preview');
+        const dropzone = row.querySelector('.js-section-dropzone');
+        const existing = row.querySelector('.js-section-existing-image');
+        const removeCheckbox = row.querySelector('.js-section-remove-image');
+        if (!(fileInput instanceof HTMLInputElement) || !(preview instanceof HTMLImageElement) || !(dropzone instanceof HTMLElement)) return;
+
+        const setFile = (file) => {
+            if (!file || !file.type.startsWith('image/')) return;
+            const dt = new DataTransfer();
+            dt.items.add(file);
+            fileInput.files = dt.files;
+            if (existing instanceof HTMLInputElement) existing.value = '';
+            if (removeCheckbox instanceof HTMLInputElement) removeCheckbox.checked = false;
+            const url = URL.createObjectURL(file);
+            preview.src = url;
+            preview.addEventListener('load', () => URL.revokeObjectURL(url), { once: true });
+        };
+
+        fileInput.addEventListener('change', () => {
+            const file = fileInput.files && fileInput.files[0] ? fileInput.files[0] : null;
+            if (file) setFile(file);
+        });
+
+        const preventDefaults = (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+        };
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach((eventName) => {
+            dropzone.addEventListener(eventName, preventDefaults);
+        });
+        ['dragenter', 'dragover'].forEach((eventName) => {
+            dropzone.addEventListener(eventName, () => { dropzone.style.borderColor = '#1f6feb'; });
+        });
+        ['dragleave', 'drop'].forEach((eventName) => {
+            dropzone.addEventListener(eventName, () => { dropzone.style.borderColor = '#c8d1dc'; });
+        });
+        dropzone.addEventListener('drop', (event) => {
+            const files = event.dataTransfer ? Array.from(event.dataTransfer.files).filter((f) => f.type.startsWith('image/')) : [];
+            if (files.length === 0) return;
+            setFile(files[0]);
+        });
+        dropzone.addEventListener('click', () => fileInput.click());
+
+        if (removeCheckbox instanceof HTMLInputElement) {
+            removeCheckbox.addEventListener('change', () => {
+                if (!removeCheckbox.checked) return;
+                fileInput.value = '';
+                if (existing instanceof HTMLInputElement) existing.value = '';
+                preview.src = placeholderSrc;
+            });
+        }
+    };
+
+    document.querySelectorAll('.js-section-style-row').forEach((row) => bindSectionRow(row));
 })();
 </script>
 @endsection

@@ -63,7 +63,7 @@
 </section>
 
 @if($homeCertificates->isNotEmpty())
-<section class="home-section home-section--certificates reveal-on-scroll" aria-labelledby="home-certificates-title">
+<section class="home-section home-section--certificates reveal-on-scroll{{ !empty($homeSectionStyles['certificates']['background_image_url']) ? ' home-section--has-bg-image' : '' }}" aria-labelledby="home-certificates-title" style="{{ \App\Support\HomeSectionSettings::inlineStyle($homeSectionStyles['certificates'] ?? []) }}">
     <h2 id="home-certificates-title" class="section__title section__title--center">As seen in</h2>
     <div class="home-certificates-marquee" role="region" aria-label="Certificate logos">
         <div class="home-certificates-marquee__track">
@@ -87,7 +87,7 @@
 </section>
 @endif
 
-<section class="home-section home-section--collections reveal-on-scroll" aria-labelledby="home-collections-title">
+<section class="home-section home-section--collections reveal-on-scroll{{ !empty($homeSectionStyles['collections']['background_image_url']) ? ' home-section--has-bg-image' : '' }}" aria-labelledby="home-collections-title" style="{{ \App\Support\HomeSectionSettings::inlineStyle($homeSectionStyles['collections'] ?? []) }}">
     <h2 id="home-collections-title" class="section__title section__title--center">Collections</h2>
     @if($homeCollections->isEmpty())
         <p class="home-section__empty home-section__empty--center">Browse the full catalog on the <a href="{{ route('shop.catalog') }}">shop page</a>.</p>
@@ -108,7 +108,7 @@
 </section>
 
 @if($homeBestSellers)
-    <section class="home-section home-section--bestsellers reveal-on-scroll" aria-labelledby="home-bestsellers-title">
+    <section class="home-section home-section--bestsellers reveal-on-scroll{{ !empty($homeSectionStyles['bestsellers']['background_image_url']) ? ' home-section--has-bg-image' : '' }}" aria-labelledby="home-bestsellers-title" style="{{ \App\Support\HomeSectionSettings::inlineStyle($homeSectionStyles['bestsellers'] ?? []) }}">
         <h2 id="home-bestsellers-title" class="section__title section__title--center">Best sellers</h2>
         @if($homeBestSellers->isEmpty())
             <p class="home-section__empty home-section__empty--center">No best sellers yet — check back soon or <a href="{{ route('shop.products.index') }}">browse the shop</a>.</p>
@@ -122,7 +122,7 @@
     </section>
 @endif
 
-<section class="home-section home-section--new reveal-on-scroll" aria-labelledby="home-new-title">
+<section class="home-section home-section--new reveal-on-scroll{{ !empty($homeSectionStyles['new']['background_image_url']) ? ' home-section--has-bg-image' : '' }}" aria-labelledby="home-new-title" style="{{ \App\Support\HomeSectionSettings::inlineStyle($homeSectionStyles['new'] ?? []) }}">
     <h2 id="home-new-title" class="section__title section__title--center">New arrivals</h2>
     @if($homeNewProducts->isEmpty())
         <p class="home-section__empty home-section__empty--center">New pieces are on the way — check back soon or <a href="{{ route('shop.products.index') }}">browse the shop</a>.</p>
@@ -139,7 +139,7 @@
 @php($journalCount = $homeJournalPosts->count())
 @php($journalSlidesDesktop = min(3, max(1, $journalCount - 1)))
 @php($journalBasisDesktop = 100 / $journalSlidesDesktop)
-<section class="home-section home-section--journal reveal-on-scroll" aria-labelledby="home-journal-title">
+<section class="home-section home-section--journal reveal-on-scroll{{ !empty($homeSectionStyles['journal']['background_image_url']) ? ' home-section--has-bg-image' : '' }}" aria-labelledby="home-journal-title" style="{{ \App\Support\HomeSectionSettings::inlineStyle($homeSectionStyles['journal'] ?? []) }}">
     <div class="home-section__head-row">
         <h2 id="home-journal-title" class="section__title">Journal</h2>
         <a class="btn btn--ghost btn--small" href="{{ route('shop.news.index') }}">View more</a>
@@ -191,10 +191,10 @@
 @endif
 
 @if($homeStoryPage)
-    @include('shop.partials.home-stories', ['storyPage' => $homeStoryPage])
+    @include('shop.partials.home-stories', ['storyPage' => $homeStoryPage, 'homeSectionStyles' => $homeSectionStyles])
 @endif
 
-<section class="home-section home-section--reviews reveal-on-scroll " aria-labelledby="home-reviews-title">
+<section class="home-section home-section--reviews reveal-on-scroll{{ !empty($homeSectionStyles['reviews']['background_image_url']) ? ' home-section--has-bg-image' : '' }}" aria-labelledby="home-reviews-title" style="{{ \App\Support\HomeSectionSettings::inlineStyle($homeSectionStyles['reviews'] ?? []) }}">
     <h2 id="home-reviews-title" class="section__title section__title--center">Feedback</h2>
     @if($homeReviews->isEmpty())
         <p class="reviews__empty">No photo reviews yet — share your experience with images after your next order.</p>

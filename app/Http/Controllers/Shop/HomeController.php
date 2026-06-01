@@ -10,6 +10,7 @@ use App\Models\Post;
 use App\Models\Product;
 use App\Models\Review;
 use App\Models\Setting;
+use App\Support\HomeSectionSettings;
 use App\Support\ShopFrontSettings;
 use App\Support\WelcomePopupSettings;
 use App\Services\CurrencyService;
@@ -113,6 +114,7 @@ class HomeController extends Controller
             'homeStoryPage' => $homeStoryPage,
             'homeJournalPosts' => $homeJournalPosts,
             'homeReviews' => $homeReviews,
+            'homeSectionStyles' => HomeSectionSettings::resolve(),
             'welcomePopup' => WelcomePopupSettings::resolve(),
             'currency' => app(CurrencyService::class),
         ]);
