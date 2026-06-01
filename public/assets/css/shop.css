@@ -3534,8 +3534,8 @@ body.pc-drawer-open {
 }
 .product-detail--missoma .add-form .btn--primary {
   width: 100%;
-  background: #111;
-  border-color: #111;
+  background: #a67c3d;
+  border-color: #a67c3d;
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }

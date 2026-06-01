@@ -76,9 +76,9 @@ class CatalogController extends Controller
         if ($searchQuery !== '') {
             $like = '%'.$searchQuery.'%';
             $productsQuery->where(function ($query) use ($like) {
-                $query->where('name', 'like', $like)
-                    ->orWhere('short_description', 'like', $like)
-                    ->orWhere('description', 'like', $like);
+                $query->where('products.name', 'like', $like)
+                    ->orWhere('products.short_description', 'like', $like)
+                    ->orWhere('products.description', 'like', $like);
             });
         }
 
