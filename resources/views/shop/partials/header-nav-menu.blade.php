@@ -86,7 +86,29 @@
     </select>
 </form>
 <a class="btn btn--small btn--header-buy" href="{{ route('shop.products.index') }}">Buy now</a>
-<div class="site-nav__account">
+<div class="site-nav__account site-nav__account--desktop-dropdown">
+    <button type="button"
+            class="site-account-menu__trigger"
+            aria-label="Account menu">
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">
+            <circle cx="12" cy="8" r="3.2" fill="none" stroke="currentColor" stroke-width="1.9"/>
+            <path d="M5.5 19c0-3.3 2.9-5.5 6.5-5.5s6.5 2.2 6.5 5.5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/>
+        </svg>
+    </button>
+    <div class="site-account-menu__panel" role="menu" aria-label="Account links">
+        @auth
+            <a class="site-account-menu__item" href="{{ route('shop.account.index') }}" role="menuitem">My account</a>
+            <form method="post" action="{{ route('shop.logout') }}" class="site-account-menu__form">
+                @csrf
+                <button type="submit" class="site-account-menu__item site-account-menu__item--button" role="menuitem">Sign out</button>
+            </form>
+        @else
+            <a class="site-account-menu__item" href="{{ route('login') }}" role="menuitem">Sign in</a>
+            <a class="site-account-menu__item" href="{{ route('register') }}" role="menuitem">Register</a>
+        @endauth
+    </div>
+</div>
+<div class="site-nav__account site-nav__account--mobile">
     @auth
         <a class="cart-link" href="{{ route('shop.account.index') }}" title="My account">{{ Auth::user()->name }}</a>
         <form method="post" action="{{ route('shop.logout') }}" class="site-logout-form">
