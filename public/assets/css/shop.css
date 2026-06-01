@@ -2494,19 +2494,66 @@ body.site-nav-open {
 }
 
 .site-main--home > .home-section {
+  --home-section-bg: #fffdf9;
+  --home-section-border: rgba(64, 55, 42, 0.1);
+  --home-section-shadow: 0 10px 30px rgba(31, 26, 20, 0.08);
   max-width: 1400px;
+  margin-top: clamp(1rem, 2.4vw, 1.8rem);
+  margin-bottom: clamp(1rem, 2.4vw, 1.8rem);
   margin-left: auto;
   margin-right: auto;
+  padding: clamp(1.1rem, 2vw, 1.7rem) clamp(0.9rem, 2.2vw, 1.5rem);
+  background: var(--home-section-bg);
+  border: 1px solid var(--home-section-border);
+  border-radius: clamp(12px, 1.2vw, 18px);
+  box-shadow: var(--home-section-shadow);
   box-sizing: border-box;
 }
+.site-main--home > .home-section:first-of-type {
+  margin-top: 0;
+}
 .site-main--home > .home-section--bestsellers + .home-section--new {
-  margin-top: clamp(1.5rem, 4vw, 2.75rem);
+  margin-top: clamp(1.2rem, 3vw, 2.1rem);
 }
 .site-main--home .section__title {
   font-size: clamp(1.85rem, 3.2vw, 2.35rem);
+  transform-origin: 50% 58%;
+  animation: home-title-wave 6.8s ease-in-out infinite;
+  animation-play-state: paused;
+  will-change: transform;
+}
+.site-main--home .home-section.is-visible .section__title {
+  animation-play-state: running;
 }
 .site-main--home > .home-section.home-section--reviews{
   max-width: 100%;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  padding-left: 0;
+  padding-right: 0;
+}
+@keyframes home-title-wave {
+  0%,
+  100% { transform: translateY(0) rotate(0deg); }
+  20% { transform: translateY(-1px) rotate(-0.45deg); }
+  50% { transform: translateY(0.9px) rotate(0.45deg); }
+  75% { transform: translateY(-0.6px) rotate(-0.2deg); }
+}
+@media (max-width: 960px) {
+  .site-main--home > .home-section {
+    margin-top: 0.9rem;
+    margin-bottom: 0.9rem;
+    padding: 1rem 0.8rem 1.1rem;
+    border-radius: 12px;
+    box-shadow: 0 8px 20px rgba(31, 26, 20, 0.07);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .site-main--home .section__title {
+    animation: none;
+    transform: none;
+  }
 }
 .shop-product-grid {
   margin-top: 1rem;
@@ -2883,6 +2930,7 @@ body.site-nav-open {
   object-fit: cover;
   display: block;
   transition: opacity 0.35s ease;
+  border-radius: 10px;
 }
 .shop-product-card--missoma .shop-product-card__img--back {
   position: absolute;
