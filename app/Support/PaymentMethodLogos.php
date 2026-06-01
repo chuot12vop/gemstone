@@ -17,13 +17,21 @@ class PaymentMethodLogos
      */
     public static function all(?string $excludePublicPath = null): array
     {
+        return PaymentLogoSettings::forDisplay($excludePublicPath);
+    }
+
+    /**
+     * Legacy scan of storage/app/public/logo — used once to seed admin-managed logos.
+     *
+     * @return list<array{path: string, label: string}>
+     */
+    public static function legacyFromDirectory(): array
+    {
         $disk = Storage::disk('public');
 
         if (! $disk->exists(self::DIRECTORY)) {
             return [];
         }
-
-        $exclude = self::normalizePublicPath($excludePublicPath);
 
         return collect($disk->files(self::DIRECTORY))
             ->filter(function (string $path) {
@@ -37,22 +45,10 @@ class PaymentMethodLogos
                 $filename = pathinfo($path, PATHINFO_FILENAME);
 
                 return [
-                    'src' => PublicAssetUrl::to($publicPath),
+                    'path' => $publicPath,
                     'label' => self::labelFromFilename($filename),
-                    'public_path' => $publicPath,
                 ];
             })
-            ->filter(function (array $logo) use ($exclude) {
-                if ($exclude === '') {
-                    return true;
-                }
-
-                return self::normalizePublicPath($logo['public_path']) !== $exclude;
-            })
-            ->map(fn (array $logo) => [
-                'src' => $logo['src'],
-                'label' => $logo['label'],
-            ])
             ->values()
             ->all();
     }

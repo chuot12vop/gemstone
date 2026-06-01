@@ -15,12 +15,13 @@ class Product extends Model
     }
 
     protected $fillable = [
-        'category_id', 'brand_id', 'name', 'slug', 'short_description', 'card_badge_label', 'description',
-        'price_usd', 'image', 'thumbnail', 'stock', 'is_active', 'meta_title', 'meta_description',
+        'category_id', 'brand_id', 'name', 'slug', 'short_description', 'card_badge_label', 'discount', 'sticker',
+        'description', 'price_usd', 'image', 'thumbnail', 'stock', 'is_active', 'meta_title', 'meta_description',
     ];
 
     protected $casts = [
         'price_usd' => 'float',
+        'discount' => 'float',
         'stock' => 'integer',
         'is_active' => 'boolean',
     ];

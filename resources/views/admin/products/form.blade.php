@@ -194,9 +194,33 @@
         Short description
         <textarea name="short_description" rows="2">{{ old('short_description', $product->short_description ?? '') }}</textarea>
     </label>
+    <div class="form-grid form-grid--2">
+        <fieldset class="form-fieldset">
+            <legend>Card sticker image</legend>
+            @if($product && $product->sticker)
+                <div style="margin-bottom:0.75rem;">
+                    <img src="{{ $product->sticker }}" alt="Sticker preview" width="96" height="96" style="object-fit:contain;border:1px solid #d7dbe2;border-radius:8px;background:#fff;">
+                </div>
+                <label class="checkbox">
+                    <input type="checkbox" name="remove_sticker" value="1" @checked(old('remove_sticker'))>
+                    Remove current sticker
+                </label>
+            @endif
+            <label>
+                Upload sticker
+                <input type="file" name="sticker" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp">
+                <small>PNG/WebP with transparency recommended. Shown on the top-right of the product card (45°). Max 2MB.</small>
+            </label>
+        </fieldset>
+        <label>
+            Discount %
+            <input type="number" name="discount" min="0" max="100" step="0.01" placeholder="e.g. 20" value="{{ old('discount', $product->discount ?? '') }}">
+            <small>Strikethrough original price + sale price on the card (unless a variant compare-at price is set).</small>
+        </label>
+    </div>
     <label>
         Card badge label
-        <input type="text" name="card_badge_label" maxlength="50" placeholder="e.g. HOT, -20%" value="{{ old('card_badge_label', $product->card_badge_label ?? '') }}">
+        <input type="text" name="card_badge_label" maxlength="50" placeholder="e.g. HOT, LIMITED" value="{{ old('card_badge_label', $product->card_badge_label ?? '') }}">
         <small>Animated tilted badge on the top-right of the product card image. Leave empty to hide.</small>
     </label>
     <label>

@@ -434,7 +434,7 @@ body.admin {
 .btn-admin--primary { background: linear-gradient(135deg, var(--gold) 0%, var(--gold-deep) 100%); color: #fff; border-color: transparent; }
 .btn-admin--primary:hover { color: #fff; opacity: 0.95; }
 
-.stack-form label { display: block; margin-bottom: 0.85rem; font-weight: 500; }
+.stack-form label { display: block; font-weight: 500; }
 .stack-form input, .stack-form textarea, .stack-form select { display: block; width: 100%; margin-top: 0.35rem; padding: 0.55rem 0.7rem; border-radius: 8px; border: 1px solid var(--border); font: inherit; background: #fff; }
 .stack-form input:focus, .stack-form textarea:focus, .stack-form select:focus { outline: none; border-color: var(--gold); box-shadow: 0 0 0 3px rgba(201, 166, 107, 0.18); }
 .stack-form .checkbox { display: flex; align-items: center; gap: 0.5rem; }

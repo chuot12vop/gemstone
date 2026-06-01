@@ -9,13 +9,52 @@
 <section class="checkout-block" aria-labelledby="checkout-delivery-title">
     <h2 id="checkout-delivery-title" class="checkout-block__title">Delivery</h2>
 
-    <div class="checkout-field checkout-field--floating full">
-        <select id="shipping_country" name="shipping_country" required autocomplete="country">
+    @php
+        $oldCountryLabel = $countries[$oldCountry] ?? CheckoutCountries::label($oldCountry);
+    @endphp
+    <div class="checkout-field checkout-field--floating checkout-field--filter-select full @if($oldCountryLabel) has-value @endif"
+         data-filter-select>
+        <select id="shipping_country"
+                name="shipping_country"
+                required
+                autocomplete="country"
+                class="checkout-filter-select__native"
+                tabindex="-1"
+                aria-hidden="true">
             @foreach($countries as $code => $label)
                 <option value="{{ $code }}" @selected($oldCountry === $code)>{{ $label }}</option>
             @endforeach
         </select>
-        <label for="shipping_country">Country/Region</label>
+        <input type="text"
+               id="shipping_country_filter"
+               class="checkout-filter-select__search"
+               data-filter-select-input
+               role="combobox"
+               aria-expanded="false"
+               aria-controls="shipping_country_options"
+               aria-autocomplete="list"
+               autocomplete="off"
+               spellcheck="false"
+               placeholder=" "
+               value="{{ $oldCountryLabel }}">
+        <div id="shipping_country_options"
+             class="checkout-filter-select__panel"
+             data-filter-select-panel
+             role="listbox"
+             aria-label="Countries"
+             hidden>
+            @foreach($countries as $code => $label)
+                <button type="button"
+                        class="checkout-filter-select__option"
+                        data-filter-select-option
+                        data-value="{{ $code }}"
+                        data-label="{{ $label }}"
+                        role="option"
+                        aria-selected="{{ $oldCountry === $code ? 'true' : 'false' }}">{{ $label }}</button>
+            @endforeach
+            <p class="checkout-filter-select__empty" data-filter-select-empty hidden>No countries found</p>
+        </div>
+        <label for="shipping_country_filter">Country/Region</label>
     </div>
 
     <div class="checkout-field-row">

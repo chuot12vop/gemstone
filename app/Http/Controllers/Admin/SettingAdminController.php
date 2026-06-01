@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Setting;
+use App\Support\PaymentLogoSettings;
 use App\Support\WelcomePopupSettings;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -23,6 +24,7 @@ class SettingAdminController extends Controller
             ],
             'settings' => $this->getSettingsMap(),
             'welcomePopup' => WelcomePopupSettings::resolve(),
+            'paymentLogos' => PaymentLogoSettings::resolveForForm(),
         ]);
     }
 
@@ -47,6 +49,12 @@ class SettingAdminController extends Controller
             'welcome_popup_legal_html' => 'nullable|string|max:8000',
             'welcome_popup_success_message' => 'nullable|string|max:500',
             'welcome_popup_image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:6144',
+            'payment_logos' => 'nullable|array',
+            'payment_logos.*.path' => 'nullable|string|max:512',
+            'payment_logos.*.label' => 'nullable|string|max:120',
+            'payment_logos.*.image' => 'nullable|file|mimes:jpg,jpeg,png,webp,svg|max:2048',
+            'payment_logos_new' => 'nullable|array',
+            'payment_logos_new.*' => 'file|mimes:jpg,jpeg,png,webp,svg|max:2048',
         ]);
 
         $settings = $this->getSettingsMap();
@@ -92,6 +100,28 @@ class SettingAdminController extends Controller
             'success_message' => $validated['welcome_popup_success_message'] ?? $welcome['success_message'],
             'image' => $welcome['image'],
         ]);
+
+        $paymentLogoRows = [];
+        foreach ($request->input('payment_logos', []) as $index => $row) {
+            if (! is_array($row)) {
+                continue;
+            }
+
+            $paymentLogoRows[] = [
+                'path' => trim((string) ($row['path'] ?? '')),
+                'label' => trim((string) ($row['label'] ?? '')),
+                'image' => $request->file('payment_logos.'.$index.'.image'),
+            ];
+        }
+
+        $newPaymentLogos = [];
+        foreach ($request->file('payment_logos_new', []) ?? [] as $file) {
+            if ($file instanceof UploadedFile) {
+                $newPaymentLogos[] = $file;
+            }
+        }
+
+        PaymentLogoSettings::saveFromAdmin($paymentLogoRows, $newPaymentLogos);
 
         foreach ($settings as $key => $value) {
             Setting::query()->updateOrCreate(

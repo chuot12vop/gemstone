@@ -111,6 +111,50 @@
     </fieldset>
 
     <fieldset class="form-fieldset">
+        <legend>Footer payment icons</legend>
+        <p style="margin:0 0 12px;color:#5c6470;font-size:0.95rem;">
+            Shown in the site footer, cart, and checkout. Drag rows to reorder. SVG, PNG, JPG, or WebP (max 2&nbsp;MB each).
+        </p>
+        <div id="payment-logos-list">
+            @foreach($paymentLogos as $i => $logo)
+                <div class="js-payment-logo-row form-fieldset" draggable="true" style="margin-top:12px;padding:12px;border:1px solid #e2e6ec;border-radius:10px;background:#fff;display:flex;flex-wrap:wrap;gap:12px;align-items:flex-start;">
+                    <input type="hidden" class="js-payment-logo-path" name="payment_logos[{{ $i }}][path]" value="{{ old('payment_logos.'.$i.'.path', $logo['path'] ?? '') }}">
+                    <div style="flex:0 0 auto;">
+                        <img class="js-payment-logo-preview" src="{{ $logo['src'] ?? asset('assets/img/placeholder.svg') }}" alt="" width="72" height="44" style="object-fit:contain;border:1px solid #d7dbe2;border-radius:6px;background:#fff;padding:4px;">
+                    </div>
+                    <div style="flex:1 1 200px;min-width:180px;">
+                        <label>
+                            Label (accessibility)
+                            <input type="text" name="payment_logos[{{ $i }}][label]" value="{{ old('payment_logos.'.$i.'.label', $logo['label'] ?? '') }}" maxlength="120" placeholder="e.g. Visa">
+                        </label>
+                        <label style="margin-top:8px;display:block;">
+                            Replace image
+                            <input class="js-payment-logo-file" type="file" name="payment_logos[{{ $i }}][image]" accept=".jpg,.jpeg,.png,.webp,.svg,image/jpeg,image/png,image/webp,image/svg+xml">
+                        </label>
+                    </div>
+                    <div style="flex:0 0 auto;align-self:center;">
+                        <button class="btn-admin" type="button" data-action="remove-payment-logo">Remove</button>
+                    </div>
+                </div>
+            @endforeach
+        </div>
+        <div style="margin-top:14px;">
+            <label>
+                Add new icons (multiple files)
+                <input id="payment-logos-new-input" type="file" name="payment_logos_new[]" accept=".jpg,.jpeg,.png,.webp,.svg,image/jpeg,image/png,image/webp,image/svg+xml" multiple>
+            </label>
+            <div id="payment-logos-new-preview" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;"></div>
+        </div>
+        <button class="btn-admin" type="button" id="add-payment-logo" style="margin-top:12px;">+ Add icon row</button>
+        @error('payment_logos.*.image')
+            <p style="margin:8px 0 0;color:#b33a3a;">{{ $message }}</p>
+        @enderror
+        @error('payment_logos_new.*')
+            <p style="margin:8px 0 0;color:#b33a3a;">{{ $message }}</p>
+        @enderror
+    </fieldset>
+
+    <fieldset class="form-fieldset">
         <legend>Policies</legend>
         <label>
             Security policy
@@ -187,6 +231,124 @@
 
     setupSingleImageDropzone('site-logo-input', 'site-logo-preview', 'site-logo-dropzone');
     setupSingleImageDropzone('welcome-popup-input', 'welcome-popup-preview', 'welcome-popup-dropzone');
+
+    const paymentLogosList = document.getElementById('payment-logos-list');
+    const addPaymentLogoBtn = document.getElementById('add-payment-logo');
+    const paymentLogosNewInput = document.getElementById('payment-logos-new-input');
+    const paymentLogosNewPreview = document.getElementById('payment-logos-new-preview');
+    const placeholderSrc = @json(asset('assets/img/placeholder.svg'));
+
+    const reindexPaymentLogoRows = () => {
+        if (!paymentLogosList) return;
+        paymentLogosList.querySelectorAll('.js-payment-logo-row').forEach((row, index) => {
+            row.querySelectorAll('[name^="payment_logos["]').forEach((input) => {
+                if (!(input instanceof HTMLInputElement)) return;
+                input.name = input.name.replace(/payment_logos\[\d+]/, `payment_logos[${index}]`);
+            });
+        });
+    };
+
+    const bindPaymentLogoRow = (row) => {
+        const fileInput = row.querySelector('.js-payment-logo-file');
+        const preview = row.querySelector('.js-payment-logo-preview');
+        const removeBtn = row.querySelector('[data-action="remove-payment-logo"]');
+
+        if (fileInput instanceof HTMLInputElement && preview instanceof HTMLImageElement) {
+            fileInput.addEventListener('change', () => {
+                const file = fileInput.files && fileInput.files[0] ? fileInput.files[0] : null;
+                if (!file || !file.type.startsWith('image/')) return;
+                const url = URL.createObjectURL(file);
+                preview.src = url;
+                preview.addEventListener('load', () => URL.revokeObjectURL(url), { once: true });
+            });
+        }
+
+        if (removeBtn instanceof HTMLButtonElement) {
+            removeBtn.addEventListener('click', () => {
+                row.remove();
+                reindexPaymentLogoRows();
+            });
+        }
+
+        row.addEventListener('dragstart', (event) => {
+            row.classList.add('is-dragging');
+            if (event.dataTransfer) {
+                event.dataTransfer.effectAllowed = 'move';
+            }
+        });
+        row.addEventListener('dragend', () => {
+            row.classList.remove('is-dragging');
+            reindexPaymentLogoRows();
+        });
+        row.addEventListener('dragover', (event) => {
+            event.preventDefault();
+            const dragging = paymentLogosList?.querySelector('.is-dragging');
+            if (!(dragging instanceof HTMLElement) || dragging === row || !paymentLogosList) return;
+            const rows = [...paymentLogosList.querySelectorAll('.js-payment-logo-row')];
+            const dragIndex = rows.indexOf(dragging);
+            const hoverIndex = rows.indexOf(row);
+            if (dragIndex < 0 || hoverIndex < 0) return;
+            if (dragIndex < hoverIndex) {
+                row.after(dragging);
+            } else {
+                row.before(dragging);
+            }
+        });
+    };
+
+    if (paymentLogosList) {
+        paymentLogosList.querySelectorAll('.js-payment-logo-row').forEach(bindPaymentLogoRow);
+    }
+
+    if (addPaymentLogoBtn && paymentLogosList) {
+        addPaymentLogoBtn.addEventListener('click', () => {
+            const index = paymentLogosList.querySelectorAll('.js-payment-logo-row').length;
+            const row = document.createElement('div');
+            row.className = 'js-payment-logo-row form-fieldset';
+            row.draggable = true;
+            row.style.cssText = 'margin-top:12px;padding:12px;border:1px solid #e2e6ec;border-radius:10px;background:#fff;display:flex;flex-wrap:wrap;gap:12px;align-items:flex-start;';
+            row.innerHTML = `
+                <input type="hidden" class="js-payment-logo-path" name="payment_logos[${index}][path]" value="">
+                <div style="flex:0 0 auto;">
+                    <img class="js-payment-logo-preview" src="${placeholderSrc}" alt="" width="72" height="44" style="object-fit:contain;border:1px solid #d7dbe2;border-radius:6px;background:#fff;padding:4px;">
+                </div>
+                <div style="flex:1 1 200px;min-width:180px;">
+                    <label>
+                        Label (accessibility)
+                        <input type="text" name="payment_logos[${index}][label]" maxlength="120" placeholder="e.g. Visa">
+                    </label>
+                    <label style="margin-top:8px;display:block;">
+                        Image
+                        <input class="js-payment-logo-file" type="file" name="payment_logos[${index}][image]" accept=".jpg,.jpeg,.png,.webp,.svg,image/jpeg,image/png,image/webp,image/svg+xml" required>
+                    </label>
+                </div>
+                <div style="flex:0 0 auto;align-self:center;">
+                    <button class="btn-admin" type="button" data-action="remove-payment-logo">Remove</button>
+                </div>
+            `;
+            paymentLogosList.appendChild(row);
+            bindPaymentLogoRow(row);
+        });
+    }
+
+    if (paymentLogosNewInput instanceof HTMLInputElement && paymentLogosNewPreview) {
+        paymentLogosNewInput.addEventListener('change', () => {
+            paymentLogosNewPreview.replaceChildren();
+            const files = paymentLogosNewInput.files ? Array.from(paymentLogosNewInput.files) : [];
+            files.forEach((file) => {
+                if (!file.type.startsWith('image/')) return;
+                const img = document.createElement('img');
+                img.alt = file.name;
+                img.width = 72;
+                img.height = 44;
+                img.style.cssText = 'object-fit:contain;border:1px solid #d7dbe2;border-radius:6px;background:#fff;padding:4px;';
+                const url = URL.createObjectURL(file);
+                img.src = url;
+                img.addEventListener('load', () => URL.revokeObjectURL(url), { once: true });
+                paymentLogosNewPreview.appendChild(img);
+            });
+        });
+    }
 })();
 </script>
 

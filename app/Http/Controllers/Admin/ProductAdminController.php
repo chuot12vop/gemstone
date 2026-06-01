@@ -84,6 +84,7 @@ class ProductAdminController extends Controller
             $data['thumbnail'] = $thumbnailUrl;
             $data['image'] = $thumbnailUrl;
         }
+        $this->applyStickerUpload($request, $data);
 
         $variants = $this->extractVariants($request);
 
@@ -134,6 +135,7 @@ class ProductAdminController extends Controller
             $data['thumbnail'] = $thumbnailUrl;
             $data['image'] = $thumbnailUrl;
         }
+        $this->applyStickerUpload($request, $data, $product);
 
         $variants = $this->extractVariants($request);
 
@@ -187,6 +189,7 @@ class ProductAdminController extends Controller
     {
         $product->load('productImages');
         $this->images->delete($product->thumbnail);
+        $this->images->delete($product->sticker);
         foreach ($product->productImages as $image) {
             $this->images->delete($image->path);
         }
@@ -207,6 +210,9 @@ class ProductAdminController extends Controller
             'brand_id' => 'required|exists:brands,id',
             'short_description' => 'nullable|string|max:500',
             'card_badge_label' => 'nullable|string|max:50',
+            'discount' => 'nullable|numeric|min:0|max:100',
+            'sticker' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
+            'remove_sticker' => 'nullable|boolean',
             'description' => 'nullable|string',
             'price_usd' => 'required|numeric|min:0',
             'stock' => 'required|integer|min:0',
@@ -249,6 +255,9 @@ class ProductAdminController extends Controller
             'brand_id' => (int) $validated['brand_id'],
             'short_description' => $validated['short_description'] ?? null,
             'card_badge_label' => trim((string) ($validated['card_badge_label'] ?? '')) ?: null,
+            'discount' => isset($validated['discount']) && $validated['discount'] !== '' && (float) $validated['discount'] > 0
+                ? (float) $validated['discount']
+                : null,
             'description' => $validated['description'] ?? null,
             'price_usd' => (float) $validated['price_usd'],
             'stock' => (int) $validated['stock'],
@@ -534,5 +543,29 @@ class ProductAdminController extends Controller
             ->where('slug', $slug)
             ->where('id', '!=', $ignoreProductId)
             ->exists();
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    private function applyStickerUpload(Request $request, array &$data, ?Product $product = null): void
+    {
+        if ($product !== null && $request->boolean('remove_sticker')) {
+            $this->images->delete($product->sticker);
+            $data['sticker'] = null;
+
+            return;
+        }
+
+        $stickerUrl = $this->images->store($request->file('sticker'), 'products/stickers', asWebp: true);
+        if ($stickerUrl === null) {
+            return;
+        }
+
+        if ($product !== null) {
+            $this->images->delete($product->sticker);
+        }
+
+        $data['sticker'] = $stickerUrl;
     }
 }
