@@ -1216,7 +1216,6 @@ body.site-nav-open {
   .catalog-filters-wrap .catalog-filters-wrap__summary::after { content: none; }
   .catalog-filters {
     padding: 0.95rem;
-    grid-template-columns: 1fr 1fr 1fr auto;
     align-items: end;
   }
 }
