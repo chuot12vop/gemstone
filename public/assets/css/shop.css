@@ -5140,7 +5140,7 @@ body.pc-drawer-open {
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .home-hero--slider .home-hero__slides { transition: none; }
+  .home-hero--slider .home-hero__slides { transition: none}
   .home-journal-slider__track { transition: none; }
   .home-product-slider__track { transition: none; }
   .home-review-slider__track { transition: none; }
