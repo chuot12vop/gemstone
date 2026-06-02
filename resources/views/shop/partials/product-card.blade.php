@@ -15,6 +15,7 @@
     $productDiscountPct = (float) ($product->discount ?? 0);
     $hasProductDiscount = $productDiscountPct > 0;
     $stickerUrl = trim((string) ($product->sticker ?? ''));
+    $cardBadgeLabel = trim((string) ($product->card_badge_label ?? ''));
     if ($variantOnSale) {
         $displayPrice = $basePrice;
         $comparePrice = (float) $activeVariant->compare_at_price_usd;
@@ -28,7 +29,6 @@
         $comparePrice = null;
         $onSale = false;
     }
-    $showSaleBadge = $variantOnSale || $hasProductDiscount;
     $inStock = ($activeVariant?->stock ?? $product->stock) > 0;
     $cardVariants = ProductVariantOptions::toPickerJson($product, $variants);
 @endphp
@@ -59,10 +59,8 @@
             @endif
         </a>
 
-        @if($showSaleBadge)
-            <span class="shop-product-card__badge shop-product-card__badge--sale" data-product-card-sale-badge>SALE</span>
-        @else
-            <span class="shop-product-card__badge shop-product-card__badge--sale" data-product-card-sale-badge hidden>SALE</span>
+        @if($cardBadgeLabel !== '')
+            <span class="shop-product-card__badge shop-product-card__badge--label">{{ $cardBadgeLabel }}</span>
         @endif
 
         @if($stickerUrl !== '')
@@ -138,12 +136,12 @@
         </h3>
 
         <div class="shop-product-card__prices{{ $onSale ? ' shop-product-card__prices--sale' : '' }}">
+            <span class="shop-product-card__price" data-product-card-price>{{ $currency->formatUsd($displayPrice) }}</span>
             @if($comparePrice !== null)
                 <span class="shop-product-card__compare" data-product-card-compare>{{ $currency->formatUsd($comparePrice) }}</span>
             @else
                 <span class="shop-product-card__compare" data-product-card-compare hidden></span>
             @endif
-            <span class="shop-product-card__price" data-product-card-price>{{ $currency->formatUsd($displayPrice) }}</span>
         </div>
     </div>
 

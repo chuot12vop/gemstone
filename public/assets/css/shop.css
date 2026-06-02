@@ -3056,23 +3056,22 @@ body.site-nav-open {
 .shop-product-card--missoma .shop-product-card__media-wrap {
   position: relative;
   overflow: hidden;
-  background: #faf5ef;
+  background: #ececec;
 }
 .shop-product-card--missoma .shop-product-card__media {
   display: block;
   aspect-ratio: 1/1;
   overflow: hidden;
-  background: #faf5ef;
+  background: #ececec;
   position: relative;
 }
 .shop-product-card--missoma .shop-product-card__img {
   width: 100%;
   height: 100%;
-  object-fit: contain;
+  object-fit: cover;
   display: block;
   transition: opacity 0.35s ease;
   border-radius: 0;
-  padding: 0.35rem;
 }
 .shop-product-card--missoma .shop-product-card__img--back {
   position: absolute;
@@ -3097,34 +3096,48 @@ body.site-nav-open {
   line-height: 1;
   pointer-events: none;
 }
-.shop-product-card--missoma .shop-product-card__badge--sale {
-  top: 1rem;
-  left: -2rem;
-  padding: 0 2rem;
-  font-size: 1.25rem;
-  background: #a39a22a8;
-  color: #ffffff;
-  transform: rotate(-45deg);
-  transform-origin: center;
-  box-shadow: 0 2px 8px rgba(43, 38, 31, 0.15);
+.shop-product-card--missoma .shop-product-card__badge--label {
+  top: 0.5rem;
+  left: 0.5rem;
+  padding: 0.32rem 0.5rem;
+  font-size: 0.65rem;
+  font-weight: 600;
+  background: #111;
+  color: #fff;
+  border-radius: 0;
+  box-shadow: none;
 }
 .shop-product-card--missoma .shop-product-card__sticker {
   position: absolute;
   top: 0;
   right: 0;
-  font-size: 1.25rem;
   z-index: 2;
-  width: 3.75rem;
-  height: 3.75rem;
-  transform: rotate(45deg);
-  transform-origin: center;
+  width: 4.75rem;
+  height: 4.75rem;
   pointer-events: none;
 }
 .shop-product-card--missoma .shop-product-card__sticker-img {
   display: block;
   width: 100%;
   height: 100%;
-  object-fit: contain;
+  object-fit: cover;
+  transform-origin: top right;
+  animation: product-card-sticker-shake 3.5s ease-in-out infinite;
+}
+@keyframes product-card-sticker-shake {
+  0%, 70%, 100% { transform: rotate(0) translate3d(0, 0, 0); }
+  72% { transform: rotate(-10deg) translate3d(-2px, 0, 0); }
+  74% { transform: rotate(-2deg) translate3d(2px, 0, 0); }
+  76% { transform: rotate(-10deg) translate3d(-2px, 0, 0); }
+  78% { transform: rotate(-2deg) translate3d(2px, 0, 0); }
+  80% { transform: rotate(-8deg) translate3d(-1px, 0, 0); }
+  82% { transform: rotate(-4deg) translate3d(1px, 0, 0); }
+  84% { transform: rotate(0) translate3d(0, 0, 0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .shop-product-card--missoma .shop-product-card__sticker-img {
+    animation: none;
+  }
 }
 .shop-product-card--missoma .shop-product-card__cart-btn {
   position: absolute;
@@ -3135,42 +3148,28 @@ body.site-nav-open {
   align-items: center;
   justify-content: center;
   border: 0;
-  background: #fff;
+  background: rgba(255, 255, 255, 0.55);
   color: var(--ink);
   width: 2.35rem;
   height: 2.35rem;
   padding: 0;
   border-radius: 50%;
-  box-shadow: 0 4px 14px rgba(43, 38, 31, 0.16);
+  box-shadow: 0 2px 8px rgba(43, 38, 31, 0.1);
   cursor: pointer;
+  opacity: 0.55;
+  transition: opacity 0.2s ease, background 0.2s ease, color 0.2s ease;
 }
 .shop-product-card--missoma .shop-product-card__cart-btn:hover {
+  opacity: 1;
   background: #111;
   color: #fff;
 }
 .shop-product-card--missoma .shop-product-card__cart-btn:disabled {
-  opacity: 0.45;
+  opacity: 0.35;
   cursor: not-allowed;
 }
 .shop-product-card--missoma .shop-product-card__cart-icon {
   flex-shrink: 0;
-}
-@media (hover: hover) {
-  .shop-product-card--missoma .shop-product-card__cart-btn {
-    opacity: 0;
-    transform: translateY(0.35rem);
-    transition: opacity 0.25s ease, transform 0.25s ease, background 0.2s ease, color 0.2s ease;
-  }
-  .shop-product-card--missoma:hover .shop-product-card__cart-btn {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-@media (hover: none) {
-  .shop-product-card--missoma .shop-product-card__cart-btn {
-    opacity: 1;
-    transform: translateY(0);
-  }
 }
 .shop-product-card--missoma .shop-product-card__body {
   padding: 0.75rem 0 0;
@@ -3205,7 +3204,8 @@ body.site-nav-open {
   line-height: 1.35;
   min-height: auto;
   max-height: none;
-  font-weight: 400;
+  font-weight: 500;
+  font-family: inherit;
 }
 .shop-product-card--missoma .shop-product-card__title a {
   color: var(--ink);
@@ -3215,9 +3215,6 @@ body.site-nav-open {
   flex-wrap: wrap;
   align-items: baseline;
   gap: 0.35rem 0.5rem;
-}
-.shop-product-card--missoma .shop-product-card__prices--sale .shop-product-card__price {
-  color: #8b3a3a;
 }
 .shop-product-card--missoma .shop-product-card__price {
   margin: 0;
@@ -3230,9 +3227,9 @@ body.site-nav-open {
   margin: 0;
   font-size: 0.85rem;
   font-weight: 400;
-  color: var(--muted);
+  color: #9a9a9a;
   text-decoration: line-through;
-  opacity: 0.75;
+  opacity: 1;
 }
 
 /* Missoma catalog */
@@ -4188,6 +4185,38 @@ body.pc-drawer-open {
   }
 }
 
+@media (min-width: 768px) {
+  /* Match recommended slide art (1400×788) so object-fit: cover does not crop. */
+  .home-hero.home-hero--slider {
+    aspect-ratio: 1400 / 788;
+    width: 100%;
+    height: auto;
+    min-height: 0;
+    max-height: none;
+  }
+
+  .home-hero--slider .home-hero__viewport {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  .home-hero--slider .home-hero__slides {
+    min-height: 0;
+    max-height: none;
+    height: 100%;
+  }
+
+  .home-hero--slider .home-hero__slide .home-hero__bg,
+  .home-hero--slider .home-hero__slide-hit .home-hero__bg,
+  .home-hero--slider .home-hero__bg {
+    min-height: 0;
+    max-height: none;
+    height: 100%;
+  }
+}
+
 .home-section {
   width: 100%;
   padding: 1.5rem 1rem;
@@ -5111,7 +5140,7 @@ body.pc-drawer-open {
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .home-hero--slider .home-hero__slides { transition: none; min-height: fit-content;}
+  .home-hero--slider .home-hero__slides { transition: none; }
   .home-journal-slider__track { transition: none; }
   .home-product-slider__track { transition: none; }
   .home-review-slider__track { transition: none; }

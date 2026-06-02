@@ -2090,7 +2090,6 @@ function initProductCards() {
     const back = card.querySelector('[data-product-card-back]');
     const priceEl = card.querySelector('[data-product-card-price]');
     const compareEl = card.querySelector('[data-product-card-compare]');
-    const saleBadge = card.querySelector('[data-product-card-sale-badge]');
     const variantInput = card.querySelector('[data-product-card-variant]');
     const swatches = card.querySelectorAll('[data-product-card-swatch]');
     const currencySymbol = document.documentElement.dataset.currencySymbol || '$';
@@ -2113,9 +2112,6 @@ function initProductCards() {
           compareEl.textContent = '';
           compareEl.hidden = true;
         }
-      }
-      if (saleBadge) {
-        saleBadge.hidden = swatch.dataset.onSale !== '1';
       }
     };
 

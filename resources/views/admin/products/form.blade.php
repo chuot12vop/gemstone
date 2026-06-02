@@ -221,7 +221,7 @@
     <label>
         Card badge label
         <input type="text" name="card_badge_label" maxlength="50" placeholder="e.g. HOT, LIMITED" value="{{ old('card_badge_label', $product->card_badge_label ?? '') }}">
-        <small>Animated tilted badge on the top-right of the product card image. Leave empty to hide.</small>
+        <small>Black badge on the top-left of the product card image (e.g. SALE, HOT, LIMITED). Leave empty to hide.</small>
     </label>
     <label>
         Full description
