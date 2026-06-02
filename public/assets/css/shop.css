@@ -3067,11 +3067,10 @@ body.site-nav-open {
 .shop-product-card--missoma .shop-product-card__img {
   width: 100%;
   height: 100%;
-  object-fit: contain;
+  object-fit: cover
   display: block;
   transition: opacity 0.35s ease;
   border-radius: 0;
-  padding: 0.35rem;
 }
 .shop-product-card--missoma .shop-product-card__img--back {
   position: absolute;
