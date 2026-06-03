@@ -3100,7 +3100,7 @@ body.site-nav-open {
   top: 0.5rem;
   left: 0.5rem;
   padding: 0.32rem 0.5rem;
-  font-size: 0.65rem;
+  font-size: 15px;
   font-weight: 600;
   background: #111;
   color: #fff;
