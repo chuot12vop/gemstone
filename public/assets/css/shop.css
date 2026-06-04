@@ -4841,6 +4841,17 @@ body.pc-drawer-open {
   font-size: 0.86rem;
   color: var(--muted);
 }
+.gateway-pane__hint--warn {
+  color: #8b4513;
+  padding: 0.65rem 0.85rem;
+  background: #fff8e6;
+  border-radius: 8px;
+  border: 1px solid #e8d4a8;
+}
+.gateway-pane__paypal-buttons {
+  min-height: 48px;
+  margin-top: 0.75rem;
+}
 .gateway-pane__details {
   background: var(--cream-dark);
   border-radius: 10px;

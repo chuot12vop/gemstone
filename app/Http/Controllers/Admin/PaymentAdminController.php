@@ -50,13 +50,18 @@ class PaymentAdminController extends Controller
             ->take(200)
             ->get();
 
+        $settings = $this->paymentSettings();
+        $hasPaypalSecret = ($settings['payment_paypal_client_secret'] ?? '') !== '';
+        unset($settings['payment_paypal_client_secret']);
+
         return view('admin.payments.index', [
             'title' => 'Payments',
             'breadcrumbs' => [
                 ['label' => 'Payments'],
             ],
             'tab' => $tab,
-            'settings' => $this->paymentSettings(),
+            'settings' => $settings,
+            'hasPaypalSecret' => $hasPaypalSecret,
             'transactions' => $transactions,
             'q' => $q,
             'method' => $method,
@@ -71,6 +76,8 @@ class PaymentAdminController extends Controller
             'paypal_enabled' => 'nullable|boolean',
             'paypal_merchant_email' => 'nullable|email|max:190',
             'paypal_client_id' => 'nullable|string|max:255',
+            'paypal_client_secret' => 'nullable|string|max:255',
+            'paypal_sandbox' => 'nullable|boolean',
             'whatsapp_enabled' => 'nullable|boolean',
             'whatsapp_phone' => 'nullable|string|max:60',
             'whatsapp_message_template' => 'nullable|string|max:500',
@@ -103,6 +110,7 @@ class PaymentAdminController extends Controller
             'payment_paypal_enabled' => $request->boolean('paypal_enabled') ? '1' : '0',
             'payment_paypal_merchant_email' => trim((string) ($validated['paypal_merchant_email'] ?? '')),
             'payment_paypal_client_id' => trim((string) ($validated['paypal_client_id'] ?? '')),
+            'payment_paypal_sandbox' => $request->boolean('paypal_sandbox') ? '1' : '0',
             'payment_whatsapp_enabled' => $request->boolean('whatsapp_enabled') ? '1' : '0',
             'payment_whatsapp_phone' => trim((string) ($validated['whatsapp_phone'] ?? '')),
             'payment_whatsapp_message_template' => trim((string) ($validated['whatsapp_message_template'] ?? '')),
@@ -128,6 +136,14 @@ class PaymentAdminController extends Controller
             Setting::query()->updateOrCreate(['key' => $key], ['value' => $value]);
         }
 
+        $secret = trim((string) $request->input('paypal_client_secret', ''));
+        if ($secret !== '') {
+            Setting::query()->updateOrCreate(
+                ['key' => 'payment_paypal_client_secret'],
+                ['value' => $secret],
+            );
+        }
+
         return redirect()->route('admin.payments.index', ['tab' => 'settings'])->with('success', 'Payment settings updated.');
     }
 
@@ -140,6 +156,8 @@ class PaymentAdminController extends Controller
             'payment_paypal_enabled' => '0',
             'payment_paypal_merchant_email' => '',
             'payment_paypal_client_id' => '',
+            'payment_paypal_client_secret' => '',
+            'payment_paypal_sandbox' => '1',
             'payment_whatsapp_enabled' => '0',
             'payment_whatsapp_phone' => '',
             'payment_whatsapp_message_template' => '',

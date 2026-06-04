@@ -55,6 +55,8 @@ class DatabaseSeeder extends Seeder
             'payment_paypal_enabled' => '1',
             'payment_paypal_merchant_email' => 'sales@gemstone.local',
             'payment_paypal_client_id' => '',
+            'payment_paypal_client_secret' => '',
+            'payment_paypal_sandbox' => '1',
             'payment_whatsapp_enabled' => '1',
             'payment_whatsapp_phone' => '+849xxxxxxxx',
             'payment_whatsapp_message_template' => 'Hello, I would like to pay for order #{order_number} (total {total}).',

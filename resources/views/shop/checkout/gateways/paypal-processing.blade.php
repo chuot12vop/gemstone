@@ -1,20 +1,84 @@
+@php
+    $configured = ($data['configured'] ?? false) === true;
+    $paypalOrderId = $data['paypalOrderId'] ?? '';
+    $clientId = $data['clientId'] ?? '';
+    $sdkUrl = $data['sdkUrl'] ?? '';
+    $sandbox = ($data['sandbox'] ?? false) === true;
+    $error = $data['error'] ?? null;
+@endphp
+
 <div class="gateway-pane gateway-pane--paypal">
     <h2 class="gateway-pane__title">Pay with PayPal</h2>
-    <p>Click the button below to open PayPal and authorize the payment for order <strong>{{ $order->order_number }}</strong>.</p>
+    <p>Authorize payment for order <strong>{{ $order->order_number }}</strong> — <strong>{{ strtoupper($order->currency_code) }} {{ number_format((float) $order->total_display, 2) }}</strong>.</p>
 
-    <ul class="gateway-pane__steps">
-        <li>Sign in to your PayPal account (or pay as guest).</li>
-        <li>Confirm the amount of <strong>{{ strtoupper($order->currency_code) }} {{ number_format((float) $order->total_display, 2) }}</strong>.</li>
-        <li>Return here automatically to receive your confirmation.</li>
-    </ul>
+    @if(! $configured)
+        <p class="gateway-pane__hint gateway-pane__hint--warn">PayPal is not fully configured. Add <strong>Client ID</strong> and <strong>Client Secret</strong> in Admin → Payments → Payment settings, then save.</p>
+    @elseif($error)
+        <p class="gateway-pane__hint gateway-pane__hint--warn">{{ $error }}</p>
+    @elseif($paypalOrderId === '' || $clientId === '' || $sdkUrl === '')
+        <p class="gateway-pane__hint gateway-pane__hint--warn">Unable to load PayPal checkout. Refresh this page or contact support.</p>
+    @else
+        <ul class="gateway-pane__steps">
+            <li>Use the PayPal button below (balance, card, or guest checkout).</li>
+            <li>Confirm the amount, then you will return here automatically.</li>
+        </ul>
 
-    <form method="post" action="{{ route('shop.checkout.confirm', ['order_number' => $order->order_number]) }}" class="gateway-pane__cta">
-        @csrf
-        <input type="hidden" name="gateway_transaction_id" value="PP-DEMO-{{ strtoupper(Str::random(8)) }}">
-        <button class="btn btn--primary btn--paypal" type="submit">
-            Pay with PayPal
-        </button>
-    </form>
+        <div id="paypal-button-container" class="gateway-pane__paypal-buttons"></div>
 
-    <p class="gateway-pane__hint">Demo build — clicking the button will simulate a successful PayPal capture.</p>
+        @if($sandbox)
+            <p class="gateway-pane__hint">Sandbox mode — use a <a href="https://developer.paypal.com/dashboard/accounts" target="_blank" rel="noopener">PayPal sandbox buyer account</a> for testing.</p>
+        @endif
+
+        @push('scripts')
+        <script src="{{ $sdkUrl }}" data-sdk-integration-source="button-factory"></script>
+        <script>
+        (function () {
+            var paypalOrderId = @json($paypalOrderId);
+            var confirmUrl = @json(route('shop.checkout.confirm', ['order_number' => $order->order_number]));
+            var csrf = @json(csrf_token());
+
+            function postConfirm(body) {
+                return fetch(confirmUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': csrf,
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                    body: JSON.stringify(body),
+                }).then(function (res) {
+                    return res.json().then(function (data) {
+                        if (res.ok && data.redirect) {
+                            window.location.href = data.redirect;
+                            return;
+                        }
+                        var msg = (data && data.message) ? data.message : 'Payment could not be confirmed.';
+                        throw new Error(msg);
+                    });
+                });
+            }
+
+            if (typeof paypal === 'undefined') {
+                document.getElementById('paypal-button-container').innerHTML =
+                    '<p class="gateway-pane__hint gateway-pane__hint--warn">PayPal could not be loaded. Check your connection or ad blocker.</p>';
+                return;
+            }
+
+            paypal.Buttons({
+                createOrder: function () {
+                    return paypalOrderId;
+                },
+                onApprove: function (data) {
+                    return postConfirm({ paypal_order_id: data.orderID });
+                },
+                onError: function (err) {
+                    console.error('PayPal error', err);
+                    alert('PayPal reported an error. Please try again or choose another payment method.');
+                },
+            }).render('#paypal-button-container');
+        })();
+        </script>
+        @endpush
+    @endif
 </div>

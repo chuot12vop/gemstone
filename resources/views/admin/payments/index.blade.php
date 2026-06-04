@@ -40,9 +40,21 @@
                 <input type="email" name="paypal_merchant_email" value="{{ old('paypal_merchant_email', $settings['payment_paypal_merchant_email'] ?? '') }}">
             </label>
             <label>
-                Client ID
-                <input type="text" name="paypal_client_id" value="{{ old('paypal_client_id', $settings['payment_paypal_client_id'] ?? '') }}">
+                REST API Client ID
+                <input type="text" name="paypal_client_id" value="{{ old('paypal_client_id', $settings['payment_paypal_client_id'] ?? '') }}" autocomplete="off" placeholder="From PayPal Developer Dashboard → Apps">
             </label>
+            <label>
+                REST API Client Secret
+                <input type="password" name="paypal_client_secret" value="" autocomplete="new-password" placeholder="{{ ($hasPaypalSecret ?? false) ? 'Saved — leave blank to keep' : 'Required for live checkout' }}">
+            </label>
+            <label class="switch-field">
+                <span class="switch-field__label">Sandbox (test mode)</span>
+                <span class="switch">
+                    <input type="checkbox" name="paypal_sandbox" value="1" @checked(old('paypal_sandbox', ($settings['payment_paypal_sandbox'] ?? '1') === '1'))>
+                    <span class="switch__slider" aria-hidden="true"></span>
+                </span>
+            </label>
+            <p class="muted" style="margin:0;">Create an app at <a href="https://developer.paypal.com/dashboard/applications/live" target="_blank" rel="noopener">developer.paypal.com</a>. Use Sandbox credentials while testing; turn off Sandbox and switch to Live credentials before accepting real payments.</p>
         </fieldset>
 
         <fieldset class="form-fieldset">

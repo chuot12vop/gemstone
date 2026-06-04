@@ -363,7 +363,7 @@ class CheckoutController extends Controller
     }
 
     /** Gateway return / "I have paid" confirmation. */
-    public function confirm(Request $request, string $order_number): RedirectResponse
+    public function confirm(Request $request, string $order_number): RedirectResponse|JsonResponse
     {
         $order = Order::query()->where('order_number', $order_number)->firstOrFail();
         $tx = $order->paymentTransactions()->first();
@@ -375,18 +375,32 @@ class CheckoutController extends Controller
 
         if ($gateway->confirm($order, $request)) {
             if (! $gateway->marksOrderPaidOnConfirm()) {
-                return redirect()
+                $redirect = redirect()
                     ->route('shop.order.show', ['order_number' => $order->order_number])
                     ->with('success', 'Thank you! We received your payment proof for order #'.$order->order_number.'. Our team will verify and confirm shortly.');
+
+                return $request->expectsJson()
+                    ? response()->json(['redirect' => $redirect->getTargetUrl()])
+                    : $redirect;
             }
 
-            return $this->markOrderPaid($order, $gateway, $request->input('gateway_transaction_id'));
+            $redirect = $this->markOrderPaid($order, $gateway, $request->input('gateway_transaction_id'));
+
+            return $request->expectsJson()
+                ? response()->json(['redirect' => $redirect->getTargetUrl()])
+                : $redirect;
         }
 
         $this->updateLatestTransaction($order, [
             'status' => 'failed',
             'notes' => 'Gateway confirmation failed',
         ]);
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'Payment could not be confirmed. Please try again.',
+            ], 422);
+        }
 
         return redirect()->route('shop.checkout.processing', ['order_number' => $order->order_number])
             ->with('error', 'Payment could not be confirmed. Please try again.');

@@ -47,9 +47,17 @@ final class PaymentInitiationResult
     /**
      * @param  array<string, mixed>  $viewData
      */
-    public static function view(array $viewData = [], ?string $notes = null): self
-    {
-        return new self(type: self::TYPE_VIEW, viewData: $viewData, notes: $notes);
+    public static function view(
+        array $viewData = [],
+        ?string $notes = null,
+        ?string $gatewayTransactionId = null,
+    ): self {
+        return new self(
+            type: self::TYPE_VIEW,
+            viewData: $viewData,
+            gatewayTransactionId: $gatewayTransactionId,
+            notes: $notes,
+        );
     }
 
     public static function redirect(string $url, ?string $notes = null): self
