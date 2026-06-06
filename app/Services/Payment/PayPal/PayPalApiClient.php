@@ -66,10 +66,15 @@ class PayPalApiClient
      */
     public function createOrder(Order $order): ?array
     {
+        $api = $this->api();
+        if ($api === null) {
+            return null;
+        }
+
         $amount = $this->formatAmount((float) $order->total_display);
         $currency = strtoupper((string) $order->currency_code);
 
-        $response = $this->api()->post('/v2/checkout/orders', [
+        $response = $api->post('/v2/checkout/orders', [
             'intent' => 'CAPTURE',
             'purchase_units' => [[
                 'reference_id' => $order->order_number,
@@ -111,10 +116,15 @@ class PayPalApiClient
      */
     public function captureOrder(string $paypalOrderId): ?array
     {
+        $token = $this->accessToken();
+        if ($token === null) {
+            return null;
+        }
+
         // PayPal requires a JSON object body, not `[]` (Laravel encodes [] as an array).
         $response = Http::baseUrl($this->apiBaseUrl())
             ->acceptJson()
-            ->withToken($this->accessToken())
+            ->withToken($token)
             ->withBody('{}', 'application/json')
             ->post('/v2/checkout/orders/'.$paypalOrderId.'/capture');
 
@@ -144,7 +154,12 @@ class PayPalApiClient
      */
     public function getOrderSummary(string $paypalOrderId): ?array
     {
-        $response = $this->api()->get('/v2/checkout/orders/'.$paypalOrderId);
+        $api = $this->api();
+        if ($api === null) {
+            return null;
+        }
+
+        $response = $api->get('/v2/checkout/orders/'.$paypalOrderId);
 
         if (! $response->successful()) {
             return null;
@@ -184,7 +199,12 @@ class PayPalApiClient
      */
     public function getPayerDetails(string $paypalOrderId): ?array
     {
-        $response = $this->api()->get('/v2/checkout/orders/'.$paypalOrderId);
+        $api = $this->api();
+        if ($api === null) {
+            return null;
+        }
+
+        $response = $api->get('/v2/checkout/orders/'.$paypalOrderId);
         if (! $response->successful()) {
             return null;
         }
@@ -300,12 +320,17 @@ class PayPalApiClient
         return ['capture_id' => $id, 'status' => $status];
     }
 
-    private function api(): \Illuminate\Http\Client\PendingRequest
+    private function api(): ?\Illuminate\Http\Client\PendingRequest
     {
+        $token = $this->accessToken();
+        if ($token === null) {
+            return null;
+        }
+
         return Http::baseUrl($this->apiBaseUrl())
             ->acceptJson()
             ->asJson()
-            ->withToken($this->accessToken());
+            ->withToken($token);
     }
 
     private function apiBaseUrl(): string
@@ -315,7 +340,7 @@ class PayPalApiClient
             : 'https://api-m.paypal.com';
     }
 
-    private function accessToken(): string
+    private function accessToken(): ?string
     {
         if ($this->accessToken !== null) {
             return $this->accessToken;
@@ -329,13 +354,15 @@ class PayPalApiClient
         if (! $response->successful()) {
             Log::error('PayPal OAuth failed', ['status' => $response->status()]);
 
-            throw new \RuntimeException('PayPal authentication failed.');
+            return null;
         }
 
         $this->accessToken = (string) ($response->json('access_token') ?? '');
 
         if ($this->accessToken === '') {
-            throw new \RuntimeException('PayPal access token missing.');
+            Log::error('PayPal access token missing');
+
+            return null;
         }
 
         return $this->accessToken;

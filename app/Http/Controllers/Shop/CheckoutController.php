@@ -29,6 +29,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
 
 /**
@@ -47,6 +48,8 @@ class CheckoutController extends Controller
     private const SESSION_PENDING_ORDER_KEY = 'checkout.pending_order';
 
     private const ERR_EMPTY_CART = 'Your cart is empty.';
+
+    private const ERR_GATEWAY_UNAVAILABLE = 'Payment gateway is temporarily unavailable. Please try again or choose another payment method.';
 
     public function __construct(
         private PaymentMethodRegistry $registry,
@@ -255,7 +258,25 @@ class CheckoutController extends Controller
             return $order;
         });
 
-        $result = $gateway->initiate($order, $request);
+        try {
+            $result = $gateway->initiate($order, $request);
+        } catch (\Throwable $e) {
+            Log::error('Express PayPal initiation failed', [
+                'order_number' => $order->order_number,
+                'message' => $e->getMessage(),
+            ]);
+            $this->rollbackFailedCheckout($order, $voucher instanceof Voucher ? $voucher : null);
+
+            return response()->json(['message' => self::ERR_GATEWAY_UNAVAILABLE], 422);
+        }
+
+        if (! $this->isInitiationSuccessful($result)) {
+            $message = (string) ($result->viewData['error'] ?? self::ERR_GATEWAY_UNAVAILABLE);
+            $this->rollbackFailedCheckout($order, $voucher instanceof Voucher ? $voucher : null);
+
+            return response()->json(['message' => $message], 422);
+        }
+
         $this->updateLatestTransaction($order, [
             'gateway_transaction_id' => $result->gatewayTransactionId,
             'notes' => $result->notes,
@@ -263,6 +284,8 @@ class CheckoutController extends Controller
 
         $paypalOrderId = $result->viewData['paypalOrderId'] ?? '';
         if ($paypalOrderId === '') {
+            $this->rollbackFailedCheckout($order, $voucher instanceof Voucher ? $voucher : null);
+
             return response()->json([
                 'message' => $result->viewData['error'] ?? 'Could not start PayPal checkout.',
             ], 422);
@@ -428,7 +451,30 @@ class CheckoutController extends Controller
             MarketingSubscribers::subscribe((string) $validated['customer_email']);
         }
 
-        $result = $gateway->initiate($order, $request);
+        try {
+            $result = $gateway->initiate($order, $request);
+        } catch (\Throwable $e) {
+            Log::error('Payment gateway initiation failed', [
+                'order_number' => $order->order_number,
+                'gateway' => $gateway->code(),
+                'message' => $e->getMessage(),
+            ]);
+            $this->rollbackFailedCheckout($order, $voucher instanceof Voucher ? $voucher : null);
+
+            return redirect()->route('shop.checkout')
+                ->withInput()
+                ->with('error', self::ERR_GATEWAY_UNAVAILABLE);
+        }
+
+        if (! $this->isInitiationSuccessful($result)) {
+            $message = (string) ($result->viewData['error'] ?? self::ERR_GATEWAY_UNAVAILABLE);
+            $this->rollbackFailedCheckout($order, $voucher instanceof Voucher ? $voucher : null);
+
+            return redirect()->route('shop.checkout')
+                ->withInput()
+                ->with('error', $message);
+        }
+
         $this->updateLatestTransaction($order, [
             'gateway_transaction_id' => $result->gatewayTransactionId,
             'notes' => $result->notes,
@@ -462,7 +508,29 @@ class CheckoutController extends Controller
             return redirect()->route('shop.order.show', ['order_number' => $order->order_number]);
         }
 
-        $initiation = $gateway->initiate($order, $request);
+        try {
+            $initiation = $gateway->initiate($order, $request);
+        } catch (\Throwable $e) {
+            Log::error('Payment gateway initiation failed on processing page', [
+                'order_number' => $order->order_number,
+                'gateway' => $gateway->code(),
+                'message' => $e->getMessage(),
+            ]);
+            $voucher = $this->voucherForOrder($order);
+            $this->rollbackFailedCheckout($order, $voucher);
+
+            return redirect()->route('shop.checkout')
+                ->with('error', self::ERR_GATEWAY_UNAVAILABLE);
+        }
+
+        if (! $this->isInitiationSuccessful($initiation)) {
+            $message = (string) ($initiation->viewData['error'] ?? self::ERR_GATEWAY_UNAVAILABLE);
+            $voucher = $this->voucherForOrder($order);
+            $this->rollbackFailedCheckout($order, $voucher);
+
+            return redirect()->route('shop.checkout')
+                ->with('error', $message);
+        }
 
         $order->load(['items.product']);
         $lines = [];
@@ -955,5 +1023,62 @@ class CheckoutController extends Controller
                 }
             }
         }
+    }
+
+    private function isInitiationSuccessful(PaymentInitiationResult $result): bool
+    {
+        if (isset($result->viewData['error']) && $result->viewData['error'] !== '') {
+            return false;
+        }
+
+        if (($result->viewData['configured'] ?? true) === false) {
+            return false;
+        }
+
+        return match ($result->type) {
+            PaymentInitiationResult::TYPE_REDIRECT => filled($result->redirectUrl),
+            PaymentInitiationResult::TYPE_COMPLETED => true,
+            PaymentInitiationResult::TYPE_VIEW => true,
+            default => false,
+        };
+    }
+
+    private function rollbackFailedCheckout(Order $order, ?Voucher $voucher = null): void
+    {
+        if ($order->status !== 'pending') {
+            return;
+        }
+
+        DB::transaction(function () use ($order, $voucher): void {
+            $this->restoreOrderStock($order);
+            $order->status = 'cancelled';
+            $order->save();
+
+            $this->updateLatestTransaction($order, [
+                'status' => 'cancelled',
+                'notes' => 'Payment gateway failed — rolled back',
+            ]);
+
+            if ($voucher instanceof Voucher && $voucher->order_id === $order->id) {
+                $this->vouchers->release($voucher);
+            }
+        });
+
+        if (session(self::SESSION_PENDING_ORDER_KEY) === $order->order_number) {
+            session()->forget(self::SESSION_PENDING_ORDER_KEY);
+        }
+        session()->forget(self::SESSION_LAST_ORDER_KEY);
+    }
+
+    private function voucherForOrder(Order $order): ?Voucher
+    {
+        if ($order->voucher_code === null || $order->voucher_code === '') {
+            return null;
+        }
+
+        return Voucher::query()
+            ->where('code', $order->voucher_code)
+            ->where('order_id', $order->id)
+            ->first();
     }
 }

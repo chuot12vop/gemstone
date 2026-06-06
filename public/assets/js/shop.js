@@ -1107,16 +1107,26 @@ function initCheckoutExpress() {
       const buttonOptions = Object.assign({}, options, {
         style: style,
         createOrder: function () {
-          return postInit().then(function (data) {
-            lastInit = data;
-            return data.paypal_order_id;
-          });
+          return postInit()
+            .then(function (data) {
+              lastInit = data;
+              return data.paypal_order_id;
+            })
+            .catch(function (err) {
+              showToast(err && err.message ? err.message : 'Could not start express checkout.');
+              throw err;
+            });
         },
         onApprove: function (data) {
           if (!lastInit || !lastInit.confirm_url) {
-            return Promise.reject(new Error('Checkout session expired. Please try again.'));
+            const expiredMsg = 'Checkout session expired. Please try again.';
+            showToast(expiredMsg);
+            return Promise.reject(new Error(expiredMsg));
           }
-          return postConfirm(lastInit.confirm_url, { paypal_order_id: data.orderID });
+          return postConfirm(lastInit.confirm_url, { paypal_order_id: data.orderID }).catch(function (err) {
+            showToast(err && err.message ? err.message : 'Payment could not be confirmed.');
+            throw err;
+          });
         },
         onError: function (err) {
           console.error('PayPal express error', err);
@@ -2308,6 +2318,78 @@ function initProductQtyStepper() {
   });
 }
 
+function getToastStack() {
+  let stack = document.querySelector('[data-toast-stack]');
+  if (!stack) {
+    stack = document.createElement('div');
+    stack.className = 'toast-stack';
+    stack.setAttribute('data-toast-stack', '');
+    stack.setAttribute('aria-live', 'polite');
+    document.body.appendChild(stack);
+  }
+  return stack;
+}
+
+function dismissToast(toast) {
+  if (!toast || toast.dataset.dismissed === 'true') {
+    return;
+  }
+  toast.dataset.dismissed = 'true';
+  toast.classList.remove('is-visible');
+  toast.classList.add('is-leaving');
+  window.setTimeout(function () {
+    const stack = toast.parentElement;
+    toast.remove();
+    if (stack && stack.matches('[data-toast-stack]') && !stack.querySelector('[data-toast]')) {
+      stack.remove();
+    }
+  }, 350);
+}
+
+function showToast(message, type) {
+  const toastType = type === 'success' ? 'success' : 'error';
+  const stack = getToastStack();
+  const existing = stack.querySelectorAll('[data-toast]').length;
+  const toast = document.createElement('div');
+  toast.className = 'toast toast--' + toastType;
+  toast.setAttribute('data-toast', '');
+  toast.setAttribute('role', toastType === 'error' ? 'alert' : 'status');
+
+  const icon = document.createElement('span');
+  icon.className = 'toast__icon';
+  icon.setAttribute('aria-hidden', 'true');
+  icon.innerHTML = toastType === 'success'
+    ? '<svg viewBox="0 0 24 24" focusable="false"><path d="M20 6 9 17l-5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+    : '<svg viewBox="0 0 24 24" focusable="false"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 8v5M12 16h.01" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
+
+  const text = document.createElement('p');
+  text.className = 'toast__message';
+  text.textContent = message;
+
+  const closeBtn = document.createElement('button');
+  closeBtn.type = 'button';
+  closeBtn.className = 'toast__close';
+  closeBtn.setAttribute('data-toast-close', '');
+  closeBtn.setAttribute('aria-label', 'Dismiss notification');
+  closeBtn.innerHTML = '<svg viewBox="0 0 24 24" focusable="false" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
+  closeBtn.addEventListener('click', function () {
+    dismissToast(toast);
+  });
+
+  toast.appendChild(icon);
+  toast.appendChild(text);
+  toast.appendChild(closeBtn);
+  stack.appendChild(toast);
+
+  window.setTimeout(function () {
+    toast.classList.add('is-visible');
+  }, 80 + existing * 120);
+
+  window.setTimeout(function () {
+    dismissToast(toast);
+  }, 5200 + existing * 120);
+}
+
 function initFlashToasts() {
   const stack = document.querySelector('[data-toast-stack]');
   if (!stack) {
@@ -2318,21 +2400,6 @@ function initFlashToasts() {
   if (!toasts.length) {
     return;
   }
-
-  const dismissToast = (toast) => {
-    if (toast.dataset.dismissed === 'true') {
-      return;
-    }
-    toast.dataset.dismissed = 'true';
-    toast.classList.remove('is-visible');
-    toast.classList.add('is-leaving');
-    window.setTimeout(function () {
-      toast.remove();
-      if (!stack.querySelector('[data-toast]')) {
-        stack.remove();
-      }
-    }, 350);
-  };
 
   toasts.forEach(function (toast, index) {
     window.setTimeout(function () {

@@ -60,6 +60,13 @@ class VoucherService
         $voucher->save();
     }
 
+    public function release(Voucher $voucher): void
+    {
+        $voucher->used_at = null;
+        $voucher->order_id = null;
+        $voucher->save();
+    }
+
     private function generateUniqueCode(): string
     {
         do {
