@@ -35,7 +35,7 @@
 @endphp
 
 @section('content')
-<article class="product-detail product-detail--missoma" itemscope itemtype="https://schema.org/Product" data-product-detail>
+<article class="product-detail product-detail--missoma" itemscope itemtype="https://schema.org/Product" data-product-detail data-product-id="{{ $product->id }}">
     <div class="product-detail__grid">
         <div class="product-detail__media">
             <div class="pd-gallery" data-pd-gallery>
@@ -77,9 +77,13 @@
                 </a>
             @endif
 
-            @if($product->short_description)
+            @if($product->description)
                 <div class="product-detail__description" data-pd-description>
-                    <p class="lede product-detail__description-body is-collapsed" data-pd-description-body>{{ $product->short_description }}</p>
+                    <div class="prose product-detail__description-body is-collapsed"
+                         data-pd-description-body
+                         itemprop="description">
+                        {!! $product->description !!}
+                    </div>
                     <button type="button"
                             class="product-detail__read-more"
                             data-pd-description-toggle
@@ -155,7 +159,8 @@
                     <button type="button" class="pd-qty-stepper__btn" data-pd-qty-inc aria-label="Increase quantity">+</button>
                 </div>
                 <button class="btn btn--primary"
-                        type="submit"
+                        type="button"
+                        data-pc-drawer-open
                         data-pd-submit
                         data-label-default="Add to Bag"
                         {{ $displayStock < 1 ? 'disabled' : '' }}>
@@ -174,18 +179,6 @@
             <p class="sr-only" data-pd-stock aria-live="polite">{{ $displayStock }} in stock</p>
 
             <div class="pd-accordion" data-pd-accordion>
-                @if($product->description)
-                    <article class="pd-accordion__item">
-                        <button type="button" class="pd-accordion__btn" data-pd-acc-btn aria-expanded="false">
-                            <span>Description</span>
-                            <span class="pd-accordion__icon" aria-hidden="true"></span>
-                        </button>
-                        <div class="pd-accordion__panel" data-pd-acc-panel hidden itemprop="description">
-                            <div class="prose">{!! $product->description !!}</div>
-                        </div>
-                    </article>
-                @endif
-
                 @if($product->productAttributes->isNotEmpty())
                     <article class="pd-accordion__item">
                         <button type="button" class="pd-accordion__btn" data-pd-acc-btn aria-expanded="false">
@@ -259,7 +252,8 @@
                 <button type="button" class="pd-qty-stepper__btn" data-pd-cta-qty-inc aria-label="Increase quantity">+</button>
             </div>
             <button class="btn btn--primary product-cta-bar__btn"
-                    type="submit"
+                    type="button"
+                    data-pc-drawer-open
                     data-pd-submit
                     data-label-default="Add to Bag"
                     {{ $displayStock < 1 ? 'disabled' : '' }}>
@@ -268,4 +262,6 @@
         </form>
     </div>
 </div>
+
+@include('shop.partials.product-card-drawer', ['product' => $product, 'currency' => $currency])
 @endsection

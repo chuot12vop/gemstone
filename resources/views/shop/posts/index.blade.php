@@ -17,7 +17,7 @@
 
     @if($posts->hasPages())
         <nav class="pagination-wrap" aria-label="Articles pagination">
-            {{ $posts->links() }}
+            {{ $posts->links('shop.partials.pagination') }}
         </nav>
     @endif
 @endif

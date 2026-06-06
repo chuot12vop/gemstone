@@ -15,12 +15,10 @@
                 @if($productUrl)
                     <a class="checkout-aside__thumb" href="{{ $productUrl }}">
                         <img src="{{ $image ?: asset('assets/img/placeholder.svg') }}" alt="" width="64" height="64" loading="lazy">
-                        <span class="checkout-aside__qty-badge" aria-hidden="true">{{ $row['quantity'] }}</span>
                     </a>
                 @else
                     <span class="checkout-aside__thumb">
                         <img src="{{ $image ?: asset('assets/img/placeholder.svg') }}" alt="" width="64" height="64" loading="lazy">
-                        <span class="checkout-aside__qty-badge" aria-hidden="true">{{ $row['quantity'] }}</span>
                     </span>
                 @endif
                 <div class="checkout-aside__body">

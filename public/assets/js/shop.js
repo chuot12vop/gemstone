@@ -2210,6 +2210,9 @@ function initProductDescriptionToggle() {
   }
 
   measure();
+  if (document.fonts && typeof document.fonts.ready !== 'undefined') {
+    document.fonts.ready.then(measure);
+  }
   window.addEventListener('resize', measure);
 
   toggle.addEventListener('click', function () {
@@ -2857,6 +2860,63 @@ function initProductCardDrawers() {
     await fetchBag(drawer);
   };
 
+  const syncDrawerFromProductDetail = (drawer) => {
+    const detail = document.querySelector('[data-product-detail]');
+    if (!detail) return;
+
+    const variantInput = detail.querySelector('[data-pd-variant-id]');
+    if (!variantInput) return;
+
+    const variantId = parseInt(variantInput.value || '0', 10);
+    if (variantId < 1) return;
+
+    const root = drawer.querySelector('[data-pc-drawer-variants]');
+    const addBtn = drawer.querySelector('[data-pc-drawer-add-btn]');
+    if (!addBtn) return;
+
+    if (!root) {
+      addBtn.dataset.variantId = String(variantId);
+      return;
+    }
+
+    let variants = [];
+    try {
+      variants = JSON.parse(root.dataset.variants || '[]');
+    } catch (e) {
+      return;
+    }
+
+    const variant = variants.find(function (v) { return v.id === variantId; });
+    if (!variant) return;
+
+    if (variant.color) {
+      root.querySelectorAll('[data-pc-color]').forEach(function (btn) {
+        if ((btn.dataset.pcColor || '') === (variant.color || '')) {
+          btn.click();
+        }
+      });
+    }
+
+    if (variant.size) {
+      root.querySelectorAll('[data-pc-size]').forEach(function (btn) {
+        if ((btn.dataset.pcSize || '') === (variant.size || '')) {
+          btn.click();
+        }
+      });
+    }
+
+    if (!variant.color && !variant.size) {
+      addBtn.dataset.variantId = String(variantId);
+      addBtn.disabled = variant.stock < 1;
+      const priceEl = drawer.querySelector('[data-pc-drawer-price]');
+      const thumbEl = drawer.querySelector('[data-pc-drawer-thumb]');
+      if (priceEl && variant.price_usd) priceEl.textContent = formatUsd(variant.price_usd);
+      if (thumbEl instanceof HTMLImageElement && variant.image) {
+        thumbEl.src = variant.image;
+      }
+    }
+  };
+
   const initDrawerVariants = (drawer) => {
     const root = drawer.querySelector('[data-pc-drawer-variants]');
     const addBtn = drawer.querySelector('[data-pc-drawer-add-btn]');
@@ -2971,11 +3031,15 @@ function initProductCardDrawers() {
       event.preventDefault();
       event.stopPropagation();
       const card = btn.closest('[data-product-card]');
-      const productId = card?.dataset.productId;
+      const detailRoot = btn.closest('[data-product-detail]') || document.querySelector('[data-product-detail]');
+      const productId = card?.dataset.productId || detailRoot?.dataset.productId;
       const drawer = productId
         ? document.querySelector('[data-pc-drawer][data-product-id="' + productId + '"]')
         : card?.querySelector('[data-pc-drawer]');
-      if (drawer) openDrawerEl(drawer);
+      if (drawer) {
+        if (detailRoot) syncDrawerFromProductDetail(drawer);
+        openDrawerEl(drawer);
+      }
     });
   });
 

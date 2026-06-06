@@ -59,7 +59,7 @@
     </div>
     @if($orders->hasPages())
         <nav class="pagination-wrap" aria-label="Order history pagination">
-            {{ $orders->links() }}
+            {{ $orders->links('shop.partials.pagination') }}
         </nav>
     @endif
 @endif
