@@ -1,0 +1,148 @@
+.file-upload {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.file-upload__label {
+  font-weight: 600;
+  font-size: 0.92rem;
+}
+
+.file-upload__hint {
+  color: var(--muted, #5c6470);
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.file-upload__dropzone {
+  padding: 18px;
+  border: 2px dashed var(--file-upload-border, #c8d1dc);
+  border-radius: 10px;
+  background: var(--file-upload-bg, #f8fafc);
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.file-upload--compact .file-upload__dropzone {
+  padding: 10px 12px;
+  border-radius: 8px;
+}
+
+.file-upload__dropzone:hover,
+.file-upload__dropzone:focus-visible {
+  border-color: var(--file-upload-active, #1f6feb);
+  outline: none;
+}
+
+.file-upload__dropzone.is-dragover {
+  border-color: var(--file-upload-active, #1f6feb);
+  background: var(--file-upload-drag-bg, #eef4ff);
+}
+
+.file-upload__dropzone.is-invalid {
+  border-color: #b33a3a;
+}
+
+.file-upload__drop-title {
+  display: block;
+  font-size: 0.95rem;
+}
+
+.file-upload--compact .file-upload__drop-title {
+  font-size: 0.85rem;
+}
+
+.file-upload__drop-hint {
+  display: block;
+  margin-top: 0.2rem;
+  color: var(--muted, #5c6470);
+  font-size: 0.82rem;
+}
+
+.file-upload__preview {
+  margin-top: 0.15rem;
+}
+
+.file-upload__preview--grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.file-upload__preview-img {
+  display: block;
+  border: 1px solid var(--border, #d7dbe2);
+  border-radius: 8px;
+  background: #fff;
+  max-width: 100%;
+}
+
+.file-upload__preview-img--compact {
+  margin-top: 0.35rem;
+  border-radius: 6px;
+}
+
+.file-upload__item {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.file-upload__item img {
+  display: block;
+  border: 1px solid var(--border, #d7dbe2);
+  border-radius: 8px;
+  background: #fff;
+  object-fit: cover;
+}
+
+.file-upload__item img.is-contain {
+  object-fit: contain;
+  padding: 4px;
+}
+
+.file-upload__remove {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 22px;
+  height: 22px;
+  border: none;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.65);
+  color: #fff;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.file-upload__remove:hover {
+  background: rgba(0, 0, 0, 0.85);
+}
+
+.file-upload__status {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--muted, #5c6470);
+}
+
+.file-upload__status.is-error {
+  color: #b33a3a;
+}
+
+.file-upload__input {
+  display: none !important;
+}
+
+/* Shop / checkout theme tokens */
+.site .file-upload,
+.checkout-page .file-upload {
+  --file-upload-border: var(--border, #d7dbe2);
+  --file-upload-bg: var(--cream-dark, #f8f6f2);
+  --file-upload-active: var(--gold-deep, #a67c3d);
+  --file-upload-drag-bg: #fff;
+}

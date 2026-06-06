@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Mail\PromoVoucherMail;
 use App\Models\Setting;
 use App\Services\VoucherService;
+use App\Support\PromoCheckoutSession;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -43,6 +44,8 @@ class PromoSignupController extends Controller
                 'message' => 'We could not send your email right now. Please try again shortly.',
             ], 503);
         }
+
+        PromoCheckoutSession::rememberSubscriber($email, $voucher);
 
         return response()->json([
             'ok' => true,

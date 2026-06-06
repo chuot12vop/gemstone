@@ -5,6 +5,9 @@ namespace App\Services\Payment\Gateways;
 use App\Models\Order;
 use App\Services\Payment\Data\PaymentInitiationResult;
 use App\Services\Payment\PayPal\PayPalApiClient;
+use App\Support\CheckoutCountries;
+use App\Support\MarketingSubscribers;
+use App\Support\ShippingAddressFormatter;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
@@ -131,6 +134,107 @@ SVG;
         return true;
     }
 
+    public function syncExpressPayerDetails(Order $order, string $paypalOrderId): bool
+    {
+        if (! $this->isExpressOrder($order)) {
+            return false;
+        }
+
+        $client = $this->apiClient();
+        if ($client === null) {
+            return false;
+        }
+
+        $payer = $client->getPayerDetails($paypalOrderId);
+        if ($payer === null) {
+            Log::warning('PayPal express: payer details missing', [
+                'order_number' => $order->order_number,
+                'paypal_order_id' => $paypalOrderId,
+            ]);
+
+            return false;
+        }
+
+        $givenName = $payer['given_name'];
+        $surname = $payer['surname'];
+        $fullName = trim($givenName.' '.$surname);
+        if ($fullName === '' && ($payer['shipping']['full_name'] ?? '') !== '') {
+            $fullName = (string) $payer['shipping']['full_name'];
+            [$givenName, $surname] = $this->splitFullName($fullName);
+        }
+
+        $phone = $payer['phone'];
+        $shipping = $payer['shipping'];
+        $hasShipping = ($shipping['address_line1'] ?? '') !== '';
+
+        if ($hasShipping) {
+            if ($fullName === '') {
+                $fullName = 'PayPal Customer';
+            }
+            $order->shipping_address = ShippingAddressFormatter::toText([
+                'first_name' => $givenName !== '' ? $givenName : $fullName,
+                'last_name' => $surname,
+                'company' => '',
+                'address_line1' => $shipping['address_line1'],
+                'address_line2' => $shipping['address_line2'],
+                'city' => $shipping['city'],
+                'postcode' => $shipping['postcode'],
+                'country' => $shipping['country'] !== '' ? $shipping['country'] : CheckoutCountries::defaultCode(),
+                'phone' => $phone,
+            ]);
+        } elseif ($phone !== '') {
+            $order->shipping_address = ShippingAddressFormatter::toText([
+                'first_name' => $givenName !== '' ? $givenName : ($fullName !== '' ? $fullName : 'PayPal Customer'),
+                'last_name' => $surname,
+                'company' => '',
+                'address_line1' => 'Express checkout — address to confirm',
+                'address_line2' => '',
+                'city' => '—',
+                'postcode' => '—',
+                'country' => CheckoutCountries::defaultCode(),
+                'phone' => $phone,
+            ]);
+        }
+
+        $order->customer_email = $payer['email'];
+        if ($fullName !== '') {
+            $order->customer_name = $fullName;
+        }
+        if ($phone !== '') {
+            $order->shipping_phone = $phone;
+        }
+        $order->save();
+
+        if ($order->marketing_email_opt_in) {
+            MarketingSubscribers::subscribe($payer['email']);
+        }
+
+        return true;
+    }
+
+    private function isExpressOrder(Order $order): bool
+    {
+        $notes = (string) optional($order->paymentTransactions()->first())->notes;
+
+        return str_contains($notes, 'Express PayPal checkout');
+    }
+
+    /** @return array{0: string, 1: string} */
+    private function splitFullName(string $fullName): array
+    {
+        $fullName = trim($fullName);
+        if ($fullName === '') {
+            return ['', ''];
+        }
+
+        $parts = preg_split('/\s+/', $fullName, 2) ?: [];
+
+        return [
+            (string) ($parts[0] ?? ''),
+            (string) ($parts[1] ?? ''),
+        ];
+    }
+
     private function viewResult(
         PayPalApiClient $client,
         Order $order,
@@ -149,6 +253,11 @@ SVG;
             gatewayTransactionId: $gatewayTransactionId ?? $paypalOrderId,
             notes: $notes ?? 'Awaiting PayPal capture for order '.$paypalOrderId,
         );
+    }
+
+    public function checkoutClient(): ?PayPalApiClient
+    {
+        return $this->apiClient();
     }
 
     private function apiClient(): ?PayPalApiClient

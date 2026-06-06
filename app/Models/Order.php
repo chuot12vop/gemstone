@@ -13,15 +13,18 @@ class Order extends Model
 
     protected $fillable = [
         'user_id', 'order_number', 'customer_email', 'customer_name', 'shipping_address',
-        'shipping_phone', 'marketing_sms_opt_in',
-        'currency_code', 'subtotal_usd', 'voucher_code', 'discount_usd', 'total_display', 'status',
+        'shipping_phone', 'marketing_sms_opt_in', 'marketing_email_opt_in',
+        'currency_code', 'subtotal_usd', 'voucher_code', 'discount_usd', 'shipping_usd', 'tax_usd', 'total_display', 'status',
     ];
 
     protected $casts = [
         'subtotal_usd' => 'float',
         'discount_usd' => 'float',
+        'shipping_usd' => 'float',
+        'tax_usd' => 'float',
         'total_display' => 'float',
         'marketing_sms_opt_in' => 'boolean',
+        'marketing_email_opt_in' => 'boolean',
     ];
 
     /** @return BelongsTo<User, Order> */

@@ -8,6 +8,7 @@ use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductImage;
 use App\Models\ProductVariant;
+use App\Models\ProductVariantHoverImage;
 use App\Services\PublicImageStore;
 use App\Support\ProductVariantOptions;
 use Illuminate\Http\Request;
@@ -108,7 +109,7 @@ class ProductAdminController extends Controller
 
     public function edit(Product $product)
     {
-        $product->load('productAttributes', 'productImages', 'upsellProducts', 'variants');
+        $product->load('productAttributes', 'productImages', 'upsellProducts', 'variants.hoverImages');
 
         return view('admin.products.form', [
             'title' => 'Edit product',
@@ -203,6 +204,8 @@ class ProductAdminController extends Controller
      */
     private function validated(Request $request): array
     {
+        $this->normalizeVariantInputs($request);
+
         $validated = $request->validate([
             'name' => 'required|string|max:200',
             'slug' => 'nullable|string|max:200',
@@ -232,6 +235,7 @@ class ProductAdminController extends Controller
             'variants' => 'required|array|min:1',
             'variants.*.id' => 'nullable|integer|exists:product_variants,id',
             'variants.*.option_color' => 'nullable|string|max:100',
+            'variants.*.swatch_color' => ['nullable', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             'variants.*.option_size' => 'nullable|string|max:100',
             'variants.*.price_usd' => 'required|numeric|min:0',
             'variants.*.compare_at_price_usd' => 'nullable|numeric|min:0',
@@ -241,6 +245,10 @@ class ProductAdminController extends Controller
             'variants.*.is_active' => 'nullable|boolean',
             'variants.*.image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:6144',
             'variants.*.image_hover' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:6144',
+            'variants.*.hover_images' => 'nullable|array|max:5',
+            'variants.*.hover_images.*' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:6144',
+            'variants.*.remove_hover_image_ids' => 'nullable|array',
+            'variants.*.remove_hover_image_ids.*' => 'integer|exists:product_variant_hover_images,id',
         ]);
 
         $slug = $validated['slug'] ?? '';
@@ -277,6 +285,7 @@ class ProductAdminController extends Controller
                 return [
                     'id' => isset($row['id']) ? (int) $row['id'] : null,
                     'option_color' => trim((string) ($row['option_color'] ?? '')) ?: null,
+                    'swatch_color' => self::normalizeSwatchColor($row['swatch_color'] ?? null),
                     'option_size' => trim((string) ($row['option_size'] ?? '')) ?: null,
                     'price_usd' => (float) ($row['price_usd'] ?? 0),
                     'compare_at_price_usd' => isset($row['compare_at_price_usd']) && $row['compare_at_price_usd'] !== ''
@@ -331,6 +340,7 @@ class ProductAdminController extends Controller
 
             $payload = [
                 'option_color' => $row['option_color'],
+                'swatch_color' => $row['swatch_color'],
                 'option_size' => $row['option_size'],
                 'price_usd' => $row['price_usd'],
                 'compare_at_price_usd' => $row['compare_at_price_usd'],
@@ -364,20 +374,111 @@ class ProductAdminController extends Controller
                 $variant = $product->variants()->create($payload);
                 $keptIds[] = $variant->id;
             }
+
+            $this->syncVariantHoverImages($variant, $request, $index, $row);
         }
 
         $removeIds = array_diff($existingIds, $keptIds);
         if ($removeIds !== []) {
-            $toRemove = ProductVariant::query()->whereIn('id', $removeIds)->get();
+            $toRemove = ProductVariant::query()->whereIn('id', $removeIds)->with('hoverImages')->get();
             foreach ($toRemove as $variant) {
                 $this->images->delete($variant->image);
                 $this->images->delete($variant->image_hover);
+                foreach ($variant->hoverImages as $hoverImage) {
+                    $this->images->delete($hoverImage->path);
+                }
                 $variant->delete();
             }
         }
 
         $product->load('variants');
         ProductVariantOptions::syncProductDenormalized($product, $product->variants);
+    }
+
+    private function normalizeVariantInputs(Request $request): void
+    {
+        $variants = $request->input('variants', []);
+        if (! is_array($variants)) {
+            return;
+        }
+
+        foreach ($variants as $index => $row) {
+            if (! is_array($row)) {
+                continue;
+            }
+
+            if (array_key_exists('swatch_color', $row) && trim((string) $row['swatch_color']) === '') {
+                $variants[$index]['swatch_color'] = null;
+            }
+        }
+
+        $request->merge(['variants' => $variants]);
+    }
+
+    private static function normalizeSwatchColor(mixed $value): ?string
+    {
+        $hex = trim((string) ($value ?? ''));
+
+        return preg_match('/^#[0-9A-Fa-f]{6}$/', $hex) ? strtolower($hex) : null;
+    }
+
+    /**
+     * @param  array<string, mixed>  $row
+     */
+    private function syncVariantHoverImages(ProductVariant $variant, Request $request, int $index, array $row): void
+    {
+        $removeIds = collect($row['remove_hover_image_ids'] ?? [])
+            ->map(static fn ($id) => (int) $id)
+            ->filter()
+            ->all();
+
+        if ($removeIds !== []) {
+            $toRemove = $variant->hoverImages()->whereIn('id', $removeIds)->get();
+            foreach ($toRemove as $hoverImage) {
+                $this->images->delete($hoverImage->path);
+                $hoverImage->delete();
+            }
+        }
+
+        $existingCount = $variant->hoverImages()->count();
+        $uploads = $request->file("variants.{$index}.hover_images") ?? [];
+        if (! is_array($uploads)) {
+            $uploads = [$uploads];
+        }
+
+        $sortOrder = $existingCount;
+        foreach ($uploads as $upload) {
+            if (! $upload instanceof UploadedFile || ! $upload->isValid()) {
+                continue;
+            }
+            if ($sortOrder >= 5) {
+                break;
+            }
+
+            $path = $this->images->store($upload, 'products/variants/hover', asWebp: true);
+            if ($path === null) {
+                continue;
+            }
+
+            ProductVariantHoverImage::query()->create([
+                'product_variant_id' => $variant->id,
+                'path' => $path,
+                'sort_order' => $sortOrder,
+            ]);
+            $sortOrder++;
+        }
+
+        $legacyHover = $request->file("variants.{$index}.image_hover");
+        if ($legacyHover instanceof UploadedFile && $legacyHover->isValid() && $sortOrder < 5) {
+            $path = $this->images->store($legacyHover, 'products/variants/hover', asWebp: true);
+            if ($path !== null) {
+                ProductVariantHoverImage::query()->create([
+                    'product_variant_id' => $variant->id,
+                    'path' => $path,
+                    'sort_order' => $sortOrder,
+                ]);
+            }
+        }
     }
 
     /**

@@ -31,11 +31,12 @@
                     name="phone"
                     inputmode="tel"
                     minlength="9"
+                    required
                     value="{{ old('phone', $user->phone) }}"
                     placeholder="+1 555 000 0000"
                     title="Enter at least 9 digits"
                 >
-                <small class="muted">Minimum 9 digits.</small>
+                <small class="muted">Required. Minimum 9 digits.</small>
             </div>
         </div>
         <div class="account-profile-form__actions">
@@ -44,4 +45,36 @@
         </div>
     </form>
 </section>
+
+@if($user->password || ! $user->google_id)
+<section class="account-card account-profile-card">
+    <h2 class="account-card__title">Change password</h2>
+    <form class="account-profile-form" method="post" action="{{ route('shop.account.profile.password.update') }}">
+        @csrf
+        @if($user->password)
+            <div class="account-profile-form__row">
+                <label class="account-profile-form__label" for="current_password">Current password</label>
+                <div class="account-profile-form__field">
+                    <input id="current_password" type="password" name="current_password" required autocomplete="current-password">
+                </div>
+            </div>
+        @endif
+        <div class="account-profile-form__row">
+            <label class="account-profile-form__label" for="new_password">New password</label>
+            <div class="account-profile-form__field">
+                <input id="new_password" type="password" name="password" required minlength="8" autocomplete="new-password">
+            </div>
+        </div>
+        <div class="account-profile-form__row">
+            <label class="account-profile-form__label" for="new_password_confirmation">Confirm new password</label>
+            <div class="account-profile-form__field">
+                <input id="new_password_confirmation" type="password" name="password_confirmation" required minlength="8" autocomplete="new-password">
+            </div>
+        </div>
+        <div class="account-profile-form__actions">
+            <button class="btn btn--primary" type="submit">Update password</button>
+        </div>
+    </form>
+</section>
+@endif
 @endsection

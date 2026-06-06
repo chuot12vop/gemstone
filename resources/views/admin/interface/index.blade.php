@@ -47,31 +47,35 @@
                     </div>
                     <div class="form-grid" style="margin-top:12px;gap:16px;">
                         <div>
-                            <p style="margin:0 0 6px;font-weight:600;font-size:0.9rem;">Desktop image <span style="color:#b33a3a;">*</span></p>
-                            <p style="margin:0 0 8px;color:#5c6470;font-size:0.85rem;">Wide banner for tablets and desktop (recommended ~1400×788).</p>
-                            <div class="js-slide-dropzone" data-image-role="desktop" style="padding:14px;border:2px dashed #c8d1dc;border-radius:10px;background:#f8fafc;text-align:center;cursor:pointer;">
-                                <strong>Drop desktop image</strong><br>
-                                <small>or click to choose</small>
-                            </div>
-                            <div style="margin-top:10px;">
-                                <img class="js-slide-preview" data-image-role="desktop" src="{{ !empty($slide['image']) ? \App\Support\PublicAssetUrl::to($slide['image']) : asset('assets/img/placeholder.svg') }}" alt="Desktop preview" width="280" height="158" style="object-fit:cover;border:1px solid #d7dbe2;border-radius:8px;background:#fff;">
-                            </div>
-                            <input class="display-none js-slide-file" data-image-role="desktop" type="file" name="slides[{{ $i }}][image]" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp">
+                            @include('partials.file-upload', [
+                                'name' => "slides[{$i}][image]",
+                                'dataName' => 'slide-image-desktop',
+                                'label' => 'Desktop image *',
+                                'hint' => 'Wide banner for tablets and desktop (recommended ~1400×788).',
+                                'dropTitle' => 'Drop desktop image',
+                                'dropHint' => 'or click to choose',
+                                'previewUrl' => !empty($slide['image']) ? \App\Support\PublicAssetUrl::to($slide['image']) : null,
+                                'previewWidth' => 280,
+                                'previewHeight' => 158,
+                                'clearTargets' => '.js-existing-image',
+                            ])
                             @error('slides.'.$i.'.image')
                                 <p style="margin:8px 0 0;color:#b33a3a;">{{ $message }}</p>
                             @enderror
                         </div>
                         <div>
-                            <p style="margin:0 0 6px;font-weight:600;font-size:0.9rem;">Mobile image</p>
-                            <p style="margin:0 0 8px;color:#5c6470;font-size:0.85rem;">Portrait banner for phones (optional; uses desktop image if empty).</p>
-                            <div class="js-slide-dropzone" data-image-role="mobile" style="padding:14px;border:2px dashed #c8d1dc;border-radius:10px;background:#f8fafc;text-align:center;cursor:pointer;">
-                                <strong>Drop mobile image</strong><br>
-                                <small>or click to choose</small>
-                            </div>
-                            <div style="margin-top:10px;">
-                                <img class="js-slide-preview" data-image-role="mobile" src="{{ !empty($slide['image_mobile']) ? \App\Support\PublicAssetUrl::to($slide['image_mobile']) : asset('assets/img/placeholder.svg') }}" alt="Mobile preview" width="280" height="160" style="object-fit:cover;border:1px solid #d7dbe2;border-radius:8px;background:#fff;">
-                            </div>
-                            <input class="display-none js-slide-file" data-image-role="mobile" type="file" name="slides[{{ $i }}][image_mobile]" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp">
+                            @include('partials.file-upload', [
+                                'name' => "slides[{$i}][image_mobile]",
+                                'dataName' => 'slide-image-mobile',
+                                'label' => 'Mobile image',
+                                'hint' => 'Portrait banner for phones (optional; uses desktop image if empty).',
+                                'dropTitle' => 'Drop mobile image',
+                                'dropHint' => 'or click to choose',
+                                'previewUrl' => !empty($slide['image_mobile']) ? \App\Support\PublicAssetUrl::to($slide['image_mobile']) : null,
+                                'previewWidth' => 280,
+                                'previewHeight' => 160,
+                                'clearTargets' => '.js-existing-image-mobile',
+                            ])
                             @error('slides.'.$i.'.image_mobile')
                                 <p style="margin:8px 0 0;color:#b33a3a;">{{ $message }}</p>
                             @enderror
@@ -106,16 +110,17 @@
                         </label>
                     </div>
                     <div style="margin-top:12px;">
-                        <p style="margin:0 0 6px;font-weight:600;font-size:0.9rem;">Background image</p>
-                        <p style="margin:0 0 8px;color:#5c6470;font-size:0.85rem;">Optional decorative background for this section.</p>
-                        <div class="js-section-dropzone" style="padding:14px;border:2px dashed #c8d1dc;border-radius:10px;background:#f8fafc;text-align:center;cursor:pointer;">
-                            <strong>Drop background image</strong><br>
-                            <small>or click to choose</small>
-                        </div>
-                        <div style="margin-top:10px;">
-                            <img class="js-section-preview" src="{{ !empty($style['background_image']) ? \App\Support\PublicAssetUrl::to($style['background_image']) : asset('assets/img/placeholder.svg') }}" alt="{{ $sectionLabels[$sectionKey] ?? $sectionKey }} background preview" width="280" height="120" style="object-fit:cover;border:1px solid #d7dbe2;border-radius:8px;background:#fff;">
-                        </div>
-                        <input class="display-none js-section-file" type="file" name="sections[{{ $sectionKey }}][background_image]" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp">
+                        @include('partials.file-upload', [
+                            'name' => "sections[{$sectionKey}][background_image]",
+                            'label' => 'Background image',
+                            'hint' => 'Optional decorative background for this section.',
+                            'dropTitle' => 'Drop background image',
+                            'dropHint' => 'or click to choose',
+                            'previewUrl' => !empty($style['background_image']) ? \App\Support\PublicAssetUrl::to($style['background_image']) : null,
+                            'previewWidth' => 280,
+                            'previewHeight' => 120,
+                            'clearTargets' => '.js-section-existing-image,.js-section-remove-image',
+                        ])
                         @error('sections.'.$sectionKey.'.background_image')
                             <p style="margin:8px 0 0;color:#b33a3a;">{{ $message }}</p>
                         @enderror
@@ -155,28 +160,28 @@
         </div>
         <div class="form-grid" style="margin-top:12px;gap:16px;">
             <div>
-                <p style="margin:0 0 6px;font-weight:600;font-size:0.9rem;">Desktop image <span style="color:#b33a3a;">*</span></p>
-                <p style="margin:0 0 8px;color:#5c6470;font-size:0.85rem;">Wide banner for tablets and desktop (recommended ~1400×788).</p>
-                <div class="js-slide-dropzone" data-image-role="desktop" style="padding:14px;border:2px dashed #c8d1dc;border-radius:10px;background:#f8fafc;text-align:center;cursor:pointer;">
-                    <strong>Drop desktop image</strong><br>
-                    <small>or click to choose</small>
-                </div>
-                <div style="margin-top:10px;">
-                    <img class="js-slide-preview" data-image-role="desktop" src="{{ asset('assets/img/placeholder.svg') }}" alt="Desktop preview" width="280" height="158" style="object-fit:cover;border:1px solid #d7dbe2;border-radius:8px;background:#fff;">
-                </div>
-                <input class="display-none js-slide-file" data-image-role="desktop" type="file" name="" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp">
+                @include('partials.file-upload', [
+                    'dataName' => 'slide-image-desktop',
+                    'label' => 'Desktop image *',
+                    'hint' => 'Wide banner for tablets and desktop (recommended ~1400×788).',
+                    'dropTitle' => 'Drop desktop image',
+                    'dropHint' => 'or click to choose',
+                    'previewWidth' => 280,
+                    'previewHeight' => 158,
+                    'clearTargets' => '.js-existing-image',
+                ])
             </div>
             <div>
-                <p style="margin:0 0 6px;font-weight:600;font-size:0.9rem;">Mobile image</p>
-                <p style="margin:0 0 8px;color:#5c6470;font-size:0.85rem;">Portrait banner for phones (optional; uses desktop image if empty).</p>
-                <div class="js-slide-dropzone" data-image-role="mobile" style="padding:14px;border:2px dashed #c8d1dc;border-radius:10px;background:#f8fafc;text-align:center;cursor:pointer;">
-                    <strong>Drop mobile image</strong><br>
-                    <small>or click to choose</small>
-                </div>
-                <div style="margin-top:10px;">
-                    <img class="js-slide-preview" data-image-role="mobile" src="{{ asset('assets/img/placeholder.svg') }}" alt="Mobile preview" width="160" height="280" style="object-fit:cover;border:1px solid #d7dbe2;border-radius:8px;background:#fff;">
-                </div>
-                <input class="display-none js-slide-file" data-image-role="mobile" type="file" name="" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp">
+                @include('partials.file-upload', [
+                    'dataName' => 'slide-image-mobile',
+                    'label' => 'Mobile image',
+                    'hint' => 'Portrait banner for phones (optional; uses desktop image if empty).',
+                    'dropTitle' => 'Drop mobile image',
+                    'dropHint' => 'or click to choose',
+                    'previewWidth' => 280,
+                    'previewHeight' => 160,
+                    'clearTargets' => '.js-existing-image-mobile',
+                ])
             </div>
         </div>
         <div class="form-actions" style="margin-top:12px;">
@@ -203,8 +208,8 @@
             const title = row.querySelector('.js-slide-title');
             const content = row.querySelector('.js-slide-content');
             const category = row.querySelector('.js-slide-category');
-            const fileDesktop = row.querySelector('.js-slide-file[data-image-role="desktop"]');
-            const fileMobile = row.querySelector('.js-slide-file[data-image-role="mobile"]');
+            const fileDesktop = row.querySelector('[data-name="slide-image-desktop"]');
+            const fileMobile = row.querySelector('[data-name="slide-image-mobile"]');
             if (existing instanceof HTMLInputElement) existing.setAttribute('name', `slides[${index}][existing_image]`);
             if (existingMobile instanceof HTMLInputElement) existingMobile.setAttribute('name', `slides[${index}][existing_image_mobile]`);
             if (title instanceof HTMLInputElement) title.setAttribute('name', `slides[${index}][title]`);
@@ -220,65 +225,14 @@
         addButton.click();
     };
 
-    const bindImageUpload = (row, role) => {
-        const fileInput = row.querySelector(`.js-slide-file[data-image-role="${role}"]`);
-        const preview = row.querySelector(`.js-slide-preview[data-image-role="${role}"]`);
-        const dropzone = row.querySelector(`.js-slide-dropzone[data-image-role="${role}"]`);
-        const existing = row.querySelector(role === 'desktop' ? '.js-existing-image' : '.js-existing-image-mobile');
-        if (!(fileInput instanceof HTMLInputElement) || !(preview instanceof HTMLImageElement) || !(dropzone instanceof HTMLElement)) return;
-
-        const setFile = (file) => {
-            if (!file || !file.type.startsWith('image/')) return;
-            const dt = new DataTransfer();
-            dt.items.add(file);
-            fileInput.files = dt.files;
-            if (existing instanceof HTMLInputElement) existing.value = '';
-            const url = URL.createObjectURL(file);
-            preview.src = url;
-            preview.addEventListener('load', () => URL.revokeObjectURL(url), { once: true });
-        };
-
-        fileInput.addEventListener('change', () => {
-            const file = fileInput.files && fileInput.files[0] ? fileInput.files[0] : null;
-            if (file) setFile(file);
-        });
-
-        const preventDefaults = (event) => {
-            event.preventDefault();
-            event.stopPropagation();
-        };
-        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach((eventName) => {
-            dropzone.addEventListener(eventName, preventDefaults);
-        });
-        ['dragenter', 'dragover'].forEach((eventName) => {
-            dropzone.addEventListener(eventName, () => { dropzone.style.borderColor = '#1f6feb'; });
-        });
-        ['dragleave', 'drop'].forEach((eventName) => {
-            dropzone.addEventListener(eventName, () => { dropzone.style.borderColor = '#c8d1dc'; });
-        });
-        dropzone.addEventListener('drop', (event) => {
-            const files = event.dataTransfer ? Array.from(event.dataTransfer.files).filter((f) => f.type.startsWith('image/')) : [];
-            if (files.length === 0) return;
-            setFile(files[0]);
-        });
-        dropzone.addEventListener('click', () => fileInput.click());
-    };
-
-    const bindRow = (row) => {
-        bindImageUpload(row, 'desktop');
-        bindImageUpload(row, 'mobile');
-    };
-
     addButton.addEventListener('click', () => {
         const fragment = template.content.cloneNode(true);
         const row = fragment.querySelector('.js-slide-row');
         if (!row) return;
         list.appendChild(row);
-        bindRow(row);
         updateSlideNames();
+        document.dispatchEvent(new CustomEvent('file-upload:init', { detail: { root: row } }));
     });
-
-    list.querySelectorAll('.js-slide-row').forEach((row) => bindRow(row));
 
     list.addEventListener('click', (event) => {
         const target = event.target;
@@ -302,62 +256,21 @@
 (() => {
     const placeholderSrc = @json(asset('assets/img/placeholder.svg'));
 
-    const bindSectionRow = (row) => {
-        const fileInput = row.querySelector('.js-section-file');
-        const preview = row.querySelector('.js-section-preview');
-        const dropzone = row.querySelector('.js-section-dropzone');
-        const existing = row.querySelector('.js-section-existing-image');
+    document.querySelectorAll('.js-section-style-row').forEach((row) => {
         const removeCheckbox = row.querySelector('.js-section-remove-image');
-        if (!(fileInput instanceof HTMLInputElement) || !(preview instanceof HTMLImageElement) || !(dropzone instanceof HTMLElement)) return;
+        if (!(removeCheckbox instanceof HTMLInputElement)) return;
 
-        const setFile = (file) => {
-            if (!file || !file.type.startsWith('image/')) return;
-            const dt = new DataTransfer();
-            dt.items.add(file);
-            fileInput.files = dt.files;
+        removeCheckbox.addEventListener('change', () => {
+            if (!removeCheckbox.checked) return;
+            const upload = row.querySelector('[data-file-upload]');
+            const fileInput = upload?.querySelector('[data-file-upload-input]');
+            const previewImg = upload?.querySelector('[data-file-upload-preview-img]');
+            const existing = row.querySelector('.js-section-existing-image');
+            if (fileInput instanceof HTMLInputElement) fileInput.value = '';
             if (existing instanceof HTMLInputElement) existing.value = '';
-            if (removeCheckbox instanceof HTMLInputElement) removeCheckbox.checked = false;
-            const url = URL.createObjectURL(file);
-            preview.src = url;
-            preview.addEventListener('load', () => URL.revokeObjectURL(url), { once: true });
-        };
-
-        fileInput.addEventListener('change', () => {
-            const file = fileInput.files && fileInput.files[0] ? fileInput.files[0] : null;
-            if (file) setFile(file);
+            if (previewImg instanceof HTMLImageElement) previewImg.src = placeholderSrc;
         });
-
-        const preventDefaults = (event) => {
-            event.preventDefault();
-            event.stopPropagation();
-        };
-        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach((eventName) => {
-            dropzone.addEventListener(eventName, preventDefaults);
-        });
-        ['dragenter', 'dragover'].forEach((eventName) => {
-            dropzone.addEventListener(eventName, () => { dropzone.style.borderColor = '#1f6feb'; });
-        });
-        ['dragleave', 'drop'].forEach((eventName) => {
-            dropzone.addEventListener(eventName, () => { dropzone.style.borderColor = '#c8d1dc'; });
-        });
-        dropzone.addEventListener('drop', (event) => {
-            const files = event.dataTransfer ? Array.from(event.dataTransfer.files).filter((f) => f.type.startsWith('image/')) : [];
-            if (files.length === 0) return;
-            setFile(files[0]);
-        });
-        dropzone.addEventListener('click', () => fileInput.click());
-
-        if (removeCheckbox instanceof HTMLInputElement) {
-            removeCheckbox.addEventListener('change', () => {
-                if (!removeCheckbox.checked) return;
-                fileInput.value = '';
-                if (existing instanceof HTMLInputElement) existing.value = '';
-                preview.src = placeholderSrc;
-            });
-        }
-    };
-
-    document.querySelectorAll('.js-section-style-row').forEach((row) => bindSectionRow(row));
+    });
 })();
 </script>
 @endsection

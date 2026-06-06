@@ -68,6 +68,7 @@
             $variantRows = $product->variants->map(fn ($v) => [
                 'id' => $v->id,
                 'option_color' => $v->option_color,
+                'swatch_color' => $v->swatch_color,
                 'option_size' => $v->option_size,
                 'price_usd' => (string) $v->price_usd,
                 'compare_at_price_usd' => $v->compare_at_price_usd !== null ? (string) $v->compare_at_price_usd : '',
@@ -77,6 +78,7 @@
                 'is_active' => $v->is_active,
                 'image' => $v->image,
                 'image_hover' => $v->image_hover,
+                'hover_images' => $v->hoverImages->map(fn ($img) => ['id' => $img->id, 'path' => $img->path])->all(),
             ])->all();
         }
         if (! is_array($variantRows) || count($variantRows) === 0) {
@@ -103,7 +105,13 @@
                     @endif
                     <label>
                         Color
-                        <input type="text" name="variants[{{ $i }}][option_color]" value="{{ $row['option_color'] ?? '' }}" placeholder="Gold">
+                        @include('admin.partials.color-picker', [
+                            'nameColor' => "variants[{$i}][option_color]",
+                            'nameSwatch' => "variants[{$i}][swatch_color]",
+                            'valueColor' => $row['option_color'] ?? '',
+                            'valueSwatch' => $row['swatch_color'] ?? '',
+                        ])
+                        <small>Color name and swatch shown on storefront.</small>
                     </label>
                     <label>
                         Size
@@ -125,20 +133,41 @@
                         SKU
                         <input type="text" name="variants[{{ $i }}][sku]" value="{{ $row['sku'] ?? '' }}">
                     </label>
-                    <label>
-                        Front image
-                        <input type="file" name="variants[{{ $i }}][image]" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp">
-                        @if(!empty($row['image']))
-                            <img src="{{ $row['image'] }}" alt="" width="60" height="60" style="object-fit:cover;margin-top:6px;border-radius:6px;">
+                    @include('partials.file-upload', [
+                        'name' => "variants[{$i}][image]",
+                        'label' => 'Front image',
+                        'variant' => 'compact',
+                        'previewUrl' => $row['image'] ?? null,
+                    ])
+                    <div>
+                        @include('partials.file-upload', [
+                            'name' => "variants[{$i}][hover_images][]",
+                            'label' => 'Hover images (3–5)',
+                            'hint' => 'Upload up to 5 hover/gallery images for this variant.',
+                            'variant' => 'compact',
+                            'multiple' => true,
+                            'maxFiles' => 5,
+                        ])
+                        @if(!empty($row['hover_images']) && is_array($row['hover_images']))
+                            <div style="display:flex;flex-wrap:wrap;gap:0.5rem;margin-top:0.5rem;">
+                                @foreach($row['hover_images'] as $hoverImage)
+                                    <label style="display:flex;flex-direction:column;align-items:center;gap:0.25rem;font-size:0.75rem;">
+                                        <img src="{{ $hoverImage['path'] ?? '' }}" alt="" width="60" height="60" style="object-fit:cover;border-radius:6px;">
+                                        <span>
+                                            <input type="checkbox" name="variants[{{ $i }}][remove_hover_image_ids][]" value="{{ $hoverImage['id'] ?? '' }}">
+                                            Remove
+                                        </span>
+                                    </label>
+                                @endforeach
+                            </div>
                         @endif
-                    </label>
-                    <label>
-                        Hover image
-                        <input type="file" name="variants[{{ $i }}][image_hover]" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp">
-                        @if(!empty($row['image_hover']))
-                            <img src="{{ $row['image_hover'] }}" alt="" width="60" height="60" style="object-fit:cover;margin-top:6px;border-radius:6px;">
-                        @endif
-                    </label>
+                    </div>
+                    @include('partials.file-upload', [
+                        'name' => "variants[{$i}][image_hover]",
+                        'label' => 'Legacy hover image',
+                        'variant' => 'compact',
+                        'previewUrl' => $row['image_hover'] ?? null,
+                    ])
                     <label class="checkbox">
                         <input type="checkbox" name="variants[{{ $i }}][is_default]" value="1" @checked(!empty($row['is_default']))>
                         Default variant
@@ -160,26 +189,22 @@
 
     <fieldset class="form-fieldset">
         <legend>Thumbnail upload</legend>
-        <div id="thumbnail-dropzone" style="margin-top:10px;padding:18px;border:2px dashed #c8d1dc;border-radius:10px;background:#f8fafc;text-align:center;cursor:pointer;">
-            <strong>Drop thumbnail here</strong><br>
-            <small>or click to choose 1 image</small>
-        </div>
-        <div style="margin-top:10px;">
-            <img id="thumbnail-preview" src="{{ $product->thumbnail ?? ($product->image ?? asset('assets/img/placeholder.svg')) }}" alt="Thumbnail preview" width="200" height="200" style="object-fit:cover;border:1px solid #d7dbe2;border-radius:8px;background:#fff;">
-        </div>
-        <input id="thumbnail-input" class="display-none" type="file" name="thumbnail" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp">
+        @include('partials.file-upload', [
+            'name' => 'thumbnail',
+            'dropTitle' => 'Drop thumbnail here',
+            'previewUrl' => $product->thumbnail ?? ($product->image ?? null),
+        ])
     </fieldset>
 
-    <label class="display-none">
-        Product gallery images (multiple files)
-        <input id="images-input" type="file" name="images[]" multiple accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp">
-        <small>When editing: upload new files to replace existing gallery images.</small>
-    </label>
-    <div id="images-dropzone" style="padding:18px;border:2px dashed #c8d1dc;border-radius:10px;background:#f8fafc;text-align:center;cursor:pointer;">
-        <strong>Drop gallery images here</strong><br>
-        <small>or click to choose multiple files</small>
-    </div>
-    <div id="gallery-preview" class="product-images-grid"></div>
+    @include('partials.file-upload', [
+        'name' => 'images[]',
+        'label' => 'Product gallery images',
+        'hint' => 'When editing: upload new files to replace existing gallery images.',
+        'dropTitle' => 'Drop gallery images here',
+        'dropHint' => 'or click to choose multiple files',
+        'multiple' => true,
+        'inputId' => 'images-input',
+    ])
     @if($product && $product->productImages->isNotEmpty())
         <div class="product-images-grid">
             @foreach($product->productImages as $galleryImage)
@@ -198,19 +223,20 @@
         <fieldset class="form-fieldset">
             <legend>Card sticker image</legend>
             @if($product && $product->sticker)
-                <div style="margin-bottom:0.75rem;">
-                    <img src="{{ $product->sticker }}" alt="Sticker preview" width="96" height="96" style="object-fit:contain;border:1px solid #d7dbe2;border-radius:8px;background:#fff;">
-                </div>
                 <label class="checkbox">
                     <input type="checkbox" name="remove_sticker" value="1" @checked(old('remove_sticker'))>
                     Remove current sticker
                 </label>
             @endif
-            <label>
-                Upload sticker
-                <input type="file" name="sticker" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp">
-                <small>PNG/WebP with transparency recommended. Shown on the top-right of the product card (45°). Max 2MB.</small>
-            </label>
+            @include('partials.file-upload', [
+                'name' => 'sticker',
+                'label' => 'Upload sticker',
+                'hint' => 'PNG/WebP with transparency recommended. Shown on the top-right of the product card (45°). Max 2MB.',
+                'previewUrl' => ($product && $product->sticker) ? $product->sticker : null,
+                'previewFit' => 'contain',
+                'previewWidth' => 96,
+                'previewHeight' => 96,
+            ])
         </fieldset>
         <label>
             Discount %
@@ -327,7 +353,13 @@
     <div class="form-grid form-grid--variants js-variant-row" style="margin-bottom:1rem;padding-bottom:1rem;border-bottom:1px solid #e5e7eb;">
         <label>
             Color
-            <input type="text" data-name="variant-color" placeholder="Gold">
+            @include('admin.partials.color-picker', [
+                'dataNameColor' => 'variant-color',
+                'dataNameSwatch' => 'variant-swatch-color',
+                'valueColor' => '',
+                'valueSwatch' => '',
+            ])
+            <small>Color name and swatch shown on storefront.</small>
         </label>
         <label>
             Size
@@ -349,14 +381,23 @@
             SKU
             <input type="text" data-name="variant-sku">
         </label>
-        <label>
-            Front image
-            <input type="file" data-name="variant-image" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp">
-        </label>
-        <label>
-            Hover image
-            <input type="file" data-name="variant-image-hover" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp">
-        </label>
+        @include('partials.file-upload', [
+            'dataName' => 'variant-image',
+            'label' => 'Front image',
+            'variant' => 'compact',
+        ])
+        @include('partials.file-upload', [
+            'dataName' => 'variant-hover-images',
+            'label' => 'Hover images (3–5)',
+            'variant' => 'compact',
+            'multiple' => true,
+            'maxFiles' => 5,
+        ])
+        @include('partials.file-upload', [
+            'dataName' => 'variant-image-hover',
+            'label' => 'Legacy hover image',
+            'variant' => 'compact',
+        ])
         <label class="checkbox">
             <input type="checkbox" data-name="variant-default" value="1">
             Default variant
@@ -398,12 +439,14 @@
             rows.forEach((row, index) => {
                 const map = [
                     ['variant-color', `variants[${index}][option_color]`],
+                    ['variant-swatch-color', `variants[${index}][swatch_color]`],
                     ['variant-size', `variants[${index}][option_size]`],
                     ['variant-price', `variants[${index}][price_usd]`],
                     ['variant-compare-price', `variants[${index}][compare_at_price_usd]`],
                     ['variant-stock', `variants[${index}][stock]`],
                     ['variant-sku', `variants[${index}][sku]`],
                     ['variant-image', `variants[${index}][image]`],
+                    ['variant-hover-images', `variants[${index}][hover_images][]`],
                     ['variant-image-hover', `variants[${index}][image_hover]`],
                     ['variant-default', `variants[${index}][is_default]`],
                     ['variant-active', `variants[${index}][is_active]`],
@@ -421,8 +464,14 @@
         };
 
         addButton.addEventListener('click', () => {
-            list.appendChild(template.content.cloneNode(true));
+            const fragment = template.content.cloneNode(true);
+            const row = fragment.querySelector('.js-variant-row');
+            list.appendChild(fragment);
             updateNames();
+            if (row) {
+                document.dispatchEvent(new CustomEvent('admin:color-picker-init', { detail: { root: row } }));
+                document.dispatchEvent(new CustomEvent('file-upload:init', { detail: { root: row } }));
+            }
         });
 
         list.addEventListener('click', (event) => {
@@ -478,133 +527,6 @@
         });
 
         updateNames();
-    };
-
-    const setupGalleryPreview = () => {
-        const imagesInput = document.getElementById('images-input');
-        const imagesDropzone = document.getElementById('images-dropzone');
-        const galleryPreview = document.getElementById('gallery-preview');
-        if (!(imagesInput instanceof HTMLInputElement) || !(imagesDropzone instanceof HTMLElement) || !galleryPreview) return;
-        let productImages = [];
-
-        const syncInputFiles = () => {
-            const dt = new DataTransfer();
-            productImages.forEach((file) => dt.items.add(file));
-            imagesInput.files = dt.files;
-        };
-
-        const renderPreview = () => {
-            galleryPreview.innerHTML = '';
-            productImages.forEach((file, index) => {
-                if (!file.type.startsWith('image/')) return;
-                const url = URL.createObjectURL(file);
-                const item = document.createElement('div');
-                item.className = 'product-image-item';
-
-                const img = document.createElement('img');
-                img.src = url;
-                img.alt = 'New gallery preview';
-                img.width = 120;
-                img.height = 120;
-                img.loading = 'lazy';
-                img.style.objectFit = 'cover';
-                img.style.borderRadius = '8px';
-                img.addEventListener('load', () => URL.revokeObjectURL(url), { once: true });
-
-                const removeButton = document.createElement('button');
-                removeButton.type = 'button';
-                removeButton.className = 'product-image-remove';
-                removeButton.textContent = '×';
-                removeButton.setAttribute('aria-label', `Remove image ${index + 1}`);
-                removeButton.addEventListener('click', () => {
-                    productImages.splice(index, 1);
-                    syncInputFiles();
-                    renderPreview();
-                });
-
-                item.appendChild(img);
-                item.appendChild(removeButton);
-                galleryPreview.appendChild(item);
-            });
-        };
-
-        const appendFiles = (incomingFiles) => {
-            incomingFiles
-                .filter((file) => file.type.startsWith('image/'))
-                .forEach((file) => productImages.push(file));
-            syncInputFiles();
-            renderPreview();
-        };
-
-        imagesInput.addEventListener('change', () => {
-            const files = imagesInput.files ? Array.from(imagesInput.files) : [];
-            appendFiles(files);
-        });
-
-        const preventDefaults = (event) => {
-            event.preventDefault();
-            event.stopPropagation();
-        };
-        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach((eventName) => {
-            imagesDropzone.addEventListener(eventName, preventDefaults);
-        });
-        ['dragenter', 'dragover'].forEach((eventName) => {
-            imagesDropzone.addEventListener(eventName, () => imagesDropzone.style.borderColor = '#1f6feb');
-        });
-        ['dragleave', 'drop'].forEach((eventName) => {
-            imagesDropzone.addEventListener(eventName, () => imagesDropzone.style.borderColor = '#c8d1dc');
-        });
-        imagesDropzone.addEventListener('drop', (event) => {
-            const files = event.dataTransfer ? Array.from(event.dataTransfer.files).filter((file) => file.type.startsWith('image/')) : [];
-            if (files.length === 0) return;
-            appendFiles(files);
-        });
-        imagesDropzone.addEventListener('click', () => imagesInput.click());
-    };
-
-    const setupThumbnailDropzone = () => {
-        const fileInput = document.getElementById('thumbnail-input');
-        const preview = document.getElementById('thumbnail-preview');
-        const dropzone = document.getElementById('thumbnail-dropzone');
-        if (!(fileInput instanceof HTMLInputElement) || !(preview instanceof HTMLImageElement) || !(dropzone instanceof HTMLElement)) {
-            return;
-        }
-
-        const setFile = (file) => {
-            if (!file || !file.type.startsWith('image/')) return;
-            const dt = new DataTransfer();
-            dt.items.add(file);
-            fileInput.files = dt.files;
-            const url = URL.createObjectURL(file);
-            preview.src = url;
-            preview.addEventListener('load', () => URL.revokeObjectURL(url), { once: true });
-        };
-
-        fileInput.addEventListener('change', () => {
-            const file = fileInput.files && fileInput.files[0] ? fileInput.files[0] : null;
-            setFile(file);
-        });
-
-        const preventDefaults = (event) => {
-            event.preventDefault();
-            event.stopPropagation();
-        };
-        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach((eventName) => {
-            dropzone.addEventListener(eventName, preventDefaults);
-        });
-        ['dragenter', 'dragover'].forEach((eventName) => {
-            dropzone.addEventListener(eventName, () => dropzone.style.borderColor = '#1f6feb');
-        });
-        ['dragleave', 'drop'].forEach((eventName) => {
-            dropzone.addEventListener(eventName, () => dropzone.style.borderColor = '#c8d1dc');
-        });
-        dropzone.addEventListener('drop', (event) => {
-            const files = event.dataTransfer ? Array.from(event.dataTransfer.files).filter((file) => file.type.startsWith('image/')) : [];
-            if (files.length === 0) return;
-            setFile(files[0]);
-        });
-        dropzone.addEventListener('click', () => fileInput.click());
-
     };
 
     const setupUpsellPicker = () => {
@@ -722,8 +644,6 @@
 
     setupVariants();
     setupAttributes();
-    setupGalleryPreview();
-    setupThumbnailDropzone();
     setupUpsellPicker();
 })();
 </script>

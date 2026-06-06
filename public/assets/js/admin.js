@@ -94,3 +94,160 @@
 
   applyStored();
 })();
+
+(function () {
+  'use strict';
+
+  const DEFAULT_SWATCH = '#E3E3E3';
+  const HEX_RE = /^#[0-9A-Fa-f]{6}$/;
+
+  function normalizeHex(value) {
+    const hex = String(value || '').trim();
+    return HEX_RE.test(hex) ? hex.toLowerCase() : '';
+  }
+
+  function closeAllColorPickers(except) {
+    document.querySelectorAll('[data-color-picker].is-open').forEach(function (picker) {
+      if (picker === except) return;
+      picker.classList.remove('is-open');
+      const trigger = picker.querySelector('[data-color-picker-trigger]');
+      const menu = picker.querySelector('[data-color-picker-menu]');
+      if (trigger) trigger.setAttribute('aria-expanded', 'false');
+      if (menu) menu.hidden = true;
+    });
+  }
+
+  function updatePreviewName(picker) {
+    const valueInput = picker.querySelector('[data-color-picker-value]');
+    const footerName = picker.querySelector('[data-color-picker-footer-name]');
+    if (!footerName) return;
+    const name = valueInput ? String(valueInput.value || '').trim() : '';
+    footerName.textContent = name !== '' ? name : '—';
+  }
+
+  function setSwatch(picker, hex) {
+    const normalized = normalizeHex(hex);
+    const hidden = picker.querySelector('[data-color-picker-hex]');
+    const preview = picker.querySelector('[data-color-picker-preview]');
+    const footerDot = picker.querySelector('[data-color-picker-footer-dot]');
+    const footerText = picker.querySelector('[data-color-picker-footer-text]');
+    const native = picker.querySelector('[data-color-picker-native]');
+    const displayColor = normalized || DEFAULT_SWATCH;
+
+    if (hidden) hidden.value = normalized;
+    if (hidden && normalized === '') {
+      hidden.removeAttribute('value');
+    } else if (hidden) {
+      hidden.setAttribute('value', normalized);
+    }
+    if (preview) preview.style.backgroundColor = displayColor;
+    if (footerDot) footerDot.style.backgroundColor = displayColor;
+    if (footerText) footerText.textContent = normalized ? normalized.toUpperCase() : '—';
+    if (native && normalized) native.value = normalized;
+    picker.classList.toggle('is-empty', normalized === '');
+    updatePreviewName(picker);
+
+    picker.querySelectorAll('[data-color-picker-swatch]').forEach(function (btn) {
+      const swatchHex = (btn.getAttribute('data-color-picker-swatch') || '').toLowerCase();
+      const selected = swatchHex === normalized;
+      btn.classList.toggle('is-selected', selected);
+      btn.setAttribute('aria-selected', selected ? 'true' : 'false');
+    });
+  }
+
+  function initColorPickerState(picker) {
+    const hidden = picker.querySelector('[data-color-picker-hex]');
+    setSwatch(picker, hidden ? hidden.value : '');
+    updatePreviewName(picker);
+  }
+
+  function initColorPickers(root) {
+    const scope = root || document;
+    scope.querySelectorAll('[data-color-picker]').forEach(initColorPickerState);
+  }
+
+  if (!window.__adminColorPickerBound) {
+    window.__adminColorPickerBound = true;
+
+    document.addEventListener('click', function (e) {
+      const target = e.target;
+      if (!(target instanceof Element)) return;
+
+      const picker = target.closest('[data-color-picker]');
+      if (!picker) {
+        closeAllColorPickers(null);
+        return;
+      }
+
+      if (target.closest('[data-color-picker-trigger]')) {
+        e.preventDefault();
+        e.stopPropagation();
+        const menu = picker.querySelector('[data-color-picker-menu]');
+        const trigger = picker.querySelector('[data-color-picker-trigger]');
+        const willOpen = !picker.classList.contains('is-open');
+        closeAllColorPickers(willOpen ? picker : null);
+        picker.classList.toggle('is-open', willOpen);
+        if (menu) menu.hidden = !willOpen;
+        if (trigger) trigger.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+        return;
+      }
+
+      if (target.closest('[data-color-picker-swatch]')) {
+        e.preventDefault();
+        setSwatch(picker, target.closest('[data-color-picker-swatch]').getAttribute('data-color-picker-swatch'));
+        return;
+      }
+
+      if (target.closest('[data-color-picker-custom]')) {
+        e.preventDefault();
+        const native = picker.querySelector('[data-color-picker-native]');
+        if (native) native.click();
+        return;
+      }
+
+      if (target.closest('[data-color-picker-reset]')) {
+        e.preventDefault();
+        setSwatch(picker, '');
+        return;
+      }
+
+      if (target.closest('[data-color-picker-clear]')) {
+        e.preventDefault();
+        const valueInput = picker.querySelector('[data-color-picker-value]');
+        if (valueInput) valueInput.value = '';
+        setSwatch(picker, '');
+        return;
+      }
+
+      e.stopPropagation();
+    });
+
+    document.addEventListener('input', function (e) {
+      const target = e.target;
+      if (!(target instanceof Element)) return;
+      const picker = target.closest('[data-color-picker]');
+      if (!picker) return;
+      if (target.matches('[data-color-picker-native]')) {
+        setSwatch(picker, target.value);
+        return;
+      }
+      if (target.matches('[data-color-picker-value]')) {
+        updatePreviewName(picker);
+      }
+    });
+
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') closeAllColorPickers(null);
+    });
+
+    document.addEventListener('admin:color-picker-init', function (e) {
+      initColorPickers(e.detail && e.detail.root);
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function () { initColorPickers(); });
+  } else {
+    initColorPickers();
+  }
+})();

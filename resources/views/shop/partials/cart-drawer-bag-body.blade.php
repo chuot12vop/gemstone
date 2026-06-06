@@ -1,5 +1,5 @@
 @php
-    $shippingProgress = \App\Support\CheckoutShipping::progress($subtotalUsd);
+    $shippingProgress = \App\Support\CheckoutShipping::progress($subtotalUsd, $lines);
 @endphp
 @if($shippingProgress['qualified'])
     <p class="pc-drawer__shipping-msg">Hooray! Your order will be delivered for FREE</p>
@@ -48,10 +48,6 @@
         <strong data-cart-subtotal>{{ $currency->formatUsd($subtotalUsd) }}</strong>
     </p>
     <p class="pc-drawer__note">Have a discount code? Enter it at checkout.</p>
-    @auth
-        <a class="btn btn--primary pc-drawer__checkout" href="{{ route('shop.checkout') }}">Secure Checkout</a>
-    @else
-        <a class="btn btn--primary pc-drawer__checkout" href="{{ route('login') }}">Sign in to checkout</a>
-    @endauth
+    <a class="btn btn--primary pc-drawer__checkout" href="{{ route('shop.checkout') }}">Secure Checkout</a>
     @include('shop.partials.payment-icons')
 </div>

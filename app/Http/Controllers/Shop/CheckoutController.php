@@ -7,15 +7,22 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\PaymentTransaction;
 use App\Models\Product;
+use App\Models\ProductVariant;
 use App\Models\Voucher;
 use App\Services\CartService;
 use App\Services\CurrencyService;
 use App\Services\VoucherService;
 use App\Services\Payment\Contracts\PaymentGateway;
 use App\Services\Payment\Data\PaymentInitiationResult;
+use App\Services\Payment\Gateways\PayPalGateway;
 use App\Services\Payment\PaymentMethodRegistry;
+use App\Services\Payment\PayPal\PayPalApiClient;
 use App\Support\CheckoutCountries;
 use App\Support\CheckoutShipping;
+use App\Support\MarketingSubscribers;
+use App\Support\PhoneValidation;
+use App\Support\ProductVariantOptions;
+use App\Support\PromoCheckoutSession;
 use App\Support\ShippingAddressFormatter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -34,6 +41,10 @@ use Illuminate\View\View;
 class CheckoutController extends Controller
 {
     private const SESSION_VOUCHER_KEY = 'checkout.voucher_id';
+
+    private const SESSION_LAST_ORDER_KEY = 'checkout.last_order';
+
+    private const SESSION_PENDING_ORDER_KEY = 'checkout.pending_order';
 
     private const ERR_EMPTY_CART = 'Your cart is empty.';
 
@@ -58,7 +69,7 @@ class CheckoutController extends Controller
 
         $lines = $this->buildLines();
         $subtotalUsd = (float) array_sum(array_column($lines, 'line_usd'));
-        $totals = $this->checkoutTotals($subtotalUsd);
+        $totals = $this->checkoutTotals($subtotalUsd, $lines);
 
         $user = Auth::user();
         [$firstName, $lastName] = $this->splitName($user?->name ?? '');
@@ -74,12 +85,14 @@ class CheckoutController extends Controller
             'lines' => $lines,
             'subtotalUsd' => $subtotalUsd,
             'discountUsd' => $totals['discountUsd'],
+            'shippingUsd' => $totals['shippingUsd'],
+            'taxUsd' => $totals['taxUsd'],
             'totalUsd' => $totals['totalUsd'],
             'appliedVoucher' => $totals['voucher'],
-            'shippingProgress' => CheckoutShipping::progress($subtotalUsd),
+            'shippingProgress' => CheckoutShipping::progress($subtotalUsd, $lines),
             'currency' => $currency,
             'checkoutDefaults' => [
-                'customer_email' => old('customer_email', $user?->email ?? ''),
+                'customer_email' => $this->defaultCustomerEmail($user?->email),
             ],
             'deliveryDefaults' => [
                 'country' => old('shipping_country', CheckoutCountries::defaultCode()),
@@ -92,6 +105,179 @@ class CheckoutController extends Controller
                 'postcode' => old('shipping_postcode', ''),
                 'phone' => old('shipping_phone', ''),
             ],
+            'expressCheckout' => $this->expressCheckoutConfig($currency),
+        ]);
+    }
+
+    /** Create a PayPal order for express checkout (JSON). */
+    public function expressPaypal(Request $request, CurrencyService $currency): JsonResponse
+    {
+        $gateway = $this->registry->findEnabled('paypal');
+        if (! $gateway instanceof PayPalGateway) {
+            return response()->json(['message' => 'PayPal is not available.'], 422);
+        }
+
+        $client = $gateway->checkoutClient();
+        if ($client === null) {
+            return response()->json(['message' => 'PayPal is not configured.'], 422);
+        }
+
+        $lines = $this->buildLines();
+        if ($lines === []) {
+            return response()->json(['message' => self::ERR_EMPTY_CART], 422);
+        }
+
+        $countryCodes = array_keys(CheckoutCountries::options());
+        $validated = $request->validate([
+            'customer_email' => 'nullable|email|max:190',
+            'shipping_country' => 'nullable|string|in:'.implode(',', $countryCodes),
+            'shipping_first_name' => 'nullable|string|max:80',
+            'shipping_last_name' => 'nullable|string|max:80',
+            'shipping_company' => 'nullable|string|max:120',
+            'shipping_address_line1' => 'nullable|string|max:200',
+            'shipping_address_line2' => 'nullable|string|max:200',
+            'shipping_city' => 'nullable|string|max:100',
+            'shipping_postcode' => 'nullable|string|max:32',
+            'shipping_phone' => [
+                'nullable',
+                'string',
+                'max:40',
+                function (string $attribute, mixed $value, \Closure $fail): void {
+                    if ($value === null || trim((string) $value) === '') {
+                        return;
+                    }
+                    if (! PhoneValidation::hasMinDigits((string) $value)) {
+                        $fail(__('validation.min_digits', [
+                            'attribute' => str_replace('_', ' ', $attribute),
+                            'min' => 9,
+                        ]));
+                    }
+                },
+            ],
+            'voucher_code' => 'nullable|string|max:32',
+            'marketing_email_opt_in' => 'nullable|boolean',
+        ]);
+
+        $validated = $this->expressCheckoutDefaults($validated);
+
+        $customerName = trim($validated['shipping_first_name'].' '.$validated['shipping_last_name']);
+        $shippingAddress = ShippingAddressFormatter::toText([
+            'first_name' => $validated['shipping_first_name'],
+            'last_name' => $validated['shipping_last_name'],
+            'company' => $validated['shipping_company'] ?? '',
+            'address_line1' => $validated['shipping_address_line1'],
+            'address_line2' => $validated['shipping_address_line2'] ?? '',
+            'city' => $validated['shipping_city'],
+            'postcode' => $validated['shipping_postcode'],
+            'country' => $validated['shipping_country'],
+            'phone' => $validated['shipping_phone'],
+        ]);
+
+        $subtotalUsd = (float) array_sum(array_column($lines, 'line_usd'));
+        $currencyCode = $currency->currentCode();
+
+        $voucher = $this->resolveVoucherForCheckout(
+            (string) ($validated['voucher_code'] ?? ''),
+            (string) $validated['customer_email'],
+        );
+        if ($voucher === false) {
+            return response()->json(['message' => 'Voucher code is invalid or does not match this email.'], 422);
+        }
+
+        $discountUsd = $voucher instanceof Voucher ? $voucher->discountUsd($subtotalUsd) : 0.0;
+        $amounts = CheckoutShipping::orderAmounts($subtotalUsd, $discountUsd, $lines);
+        $totalUsd = $amounts['totalUsd'];
+        $totalDisplay = $currency->convertUsdToCurrent($totalUsd);
+        $userId = Auth::id();
+
+        $this->cancelPendingOrderBySession();
+
+        $order = DB::transaction(function () use ($validated, $customerName, $shippingAddress, $lines, $subtotalUsd, $discountUsd, $amounts, $totalDisplay, $currencyCode, $userId, $voucher, $request) {
+            $order = Order::query()->create([
+                'user_id' => $userId,
+                'order_number' => $this->makeOrderNumber(),
+                'customer_email' => $validated['customer_email'],
+                'customer_name' => $customerName,
+                'shipping_address' => $shippingAddress,
+                'shipping_phone' => ($validated['shipping_phone'] ?? '') !== ''
+                    ? $validated['shipping_phone']
+                    : null,
+                'marketing_sms_opt_in' => false,
+                'marketing_email_opt_in' => $request->boolean('marketing_email_opt_in'),
+                'currency_code' => $currencyCode,
+                'subtotal_usd' => $subtotalUsd,
+                'voucher_code' => $voucher?->code,
+                'discount_usd' => $discountUsd,
+                'shipping_usd' => $amounts['shippingUsd'],
+                'tax_usd' => $amounts['taxUsd'],
+                'total_display' => $totalDisplay,
+                'status' => 'pending',
+            ]);
+
+            if ($voucher instanceof Voucher) {
+                $this->vouchers->markUsed($voucher, $order);
+            }
+
+            foreach ($lines as $row) {
+                /** @var Product $p */
+                $p = $row['product'];
+                /** @var \App\Models\ProductVariant $variant */
+                $variant = $row['variant'];
+                $q = (int) $row['quantity'];
+                $unit = (float) $row['unit_price_usd'];
+                OrderItem::query()->create([
+                    'order_id' => $order->id,
+                    'product_id' => $p->id,
+                    'product_variant_id' => $variant->id,
+                    'variant_label' => $row['variant_label'],
+                    'product_name' => $p->name,
+                    'quantity' => $q,
+                    'unit_price_usd' => $unit,
+                    'line_total_usd' => $unit * $q,
+                ]);
+
+                $variant->stock = max(0, $variant->stock - $q);
+                $variant->save();
+
+                $p->load('variants');
+                \App\Support\ProductVariantOptions::syncProductDenormalized($p, $p->variants);
+            }
+
+            PaymentTransaction::query()->create([
+                'order_id' => $order->id,
+                'payment_method' => 'paypal',
+                'amount' => $totalDisplay,
+                'currency_code' => $currencyCode,
+                'status' => 'pending',
+                'notes' => 'Express PayPal checkout',
+            ]);
+
+            return $order;
+        });
+
+        $result = $gateway->initiate($order, $request);
+        $this->updateLatestTransaction($order, [
+            'gateway_transaction_id' => $result->gatewayTransactionId,
+            'notes' => $result->notes,
+        ]);
+
+        $paypalOrderId = $result->viewData['paypalOrderId'] ?? '';
+        if ($paypalOrderId === '') {
+            return response()->json([
+                'message' => $result->viewData['error'] ?? 'Could not start PayPal checkout.',
+            ], 422);
+        }
+
+        session([
+            self::SESSION_LAST_ORDER_KEY => $order->order_number,
+            self::SESSION_PENDING_ORDER_KEY => $order->order_number,
+            'checkout.method' => 'paypal',
+        ]);
+
+        return response()->json([
+            'paypal_order_id' => $paypalOrderId,
+            'order_number' => $order->order_number,
+            'confirm_url' => route('shop.checkout.confirm', ['order_number' => $order->order_number]),
         ]);
     }
 
@@ -131,7 +317,7 @@ class CheckoutController extends Controller
             'shipping_address_line2' => 'nullable|string|max:200',
             'shipping_city' => 'required|string|max:100',
             'shipping_postcode' => 'required|string|max:32',
-            'shipping_phone' => 'required|string|max:40',
+            'shipping_phone' => PhoneValidation::rules(),
             'shipping_method' => 'nullable|string|in:standard',
             'voucher_code' => 'nullable|string|max:32',
         ], $gateway->validationRules());
@@ -169,12 +355,15 @@ class CheckoutController extends Controller
         }
 
         $discountUsd = $voucher instanceof Voucher ? $voucher->discountUsd($subtotalUsd) : 0.0;
-        $totalUsd = max(0, $subtotalUsd - $discountUsd);
+        $amounts = CheckoutShipping::orderAmounts($subtotalUsd, $discountUsd, $lines);
+        $totalUsd = $amounts['totalUsd'];
         $totalDisplay = $currency->convertUsdToCurrent($totalUsd);
 
         $userId = Auth::id();
 
-        $order = DB::transaction(function () use ($validated, $customerName, $shippingAddress, $lines, $subtotalUsd, $discountUsd, $totalDisplay, $currencyCode, $gateway, $userId, $request, $voucher) {
+        $this->cancelPendingOrderBySession();
+
+        $order = DB::transaction(function () use ($validated, $customerName, $shippingAddress, $lines, $subtotalUsd, $discountUsd, $amounts, $totalDisplay, $currencyCode, $gateway, $userId, $request, $voucher) {
             $order = Order::query()->create([
                 'user_id' => $userId,
                 'order_number' => $this->makeOrderNumber(),
@@ -183,10 +372,13 @@ class CheckoutController extends Controller
                 'shipping_address' => $shippingAddress,
                 'shipping_phone' => $validated['shipping_phone'],
                 'marketing_sms_opt_in' => $request->boolean('marketing_sms_opt_in'),
+                'marketing_email_opt_in' => $request->boolean('marketing_email_opt_in'),
                 'currency_code' => $currencyCode,
                 'subtotal_usd' => $subtotalUsd,
                 'voucher_code' => $voucher?->code,
                 'discount_usd' => $discountUsd,
+                'shipping_usd' => $amounts['shippingUsd'],
+                'tax_usd' => $amounts['taxUsd'],
                 'total_display' => $totalDisplay,
                 'status' => 'pending',
             ]);
@@ -232,14 +424,22 @@ class CheckoutController extends Controller
             return $order;
         });
 
+        if ($request->boolean('marketing_email_opt_in')) {
+            MarketingSubscribers::subscribe((string) $validated['customer_email']);
+        }
+
         $result = $gateway->initiate($order, $request);
         $this->updateLatestTransaction($order, [
             'gateway_transaction_id' => $result->gatewayTransactionId,
             'notes' => $result->notes,
         ]);
 
-        $this->cart->clear();
+        session([
+            self::SESSION_PENDING_ORDER_KEY => $order->order_number,
+            'checkout.method' => $code,
+        ]);
         session()->forget(self::SESSION_VOUCHER_KEY);
+        session([self::SESSION_LAST_ORDER_KEY => $order->order_number]);
 
         return match ($result->type) {
             PaymentInitiationResult::TYPE_REDIRECT => redirect()->away((string) $result->redirectUrl),
@@ -284,7 +484,9 @@ class CheckoutController extends Controller
 
         $subtotalUsd = (float) $order->subtotal_usd;
         $discountUsd = (float) ($order->discount_usd ?? 0);
-        $totalUsd = max(0, $subtotalUsd - $discountUsd);
+        $shippingUsd = (float) ($order->shipping_usd ?? 0);
+        $taxUsd = (float) ($order->tax_usd ?? 0);
+        $totalUsd = max(0, $subtotalUsd - $discountUsd + $shippingUsd + $taxUsd);
 
         return view('shop.checkout.processing', [
             'title' => 'Complete payment — '.$order->order_number,
@@ -295,9 +497,37 @@ class CheckoutController extends Controller
             'lines' => $lines,
             'subtotalUsd' => $subtotalUsd,
             'discountUsd' => $discountUsd,
+            'shippingUsd' => $shippingUsd,
+            'taxUsd' => $taxUsd,
             'totalUsd' => $totalUsd,
             'currency' => app(CurrencyService::class),
         ]);
+    }
+
+    public function cancelPending(string $order_number): RedirectResponse
+    {
+        $order = Order::query()->where('order_number', $order_number)->firstOrFail();
+
+        if ($order->status !== 'pending') {
+            return redirect()->route('shop.checkout')
+                ->with('error', 'This order can no longer be changed.');
+        }
+
+        $this->restoreOrderStock($order);
+        $order->status = 'cancelled';
+        $order->save();
+
+        $this->updateLatestTransaction($order, [
+            'status' => 'cancelled',
+            'notes' => 'Cancelled by customer — returned to checkout',
+        ]);
+
+        if (session(self::SESSION_PENDING_ORDER_KEY) === $order->order_number) {
+            session()->forget(self::SESSION_PENDING_ORDER_KEY);
+        }
+
+        return redirect()->route('shop.checkout')
+            ->with('success', 'Your order was cancelled. You can review your details and choose a payment method again.');
     }
 
     public function applyVoucher(Request $request, CurrencyService $currency): JsonResponse
@@ -328,20 +558,25 @@ class CheckoutController extends Controller
         session([self::SESSION_VOUCHER_KEY => $voucher->id]);
 
         $subtotalUsd = (float) array_sum(array_column($this->buildLines(), 'line_usd'));
+        $lines = $this->buildLines();
         $discountUsd = $voucher->discountUsd($subtotalUsd);
-        $totalUsd = max(0, $subtotalUsd - $discountUsd);
+        $amounts = CheckoutShipping::orderAmounts($subtotalUsd, $discountUsd, $lines);
 
         return response()->json(array_merge(
-            $this->shippingProgressPayload($subtotalUsd, $currency),
+            $this->shippingProgressPayload($subtotalUsd, $currency, $lines),
             [
                 'ok' => true,
                 'code' => $voucher->code,
                 'percent' => $voucher->percent,
                 'discount_usd' => $discountUsd,
-                'total_usd' => $totalUsd,
+                'shipping_usd' => $amounts['shippingUsd'],
+                'tax_usd' => $amounts['taxUsd'],
+                'total_usd' => $amounts['totalUsd'],
                 'subtotal_usd' => $subtotalUsd,
                 'discount_formatted' => $currency->formatUsd($discountUsd),
-                'total_formatted' => $currency->formatUsd($totalUsd),
+                'shipping_formatted' => $currency->formatUsd($amounts['shippingUsd']),
+                'tax_formatted' => $currency->formatUsd($amounts['taxUsd']),
+                'total_formatted' => $currency->formatUsd($amounts['totalUsd']),
             ],
         ));
     }
@@ -349,15 +584,21 @@ class CheckoutController extends Controller
     public function removeVoucher(CurrencyService $currency): JsonResponse
     {
         session()->forget(self::SESSION_VOUCHER_KEY);
-        $subtotalUsd = (float) array_sum(array_column($this->buildLines(), 'line_usd'));
+        $lines = $this->buildLines();
+        $subtotalUsd = (float) array_sum(array_column($lines, 'line_usd'));
+        $amounts = CheckoutShipping::orderAmounts($subtotalUsd, 0.0, $lines);
 
         return response()->json(array_merge(
-            $this->shippingProgressPayload($subtotalUsd, $currency),
+            $this->shippingProgressPayload($subtotalUsd, $currency, $lines),
             [
                 'ok' => true,
-                'total_usd' => $subtotalUsd,
+                'shipping_usd' => $amounts['shippingUsd'],
+                'tax_usd' => $amounts['taxUsd'],
+                'total_usd' => $amounts['totalUsd'],
                 'subtotal_usd' => $subtotalUsd,
-                'total_formatted' => $currency->formatUsd($subtotalUsd),
+                'shipping_formatted' => $currency->formatUsd($amounts['shippingUsd']),
+                'tax_formatted' => $currency->formatUsd($amounts['taxUsd']),
+                'total_formatted' => $currency->formatUsd($amounts['totalUsd']),
             ],
         ));
     }
@@ -374,6 +615,14 @@ class CheckoutController extends Controller
         }
 
         if ($gateway->confirm($order, $request)) {
+            if ($gateway instanceof PayPalGateway) {
+                $paypalOrderId = trim((string) $request->input('paypal_order_id', ''));
+                if ($paypalOrderId !== '') {
+                    $gateway->syncExpressPayerDetails($order, $paypalOrderId);
+                    $order->refresh();
+                }
+            }
+
             if (! $gateway->marksOrderPaidOnConfirm()) {
                 $redirect = redirect()
                     ->route('shop.order.show', ['order_number' => $order->order_number])
@@ -420,6 +669,10 @@ class CheckoutController extends Controller
 
     private function markOrderPaid(Order $order, PaymentGateway $gateway, ?string $txId): RedirectResponse
     {
+        $this->cart->clear();
+        session()->forget(self::SESSION_VOUCHER_KEY);
+        session()->forget(self::SESSION_PENDING_ORDER_KEY);
+
         DB::transaction(function () use ($order, $txId) {
             $order->status = 'paid';
             $order->save();
@@ -468,17 +721,20 @@ class CheckoutController extends Controller
     }
 
     /**
-     * @return array{voucher: ?Voucher, discountUsd: float, totalUsd: float}
+     * @return array{voucher: ?Voucher, discountUsd: float, shippingUsd: float, taxUsd: float, totalUsd: float}
      */
-    private function checkoutTotals(float $subtotalUsd): array
+    private function checkoutTotals(float $subtotalUsd, array $lines): array
     {
         $voucher = $this->sessionVoucher();
         $discountUsd = $voucher ? $voucher->discountUsd($subtotalUsd) : 0.0;
+        $amounts = CheckoutShipping::orderAmounts($subtotalUsd, $discountUsd, $lines);
 
         return [
             'voucher' => $voucher,
             'discountUsd' => $discountUsd,
-            'totalUsd' => max(0, $subtotalUsd - $discountUsd),
+            'shippingUsd' => $amounts['shippingUsd'],
+            'taxUsd' => $amounts['taxUsd'],
+            'totalUsd' => $amounts['totalUsd'],
         ];
     }
 
@@ -523,6 +779,105 @@ class CheckoutController extends Controller
         return $voucher;
     }
 
+    /**
+     * @return array{show: bool, slots: list<string>, paypal: ?array<string, mixed>}
+     */
+    private function expressCheckoutConfig(CurrencyService $currency): array
+    {
+        $paypalGateway = $this->registry->findEnabled('paypal');
+        if (! $paypalGateway instanceof PayPalGateway) {
+            return ['show' => false, 'slots' => [], 'paypal' => null];
+        }
+
+        $client = $paypalGateway->checkoutClient();
+        if ($client === null) {
+            return ['show' => false, 'slots' => [], 'paypal' => null];
+        }
+
+        $code = strtoupper($currency->currentCode());
+        $paypal = [
+            'clientId' => $client->clientId(),
+            'sdkUrl' => $client->sdkUrl($code, 'buttons'),
+            'sandbox' => $client->isSandbox(),
+            'initUrl' => route('shop.checkout.express.paypal'),
+            'currency' => $code,
+        ];
+
+        return [
+            'show' => true,
+            'slots' => ['paypal', 'google_pay'],
+            'paypal' => $paypal,
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $validated
+     * @return array<string, mixed>
+     */
+    private function expressCheckoutDefaults(array $validated): array
+    {
+        $email = trim((string) ($validated['customer_email'] ?? ''));
+        if ($email === '') {
+            $validated['customer_email'] = $this->expressPlaceholderEmail();
+        }
+
+        if (trim((string) ($validated['shipping_phone'] ?? '')) === '') {
+            $validated['shipping_phone'] = '';
+        }
+
+        return $this->expressShippingDefaults($validated);
+    }
+
+    private function expressPlaceholderEmail(): string
+    {
+        $accountEmail = Auth::user()?->email;
+        if (is_string($accountEmail) && trim($accountEmail) !== '') {
+            return strtolower(trim($accountEmail));
+        }
+
+        return 'express.'.bin2hex(random_bytes(8)).'@checkout.pending';
+    }
+
+    /**
+     * @param  array<string, mixed>  $validated
+     * @return array<string, mixed>
+     */
+    private function expressShippingDefaults(array $validated): array
+    {
+        $country = trim((string) ($validated['shipping_country'] ?? ''));
+        if ($country === '') {
+            $validated['shipping_country'] = CheckoutCountries::defaultCode();
+        }
+
+        foreach ([
+            'shipping_first_name' => 'Guest',
+            'shipping_last_name' => 'Customer',
+            'shipping_address_line1' => 'Express checkout — address to confirm',
+            'shipping_city' => '—',
+            'shipping_postcode' => '—',
+        ] as $key => $fallback) {
+            if (trim((string) ($validated[$key] ?? '')) === '') {
+                $validated[$key] = $fallback;
+            }
+        }
+
+        return $validated;
+    }
+
+    private function defaultCustomerEmail(?string $accountEmail): string
+    {
+        $old = old('customer_email');
+        if (is_string($old) && trim($old) !== '') {
+            return $old;
+        }
+
+        if ($accountEmail !== null && trim($accountEmail) !== '') {
+            return $accountEmail;
+        }
+
+        return PromoCheckoutSession::subscriberEmail();
+    }
+
     /** @return array{0: string, 1: string} */
     private function splitName(string $fullName): array
     {
@@ -539,11 +894,12 @@ class CheckoutController extends Controller
     }
 
     /**
+     * @param  array<int, array{quantity?: int}>  $lines
      * @return array<string, mixed>
      */
-    private function shippingProgressPayload(float $subtotalUsd, CurrencyService $currency): array
+    private function shippingProgressPayload(float $subtotalUsd, CurrencyService $currency, array $lines = []): array
     {
-        $progress = CheckoutShipping::progress($subtotalUsd);
+        $progress = CheckoutShipping::progress($subtotalUsd, $lines);
 
         return [
             'shipping_qualified' => $progress['qualified'],
@@ -551,6 +907,53 @@ class CheckoutController extends Controller
             'shipping_remaining_usd' => $progress['remaining'],
             'shipping_remaining_formatted' => $currency->formatUsd($progress['remaining']),
             'shipping_threshold_usd' => $progress['threshold'],
+            'shipping_min_items' => $progress['min_items'],
+            'shipping_item_count' => $progress['item_count'],
         ];
+    }
+
+    private function cancelPendingOrderBySession(): void
+    {
+        $orderNumber = session(self::SESSION_PENDING_ORDER_KEY);
+        if (! is_string($orderNumber) || $orderNumber === '') {
+            return;
+        }
+
+        $order = Order::query()->where('order_number', $orderNumber)->where('status', 'pending')->first();
+        if ($order === null) {
+            session()->forget(self::SESSION_PENDING_ORDER_KEY);
+
+            return;
+        }
+
+        $this->restoreOrderStock($order);
+        $order->status = 'cancelled';
+        $order->save();
+        $this->updateLatestTransaction($order, [
+            'status' => 'cancelled',
+            'notes' => 'Replaced by a new checkout attempt',
+        ]);
+        session()->forget(self::SESSION_PENDING_ORDER_KEY);
+    }
+
+    private function restoreOrderStock(Order $order): void
+    {
+        $order->loadMissing(['items.product']);
+
+        foreach ($order->items as $item) {
+            if ($item->product_variant_id) {
+                $variant = ProductVariant::query()->find($item->product_variant_id);
+                if ($variant) {
+                    $variant->stock = (int) $variant->stock + (int) $item->quantity;
+                    $variant->save();
+
+                    $product = $item->product;
+                    if ($product) {
+                        $product->load('variants');
+                        ProductVariantOptions::syncProductDenormalized($product, $product->variants);
+                    }
+                }
+            }
+        }
     }
 }

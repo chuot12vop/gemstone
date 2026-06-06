@@ -45,7 +45,7 @@ class PaymentAdminController extends Controller
                 });
             })
             ->when(in_array($method, self::METHODS, true), fn ($query) => $query->where('payment_method', $method))
-            ->when(in_array($status, ['pending', 'paid', 'failed', 'refunded'], true), fn ($query) => $query->where('status', $status))
+            ->when(in_array($status, PaymentTransaction::STATUSES, true), fn ($query) => $query->where('status', $status))
             ->latest()
             ->take(200)
             ->get();

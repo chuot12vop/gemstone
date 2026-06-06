@@ -14,7 +14,20 @@
                        @checked(($selected ?? '') === $method->code() || (empty($selected) && $loop->first))
                        required
                        data-payment-method-radio>
-                <span class="payment-card__icon">{!! $method->iconHtml() ?: '<span class="payment-card__icon-placeholder">'.strtoupper(substr($method->label(),0,1)).'</span>' !!}</span>
+                @php($gatewayLogo = \App\Support\PaymentMethodLogos::forGateway($method->code(), $method->label()))
+                <span class="payment-card__icon">
+                    @if($gatewayLogo)
+                        <img class="payment-card__icon-img"
+                             src="{{ $gatewayLogo['src'] }}"
+                             alt="{{ $gatewayLogo['label'] }}"
+                             width="32"
+                             height="32"
+                             loading="lazy"
+                             decoding="async">
+                    @else
+                        {!! $method->iconHtml() ?: '<span class="payment-card__icon-placeholder">'.strtoupper(substr($method->label(),0,1)).'</span>' !!}
+                    @endif
+                </span>
                 <span class="payment-card__body">
                     <span class="payment-card__label">{{ $method->label() }}</span>
                     @if($method->description() !== '')

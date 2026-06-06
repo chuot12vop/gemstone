@@ -6,25 +6,24 @@
     $activeVariants = $product->variants->where('is_active', true)->values();
     $defaultVariant = $activeVariants->firstWhere('is_default', true) ?: $activeVariants->first();
     $pickerVariants = ProductVariantOptions::toPickerJson($product, $activeVariants);
+    $swatchColors = ProductVariantOptions::swatchColorsByOption($activeVariants);
     $colors = $activeVariants->pluck('option_color')->filter(fn (?string $c) => $c !== null && trim($c) !== '')->unique()->values();
     $sizes = ProductVariantOptions::sizes($activeVariants);
     $initialColor = $defaultVariant?->option_color ?? '';
     $initialSize = $defaultVariant?->option_size ?? '';
 
-    $mainImage = $defaultVariant?->frontImage($product) ?: ($product->image ?: ($product->thumbnail ?: asset('assets/img/placeholder.svg')));
-    $galleryImages = collect();
-    if ($mainImage) {
-        $galleryImages->push($mainImage);
-    }
-    foreach ($product->productImages as $img) {
-        if ($img->path && ! $galleryImages->contains($img->path)) {
-            $galleryImages->push($img->path);
+    $galleryImages = $defaultVariant
+        ? $defaultVariant->galleryImages($product)
+        : collect();
+    if ($galleryImages->isEmpty()) {
+        $mainImage = $product->image ?: ($product->thumbnail ?: asset('assets/img/placeholder.svg'));
+        if ($mainImage) {
+            $galleryImages->push($mainImage);
         }
-    }
-    foreach ($activeVariants as $variant) {
-        $front = $variant->frontImage($product);
-        if ($front && ! $galleryImages->contains($front)) {
-            $galleryImages->push($front);
+        foreach ($product->productImages as $img) {
+            if ($img->path && ! $galleryImages->contains($img->path)) {
+                $galleryImages->push($img->path);
+            }
         }
     }
     if ($galleryImages->isEmpty()) {
@@ -68,9 +67,7 @@
         </div>
 
         <div class="product-detail__info">
-            <p class="eyebrow">
-                <a href="{{ route('shop.catalog.category', $product->category) }}">{{ $product->category->name }}</a>
-            </p>
+            <a class="eyebrow product-detail__eyebrow" href="{{ route('shop.catalog.category', $product->category) }}">{{ $product->category->name }}</a>
             <h1 class="product-detail__title" itemprop="name">{{ $product->name }}</h1>
 
             @if(($reviewStats['count'] ?? 0) > 0)
@@ -81,7 +78,17 @@
             @endif
 
             @if($product->short_description)
-                <p class="lede">{{ $product->short_description }}</p>
+                <div class="product-detail__description" data-pd-description>
+                    <p class="lede product-detail__description-body is-collapsed" data-pd-description-body>{{ $product->short_description }}</p>
+                    <button type="button"
+                            class="product-detail__read-more"
+                            data-pd-description-toggle
+                            data-label-more="Read more"
+                            data-label-less="Read less"
+                            hidden>
+                        Read more
+                    </button>
+                </div>
             @endif
 
             <p class="product-detail__price" itemprop="offers" itemscope itemtype="https://schema.org/Offer" data-pd-price>
@@ -101,10 +108,21 @@
                             <span class="pd-variant-picker__label">Colour</span>
                             <div class="pd-variant-picker__swatches">
                                 @foreach($colors as $i => $color)
+                                    @php
+                                        $swatchHex = $swatchColors[$color] ?? null;
+                                    @endphp
                                     <button type="button"
-                                            class="pd-variant-picker__swatch {{ ($initialColor === $color) || ($i === 0 && $initialColor === '') ? 'is-active' : '' }}"
-                                            data-pd-color="{{ $color }}">
-                                        {{ $color }}
+                                            class="pd-variant-picker__swatch{{ $swatchHex ? ' pd-variant-picker__swatch--has-color' : ' pd-variant-picker__swatch--text' }} {{ ($initialColor === $color) || ($i === 0 && $initialColor === '') ? 'is-active' : '' }}"
+                                            data-pd-color="{{ $color }}"
+                                            aria-label="{{ $color }}"
+                                            title="{{ $color }}">
+                                        @if($swatchHex)
+                                            <span class="pd-variant-picker__swatch-dot pd-variant-picker__swatch-dot--custom"
+                                                  style="background-color: {{ $swatchHex }};"
+                                                  aria-hidden="true"></span>
+                                        @else
+                                            <span class="pd-variant-picker__swatch-label">{{ $color }}</span>
+                                        @endif
                                     </button>
                                 @endforeach
                             </div>
@@ -130,10 +148,12 @@
             <form class="add-form" method="post" action="{{ route('shop.cart.add') }}" data-pd-form>
                 @csrf
                 <input type="hidden" name="variant_id" value="{{ $defaultVariant?->id }}" data-pd-variant-id>
-                <label class="qty">
+                <div class="pd-qty-stepper qty" data-pd-qty-stepper>
                     <span class="sr-only">Quantity</span>
-                    <input type="number" name="quantity" value="1" min="1" max="{{ max(1, $displayStock) }}" data-pd-qty>
-                </label>
+                    <button type="button" class="pd-qty-stepper__btn" data-pd-qty-dec aria-label="Decrease quantity">−</button>
+                    <input type="number" name="quantity" value="1" min="1" max="{{ max(1, $displayStock) }}" data-pd-qty readonly>
+                    <button type="button" class="pd-qty-stepper__btn" data-pd-qty-inc aria-label="Increase quantity">+</button>
+                </div>
                 <button class="btn btn--primary"
                         type="submit"
                         data-pd-submit
@@ -151,7 +171,7 @@
                     Buy now
                 </button>
             </form>
-            <p class="stock-note" data-pd-stock>{{ $displayStock }} in stock</p>
+            <p class="sr-only" data-pd-stock aria-live="polite">{{ $displayStock }} in stock</p>
 
             <div class="pd-accordion" data-pd-accordion>
                 @if($product->description)
@@ -232,10 +252,12 @@
         <form class="product-cta-bar__form" method="post" action="{{ route('shop.cart.add') }}">
             @csrf
             <input type="hidden" name="variant_id" value="{{ $defaultVariant?->id }}" data-pd-cta-variant-id>
-            <label class="qty product-cta-bar__qty">
+            <div class="pd-qty-stepper qty product-cta-bar__qty" data-pd-cta-qty-stepper>
                 <span class="sr-only">Quantity</span>
-                <input type="number" name="quantity" value="1" min="1" max="{{ max(1, $displayStock) }}" data-pd-cta-qty>
-            </label>
+                <button type="button" class="pd-qty-stepper__btn" data-pd-cta-qty-dec aria-label="Decrease quantity">−</button>
+                <input type="number" name="quantity" value="1" min="1" max="{{ max(1, $displayStock) }}" data-pd-cta-qty readonly>
+                <button type="button" class="pd-qty-stepper__btn" data-pd-cta-qty-inc aria-label="Increase quantity">+</button>
+            </div>
             <button class="btn btn--primary product-cta-bar__btn"
                     type="submit"
                     data-pd-submit

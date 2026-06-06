@@ -36,13 +36,13 @@
         Body
         <textarea id="post-body" class="js-rich-text" name="body" rows="8" data-rich-height="360">{{ old('body', $post->body ?? '') }}</textarea>
     </label>
-    <label>
-        Cover image
-        <input type="file" name="image" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp">
-        @if($post && $post->image)
-            <img src="{{ \App\Support\PublicAssetUrl::to($post->image) }}" alt="" width="160" style="margin-top:8px;border-radius:8px;">
-        @endif
-    </label>
+    @include('partials.file-upload', [
+        'name' => 'image',
+        'label' => 'Cover image',
+        'previewUrl' => ($post && $post->image) ? \App\Support\PublicAssetUrl::to($post->image) : null,
+        'previewWidth' => 160,
+        'previewHeight' => 160,
+    ])
     <label class="checkbox">
         <input type="checkbox" name="is_active" value="1" @checked(old('is_active', $post ? $post->is_active : true))>
         Published on storefront

@@ -55,11 +55,13 @@
             <textarea name="content" rows="6" maxlength="5000" required>{{ old('content') }}</textarea>
         </label>
 
-        <label>
-            Photos (up to 5)
-            <input type="file" name="images[]" accept="image/jpeg,image/png,image/webp" multiple>
-            <small class="review-form__hint">JPG, PNG or WebP. Max 4 MB each.</small>
-        </label>
+        @include('partials.file-upload', [
+            'name' => 'images[]',
+            'label' => 'Photos (up to 5)',
+            'hint' => 'JPG, PNG or WebP. Max 4 MB each.',
+            'multiple' => true,
+            'maxFiles' => 5,
+        ])
 
         <div class="review-form__actions">
             <a class="btn btn--ghost" href="{{ route('shop.order.show', ['order_number' => $order->order_number]) }}">Cancel</a>

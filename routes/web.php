@@ -46,6 +46,10 @@ Route::middleware('guest')->group(function () {
     Route::post('/login', [LoginController::class, 'login'])->name('shop.login');
     Route::get('/register', [RegisterController::class, 'show'])->name('register');
     Route::post('/register', [RegisterController::class, 'store'])->name('shop.register');
+    Route::get('/forgot-password', [\App\Http\Controllers\Shop\Auth\ForgotPasswordController::class, 'show'])->name('password.request');
+    Route::post('/forgot-password', [\App\Http\Controllers\Shop\Auth\ForgotPasswordController::class, 'store'])->name('password.email');
+    Route::get('/reset-password/{token}', [\App\Http\Controllers\Shop\Auth\ResetPasswordController::class, 'show'])->name('password.reset');
+    Route::post('/reset-password', [\App\Http\Controllers\Shop\Auth\ResetPasswordController::class, 'store'])->name('password.update');
 });
 Route::post('/logout', [LoginController::class, 'logout'])->middleware('auth')->name('shop.logout');
 
@@ -53,6 +57,7 @@ Route::middleware('auth')->prefix('account')->name('shop.account.')->group(funct
     Route::get('/', [AccountController::class, 'index'])->name('index');
     Route::get('/profile', [AccountController::class, 'profile'])->name('profile');
     Route::post('/profile', [AccountController::class, 'updateProfile'])->name('profile.update');
+    Route::post('/profile/password', [AccountController::class, 'updatePassword'])->name('profile.password.update');
     Route::get('/orders', [AccountController::class, 'orders'])->name('orders');
     Route::get('/orders/{order_number}', [AccountController::class, 'orderShow'])->name('orders.show');
 });
@@ -71,14 +76,14 @@ Route::post('/cart/add', [CartController::class, 'add'])->name('shop.cart.add');
 Route::post('/cart/add-bundle', [CartController::class, 'addBundle'])->name('shop.cart.add-bundle');
 Route::post('/cart/update', [CartController::class, 'update'])->name('shop.cart.update');
 Route::post('/cart/remove', [CartController::class, 'remove'])->name('shop.cart.remove');
-Route::middleware('auth')->group(function () {
-    Route::get('/checkout', [CheckoutController::class, 'index'])->name('shop.checkout');
-    Route::post('/checkout/method', [CheckoutController::class, 'chooseMethod'])->name('shop.checkout.method');
-    Route::get('/checkout/details', [CheckoutController::class, 'details'])->name('shop.checkout.details');
-    Route::post('/checkout/voucher', [CheckoutController::class, 'applyVoucher'])->name('shop.checkout.voucher.apply');
-    Route::delete('/checkout/voucher', [CheckoutController::class, 'removeVoucher'])->name('shop.checkout.voucher.remove');
-    Route::post('/checkout/place', [CheckoutController::class, 'place'])->name('shop.checkout.place');
-});
+Route::get('/checkout', [CheckoutController::class, 'index'])->name('shop.checkout');
+Route::post('/checkout/method', [CheckoutController::class, 'chooseMethod'])->name('shop.checkout.method');
+Route::get('/checkout/details', [CheckoutController::class, 'details'])->name('shop.checkout.details');
+Route::post('/checkout/voucher', [CheckoutController::class, 'applyVoucher'])->name('shop.checkout.voucher.apply');
+Route::delete('/checkout/voucher', [CheckoutController::class, 'removeVoucher'])->name('shop.checkout.voucher.remove');
+Route::post('/checkout/place', [CheckoutController::class, 'place'])->middleware('throttle:20,1')->name('shop.checkout.place');
+Route::post('/checkout/express/paypal', [CheckoutController::class, 'expressPaypal'])->middleware('throttle:20,1')->name('shop.checkout.express.paypal');
+Route::post('/checkout/cancel/{order_number}', [CheckoutController::class, 'cancelPending'])->name('shop.checkout.cancel');
 Route::get('/checkout/processing/{order_number}', [CheckoutController::class, 'processing'])->name('shop.checkout.processing');
 Route::post('/checkout/confirm/{order_number}', [CheckoutController::class, 'confirm'])->name('shop.checkout.confirm');
 Route::get('/order/{order_number}', [CheckoutController::class, 'confirmation'])->name('shop.order.show');

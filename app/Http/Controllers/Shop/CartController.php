@@ -22,7 +22,8 @@ class CartController extends Controller
         $currency = app(CurrencyService::class);
         $lines = $this->cart->buildLines();
         $subtotalUsd = (float) array_sum(array_column($lines, 'line_usd'));
-        $shippingProgress = CheckoutShipping::progress($subtotalUsd);
+        $shippingProgress = CheckoutShipping::progress($subtotalUsd, $lines);
+        $amounts = CheckoutShipping::orderAmounts($subtotalUsd, 0.0, $lines);
         $cartCount = $this->cart->totalQuantity();
 
         $bestSellersCategory = Category::query()->where('slug', 'Best-Sellers')->first();
@@ -40,6 +41,9 @@ class CartController extends Controller
             'metaDescription' => 'Review your gemstone selections.',
             'lines' => $lines,
             'subtotalUsd' => $subtotalUsd,
+            'shippingUsd' => $amounts['shippingUsd'],
+            'taxUsd' => $amounts['taxUsd'],
+            'totalUsd' => $amounts['totalUsd'],
             'shippingProgress' => $shippingProgress,
             'cartCount' => $cartCount,
             'bestSellers' => $bestSellers,
@@ -285,7 +289,8 @@ class CartController extends Controller
         $currency = app(CurrencyService::class);
         $lines = $this->cart->buildLines();
         $subtotalUsd = (float) array_sum(array_column($lines, 'line_usd'));
-        $shippingProgress = CheckoutShipping::progress($subtotalUsd);
+        $shippingProgress = CheckoutShipping::progress($subtotalUsd, $lines);
+        $amounts = CheckoutShipping::orderAmounts($subtotalUsd, 0.0, $lines);
 
         return response()->json([
             'ok' => true,

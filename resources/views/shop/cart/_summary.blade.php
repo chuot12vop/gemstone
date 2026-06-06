@@ -4,15 +4,27 @@
         <span>Subtotal</span>
         <strong data-cart-subtotal>{{ $currency->formatUsd($subtotalUsd) }}</strong>
     </p>
+    <p class="cart-page__shipping">
+        <span>Shipping</span>
+        <strong>{{ ($shippingUsd ?? 0) <= 0 ? 'FREE' : $currency->formatUsd((float) $shippingUsd) }}</strong>
+    </p>
+    @if(($taxUsd ?? 0) > 0)
+        <p class="cart-page__tax">
+            <span>Taxes</span>
+            <strong>{{ $currency->formatUsd((float) $taxUsd) }}</strong>
+        </p>
+    @endif
+    <p class="cart-page__total">
+        <span>Total</span>
+        <strong>{{ $currency->formatUsd((float) ($totalUsd ?? $subtotalUsd)) }}</strong>
+    </p>
     <p class="cart-page__note">Have a discount code? Enter it at checkout.</p>
-    @auth
-        <a class="btn btn--primary cart-page__checkout" href="{{ route('shop.checkout') }}">Secure Checkout</a>
-    @else
-        <a class="btn btn--primary cart-page__checkout" href="{{ route('login') }}">Sign in to checkout</a>
+    <a class="btn btn--primary cart-page__checkout" href="{{ route('shop.checkout') }}">Secure Checkout</a>
+    @guest
         <p class="cart-page__auth-note">
             Have an account? <a href="{{ route('login') }}">Log in</a> to check out faster.
             <a href="{{ route('register') }}">Create account</a>
         </p>
-    @endauth
+    @endguest
     @include('shop.partials.payment-icons')
 </aside>

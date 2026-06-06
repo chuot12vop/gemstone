@@ -86,11 +86,14 @@
         </fieldset>
     @endif
 
-    <label>
-        Add photos
-        <input type="file" name="images[]" accept="image/jpeg,image/png,image/webp" multiple>
-        <small class="muted">JPG, PNG or WebP, max 4 MB each, up to 5 files.</small>
-    </label>
+    @include('partials.file-upload', [
+        'name' => 'images[]',
+        'label' => 'Add photos',
+        'hint' => 'JPG, PNG or WebP, max 4 MB each, up to 5 files.',
+        'multiple' => true,
+        'maxFiles' => 5,
+        'showPreview' => true,
+    ])
 
     <div class="form-actions">
         <button class="btn-admin btn-admin--primary" type="submit">{{ $review ? 'Save changes' : 'Create review' }}</button>

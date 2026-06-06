@@ -5,9 +5,11 @@ namespace App\Http\Controllers\Shop;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Services\CurrencyService;
+use App\Support\PhoneValidation;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\View\View;
 
 class AccountController extends Controller
@@ -43,15 +45,36 @@ class AccountController extends Controller
         $user = Auth::user();
         $validated = $request->validate([
             'name' => 'required|string|max:160',
-            'phone' => 'nullable|string|max:30|min_digits:9',
+            'phone' => PhoneValidation::rules(9, 30),
         ]);
 
         $user->update([
             'name' => $validated['name'],
-            'phone' => trim((string) ($validated['phone'] ?? '')) ?: null,
+            'phone' => trim((string) $validated['phone']),
         ]);
 
         return redirect()->route('shop.account.profile')->with('success', 'Profile updated.');
+    }
+
+    public function updatePassword(Request $request): RedirectResponse
+    {
+        $user = Auth::user();
+
+        $rules = [
+            'password' => 'required|string|min:8|confirmed',
+        ];
+
+        if ($user->password) {
+            $rules['current_password'] = 'required|current_password';
+        }
+
+        $validated = $request->validate($rules);
+
+        $user->update([
+            'password' => Hash::make($validated['password']),
+        ]);
+
+        return redirect()->route('shop.account.profile')->with('success', 'Password updated.');
     }
 
     public function orders(CurrencyService $currency): View

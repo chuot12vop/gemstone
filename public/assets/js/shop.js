@@ -25,10 +25,10 @@ let pcDrawerOpenEl = null;
   initProductAttributesAccordion();
   initProductCtaBar();
   initProductCtaQtySync();
+  initProductQtyStepper();
   initSiteHeaderHeight();
   initHeaderPromoBar();
   initCatalogMega();
-  initCatalogFiltersCollapse();
   initSiteFooterCollapse();
   initCatalogCategoryFilter();
   initProductUpsellBundle();
@@ -45,6 +45,7 @@ let pcDrawerOpenEl = null;
   initCheckoutVoucher();
   initCheckoutMobileSummary();
   initCheckoutGatewayFields();
+  initCheckoutExpress();
   initWelcomePopup();
   initFooterNewsletter();
   initContactForm();
@@ -458,26 +459,7 @@ function initHeaderPromoBar() {
 }
 
 function initCatalogCategoryFilter() {
-  const form = document.querySelector('[data-catalog-filter-form]');
-  const categorySelect = document.querySelector('[data-catalog-category-filter]');
-  if (!form || !categorySelect) {
-    return;
-  }
-
-  categorySelect.addEventListener('change', function () {
-    const brandSelect = form.querySelector('[name="brand"]');
-    if (brandSelect instanceof HTMLSelectElement) {
-      brandSelect.value = '';
-    }
-    form.requestSubmit();
-  });
-
-  const sortSelect = form.querySelector('[data-catalog-sort-filter]');
-  if (sortSelect instanceof HTMLSelectElement) {
-    sortSelect.addEventListener('change', function () {
-      form.requestSubmit();
-    });
-  }
+  // Filters apply only when the user clicks Apply in the drawer form.
 }
 
 function initFooterNewsletter() {
@@ -565,6 +547,10 @@ function initCheckoutVoucher() {
   const msg = section.querySelector('[data-voucher-msg]');
   const discountRow = document.querySelector('[data-checkout-discount-row]');
   const discountEl = document.querySelector('[data-checkout-discount]');
+  const shippingEl = document.querySelector('[data-checkout-shipping]');
+  const shippingRow = document.querySelector('[data-checkout-shipping-row]');
+  const taxRow = document.querySelector('[data-checkout-tax-row]');
+  const taxEl = document.querySelector('[data-checkout-tax]');
   const totalEl = document.querySelector('[data-checkout-total]');
 
   function csrfToken() {
@@ -601,6 +587,22 @@ function initCheckoutVoucher() {
     }
     if (totalEl && data.total_formatted) {
       totalEl.textContent = data.total_formatted;
+    }
+    if (shippingEl) {
+      const shipping = parseFloat(data.shipping_usd || '0', 10) || 0;
+      shippingEl.textContent = shipping <= 0 ? 'FREE' : (data.shipping_formatted || shippingEl.textContent);
+      if (shippingRow) {
+        shippingRow.hidden = false;
+      }
+    }
+    if (taxRow && taxEl) {
+      const tax = parseFloat(data.tax_usd || '0', 10) || 0;
+      if (tax > 0) {
+        taxEl.textContent = data.tax_formatted || taxEl.textContent;
+        taxRow.hidden = false;
+      } else {
+        taxRow.hidden = true;
+      }
     }
     const mobileTotal = document.querySelector('[data-checkout-summary-toggle] [data-checkout-total]');
     if (mobileTotal && data.total_formatted) {
@@ -957,6 +959,207 @@ function initCheckoutMobileSummary() {
     mq.addListener(syncLayout);
   }
   syncLayout();
+}
+
+function initCheckoutExpress() {
+  const root = document.querySelector('[data-checkout-express]');
+  if (!root) {
+    return;
+  }
+
+  const form = document.querySelector('[data-checkout-delivery]');
+  const initUrl = root.getAttribute('data-paypal-init-url');
+  const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')
+    || document.querySelector('input[name="_token"]')?.value
+    || '';
+
+  if (!initUrl) {
+    return;
+  }
+
+  const sdkUrl = root.getAttribute('data-paypal-sdk');
+
+  function loadPayPalSdk(url) {
+    if (typeof paypal !== 'undefined') {
+      return Promise.resolve();
+    }
+    if (!url) {
+      return Promise.reject(new Error('PayPal SDK URL missing'));
+    }
+    const existing = document.querySelector('script[data-paypal-sdk-express]');
+    if (existing) {
+      return new Promise(function (resolve, reject) {
+        if (typeof paypal !== 'undefined') {
+          resolve();
+          return;
+        }
+        existing.addEventListener('load', function () { resolve(); }, { once: true });
+        existing.addEventListener('error', function () { reject(new Error('PayPal SDK failed to load')); }, { once: true });
+      });
+    }
+    return new Promise(function (resolve, reject) {
+      const script = document.createElement('script');
+      script.src = url;
+      script.async = true;
+      script.dataset.paypalSdkExpress = '1';
+      script.dataset.sdkIntegrationSource = 'express-checkout';
+      script.onload = function () { resolve(); };
+      script.onerror = function () { reject(new Error('PayPal SDK failed to load')); };
+      document.head.appendChild(script);
+    });
+  }
+
+  function showPayPalMountError(mountSelector, message) {
+    const mount = document.querySelector(mountSelector);
+    if (!mount || mount.querySelector('.checkout-express__mount-error')) {
+      return;
+    }
+    mount.innerHTML = '<p class="checkout-express__mount-error">' + message + '</p>';
+  }
+
+  function collectPayload() {
+    const payload = { customer_email: '' };
+    if (!form) {
+      return payload;
+    }
+    const names = [
+      'customer_email',
+      'shipping_country',
+      'shipping_first_name',
+      'shipping_last_name',
+      'shipping_company',
+      'shipping_address_line1',
+      'shipping_address_line2',
+      'shipping_city',
+      'shipping_postcode',
+      'shipping_phone',
+      'voucher_code',
+    ];
+    names.forEach(function (name) {
+      const el = form.querySelector('[name="' + name + '"]');
+      if (el) {
+        payload[name] = String(el.value || '').trim();
+      }
+    });
+    const emailOptIn = form.querySelector('[name="marketing_email_opt_in"]');
+    if (emailOptIn?.checked) {
+      payload.marketing_email_opt_in = '1';
+    }
+    return payload;
+  }
+
+  function postInit() {
+    const payload = collectPayload();
+
+    return fetch(initUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+        'X-CSRF-TOKEN': csrf,
+        'X-Requested-With': 'XMLHttpRequest',
+      },
+      body: JSON.stringify(payload),
+    }).then(function (res) {
+      return res.json().then(function (data) {
+        if (!res.ok) {
+          throw new Error((data && data.message) || 'Could not start express checkout.');
+        }
+        return data;
+      });
+    });
+  }
+
+  function postConfirm(confirmUrl, body) {
+    return fetch(confirmUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+        'X-CSRF-TOKEN': csrf,
+        'X-Requested-With': 'XMLHttpRequest',
+      },
+      body: JSON.stringify(body),
+    }).then(function (res) {
+      return res.json().then(function (data) {
+        if (res.ok && data.redirect) {
+          window.location.href = data.redirect;
+          return;
+        }
+        throw new Error((data && data.message) || 'Payment could not be confirmed.');
+      });
+    });
+  }
+
+  function mountPayPal() {
+    if (typeof paypal === 'undefined') {
+      showPayPalMountError('#express-paypal-button', 'PayPal could not be loaded. Check your connection or ad blocker.');
+      return;
+    }
+
+    let lastInit = null;
+
+    function bindExpressButton(mountSelector, options, style) {
+      const mount = document.querySelector(mountSelector);
+      if (!mount) {
+        return;
+      }
+      const buttonOptions = Object.assign({}, options, {
+        style: style,
+        createOrder: function () {
+          return postInit().then(function (data) {
+            lastInit = data;
+            return data.paypal_order_id;
+          });
+        },
+        onApprove: function (data) {
+          if (!lastInit || !lastInit.confirm_url) {
+            return Promise.reject(new Error('Checkout session expired. Please try again.'));
+          }
+          return postConfirm(lastInit.confirm_url, { paypal_order_id: data.orderID });
+        },
+        onError: function (err) {
+          console.error('PayPal express error', err);
+        },
+      });
+      paypal
+        .Buttons(buttonOptions)
+        .render(mount)
+        .catch(function (err) {
+          console.error('PayPal express render failed', mountSelector, err);
+          showPayPalMountError(mountSelector, 'PayPal is unavailable in this browser.');
+        });
+    }
+
+    bindExpressButton('#express-paypal-button', { fundingSource: paypal.FUNDING.PAYPAL }, {
+      layout: 'vertical',
+      color: 'gold',
+      shape: 'rect',
+      label: 'paypal',
+      height: 48,
+      tagline: false,
+    });
+
+    const gpayFunding = paypal.FUNDING && paypal.FUNDING.GOOGLEPAY;
+    if (gpayFunding) {
+      bindExpressButton('#express-googlepay-button', { fundingSource: gpayFunding }, {
+        layout: 'vertical',
+        color: 'black',
+        shape: 'rect',
+        height: 48,
+        tagline: false,
+      });
+    }
+  }
+
+  loadPayPalSdk(sdkUrl)
+    .then(function () {
+      mountPayPal();
+    })
+    .catch(function (err) {
+      console.error(err);
+      showPayPalMountError('#express-paypal-button', 'PayPal could not be loaded. Refresh the page or use Pay now below.');
+    });
 }
 
 function initCheckoutGatewayFields() {
@@ -1839,6 +2042,37 @@ function initProductGallery() {
   });
 
   startAutoplay();
+
+  gallery._pdSetImages = function (urls) {
+    const nextUrls = (urls || []).filter(Boolean);
+    if (!nextUrls.length) {
+      return;
+    }
+
+    images.length = 0;
+    nextUrls.forEach(function (url) { images.push(url); });
+
+    const thumbsWrap = gallery.querySelector('.pd-gallery__thumbs');
+    if (thumbsWrap) {
+      if (nextUrls.length <= 1) {
+        thumbsWrap.hidden = true;
+        thumbsWrap.innerHTML = '';
+      } else {
+        thumbsWrap.hidden = false;
+        thumbsWrap.innerHTML = nextUrls.map(function (url, idx) {
+          return '<button type="button" class="pd-gallery__thumb' + (idx === 0 ? ' is-active' : '') + '" data-pd-thumb data-pd-src="' + url + '" aria-label="Show image ' + (idx + 1) + '"><img src="' + url + '" alt="" loading="lazy"></button>';
+        }).join('');
+        thumbsWrap.querySelectorAll('[data-pd-thumb]').forEach(function (thumb, idx) {
+          thumb.addEventListener('click', function () { setActive(idx, false); });
+        });
+      }
+    }
+
+    if (prevBtn) prevBtn.classList.toggle('is-hidden', nextUrls.length <= 1);
+    if (nextBtn) nextBtn.classList.toggle('is-hidden', nextUrls.length <= 1);
+
+    setActive(0, false);
+  };
 }
 
 function initHomeStoriesTextToggle() {
@@ -2038,6 +2272,40 @@ function initProductCtaQtySync() {
   if (!main || !cta) return;
   main.addEventListener('input', function () { cta.value = main.value; });
   cta.addEventListener('input', function () { main.value = cta.value; });
+}
+
+function initProductQtyStepper() {
+  const pairs = [
+    {
+      dec: document.querySelector('[data-pd-qty-dec]'),
+      inc: document.querySelector('[data-pd-qty-inc]'),
+      input: document.querySelector('[data-pd-qty]'),
+    },
+    {
+      dec: document.querySelector('[data-pd-cta-qty-dec]'),
+      inc: document.querySelector('[data-pd-cta-qty-inc]'),
+      input: document.querySelector('[data-pd-cta-qty]'),
+    },
+  ];
+
+  const clampQty = (input, delta) => {
+    if (!(input instanceof HTMLInputElement)) return;
+    const min = parseInt(input.min || '1', 10) || 1;
+    const max = parseInt(input.max || '9999', 10) || 9999;
+    const next = Math.min(max, Math.max(min, (parseInt(input.value || '1', 10) || 1) + delta));
+    input.value = String(next);
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  };
+
+  pairs.forEach(function (pair) {
+    if (!(pair.input instanceof HTMLInputElement)) return;
+    if (pair.dec) {
+      pair.dec.addEventListener('click', function () { clampQty(pair.input, -1); });
+    }
+    if (pair.inc) {
+      pair.inc.addEventListener('click', function () { clampQty(pair.input, 1); });
+    }
+  });
 }
 
 function initFlashToasts() {
@@ -2293,12 +2561,35 @@ function initProductVariantPicker() {
   };
 
   const syncGallery = (variant) => {
-    if (!(mainImg instanceof HTMLImageElement) || !variant) {
+    if (!variant) {
       return;
     }
-    if (variant.image) {
+
+    const gallery = document.querySelector('[data-pd-gallery]');
+    const urls = Array.isArray(variant.images) && variant.images.length
+      ? variant.images.filter(Boolean)
+      : [variant.image].filter(Boolean);
+
+    if (gallery && typeof gallery._pdSetImages === 'function') {
+      gallery._pdSetImages(urls);
+      return;
+    }
+
+    if (mainImg instanceof HTMLImageElement && variant.image) {
       mainImg.src = variant.image;
     }
+  };
+
+  const updateQtyLimits = (variant) => {
+    if (!variant) return;
+    const max = Math.max(1, Number(variant.stock || 1));
+    document.querySelectorAll('[data-pd-qty], [data-pd-cta-qty]').forEach(function (input) {
+      if (!(input instanceof HTMLInputElement)) return;
+      input.max = String(max);
+      if ((parseInt(input.value || '1', 10) || 1) > max) {
+        input.value = String(max);
+      }
+    });
   };
 
   const applyVariant = () => {
@@ -2335,6 +2626,7 @@ function initProductVariantPicker() {
       }
     });
 
+    updateQtyLimits(variant);
     syncGallery(variant);
   };
 

@@ -5,9 +5,9 @@
     <h1 class="page-head__title">Sign in</h1>
     <p class="page-head__summary">
         @if($checkoutRequired ?? false)
-            Please sign in to continue checkout and complete your payment.
+            Sign in to prefill your details and track this order in your account.
         @else
-            Sign in to checkout, track orders, and manage your profile.
+            Sign in to track orders and manage your profile. You can also checkout as a guest.
         @endif
     </p>
 </header>
@@ -30,6 +30,7 @@
         Password
         <input type="password" name="password" required autocomplete="current-password">
     </label>
+    <p class="auth-form__switch"><a href="{{ route('password.request') }}">Forgot your password?</a></p>
     <label class="auth-form__remember">
         <input type="checkbox" name="remember" value="1" @checked(old('remember'))>
         Remember me

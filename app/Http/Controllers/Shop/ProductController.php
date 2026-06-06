@@ -21,9 +21,9 @@ class ProductController extends Controller
             'category',
             'productImages',
             'productAttributes',
-            'variants' => static fn ($q) => $q->where('is_active', true)->orderBy('sort_order')->orderBy('id'),
+            'variants' => static fn ($q) => $q->where('is_active', true)->orderBy('sort_order')->orderBy('id')->with('hoverImages'),
             'upsellProducts' => static fn ($q) => $q->where('is_active', true)->with([
-                'variants' => static fn ($vq) => $vq->where('is_active', true)->orderBy('sort_order')->orderBy('id'),
+                'variants' => static fn ($vq) => $vq->where('is_active', true)->orderBy('sort_order')->orderBy('id')->with('hoverImages'),
             ]),
         ]);
         $currency = app(CurrencyService::class);
@@ -32,7 +32,7 @@ class ProductController extends Controller
             ->where('is_active', true)
             ->where('category_id', $product->category_id)
             ->where('id', '!=', $product->id)
-            ->with(['category', 'variants' => fn ($q) => $q->where('is_active', true)->orderBy('sort_order')->orderBy('id')])
+            ->with(['category', 'variants' => fn ($q) => $q->where('is_active', true)->orderBy('sort_order')->orderBy('id')->with('hoverImages')])
             ->inRandomOrder()
             ->limit(8)
             ->get();
@@ -44,7 +44,7 @@ class ProductController extends Controller
                 ->where('is_active', true)
                 ->where('category_id', $bestSellersCategory->id)
                 ->where('id', '!=', $product->id)
-                ->with(['category', 'variants' => fn ($q) => $q->where('is_active', true)->orderBy('sort_order')->orderBy('id')])
+                ->with(['category', 'variants' => fn ($q) => $q->where('is_active', true)->orderBy('sort_order')->orderBy('id')->with('hoverImages')])
                 ->inRandomOrder()
                 ->limit(8)
                 ->get();

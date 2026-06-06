@@ -125,13 +125,13 @@
                 $Cashtag
                 <input type="text" name="cashapp_cashtag" value="{{ old('cashapp_cashtag', $settings['payment_cashapp_cashtag'] ?? '') }}" placeholder="YourCashtag">
             </label>
-            <label>
-                QR image
-                <input type="file" name="cashapp_qr" accept="image/jpeg,image/png,image/webp">
-            </label>
-            @if(! empty($settings['payment_cashapp_qr_image']))
-                <p><img src="{{ $settings['payment_cashapp_qr_image'] }}" alt="Current Cash App QR" style="max-width:140px;border-radius:8px;border:1px solid #e2e5ea;"></p>
-            @endif
+            @include('partials.file-upload', [
+                'name' => 'cashapp_qr',
+                'label' => 'QR image',
+                'previewUrl' => !empty($settings['payment_cashapp_qr_image']) ? $settings['payment_cashapp_qr_image'] : null,
+                'previewWidth' => 140,
+                'previewHeight' => 140,
+            ])
         </fieldset>
 
         <fieldset class="form-fieldset">
@@ -148,13 +148,13 @@
                 Payee label (shown to customer)
                 <input type="text" name="zelle_payee_label" value="{{ old('zelle_payee_label', $settings['payment_zelle_payee_label'] ?? '') }}" placeholder="Tachi Gem Stone">
             </label>
-            <label>
-                QR image
-                <input type="file" name="zelle_qr" accept="image/jpeg,image/png,image/webp">
-            </label>
-            @if(! empty($settings['payment_zelle_qr_image']))
-                <p><img src="{{ $settings['payment_zelle_qr_image'] }}" alt="Current Zelle QR" style="max-width:140px;border-radius:8px;border:1px solid #e2e5ea;"></p>
-            @endif
+            @include('partials.file-upload', [
+                'name' => 'zelle_qr',
+                'label' => 'QR image',
+                'previewUrl' => !empty($settings['payment_zelle_qr_image']) ? $settings['payment_zelle_qr_image'] : null,
+                'previewWidth' => 140,
+                'previewHeight' => 140,
+            ])
         </fieldset>
 
         <div class="form-actions">
@@ -182,7 +182,7 @@
             Status
             <select name="status">
                 <option value="">All</option>
-                @foreach(['pending', 'paid', 'failed', 'refunded'] as $paymentStatus)
+                @foreach(\App\Models\PaymentTransaction::STATUSES as $paymentStatus)
                     <option value="{{ $paymentStatus }}" @selected($status === $paymentStatus)>{{ $paymentStatus }}</option>
                 @endforeach
             </select>

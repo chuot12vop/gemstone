@@ -10,10 +10,17 @@
         <p class="banner banner--err">{{ $errors->first() }}</p>
     @endif
 
-    <label class="gateway-pane__file">
-        <span class="gateway-pane__file-label">Transfer screenshot <span aria-hidden="true">*</span></span>
-        <input type="file" name="payment_proof" accept="image/jpeg,image/png,image/webp" capture="environment" required>
-    </label>
+    <div class="gateway-pane__file">
+        @include('partials.file-upload', [
+            'name' => 'payment_proof',
+            'label' => 'Transfer screenshot *',
+            'hint' => 'Take a screenshot showing the completed transfer.',
+            'dropTitle' => 'Drop screenshot here',
+            'dropHint' => 'or click to upload / take photo',
+            'required' => true,
+            'capture' => 'environment',
+        ])
+    </div>
 
     <label class="gateway-pane__field">
         <span>Reference / transaction ID (optional)</span>

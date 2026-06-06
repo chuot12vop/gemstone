@@ -21,6 +21,14 @@ class PaymentMethodLogos
     }
 
     /**
+     * @return array{src: string, label: string}|null
+     */
+    public static function forGateway(string $code, string $label = ''): ?array
+    {
+        return PaymentLogoSettings::forGateway($code, $label);
+    }
+
+    /**
      * Legacy scan of storage/app/public/logo — used once to seed admin-managed logos.
      *
      * @return list<array{path: string, label: string}>

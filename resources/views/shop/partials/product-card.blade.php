@@ -90,6 +90,19 @@
     </div>
 
     <div class="shop-product-card__body">
+        <h3 class="shop-product-card__title">
+            <a href="{{ route('shop.product', $product) }}">{{ $product->name }}</a>
+        </h3>
+
+        <div class="shop-product-card__prices{{ $onSale ? ' shop-product-card__prices--sale' : '' }}">
+            <span class="shop-product-card__price" data-product-card-price>{{ $currency->formatUsd($displayPrice) }}</span>
+            @if($comparePrice !== null)
+                <span class="shop-product-card__compare" data-product-card-compare>{{ $currency->formatUsd($comparePrice) }}</span>
+            @else
+                <span class="shop-product-card__compare" data-product-card-compare hidden></span>
+            @endif
+        </div>
+
         @if(count($swatches) > 1)
             <div class="shop-product-card__swatches" role="list" aria-label="Color options">
                 @foreach($swatches as $i => $swatch)
@@ -116,6 +129,7 @@
                             aria-label="{{ $swatch['color'] }}"
                             data-product-card-swatch
                             data-variant-id="{{ $swatch['variant_id'] }}"
+                            data-swatch-color="{{ $swatch['swatch_color'] ?? '' }}"
                             data-image="{{ $swatch['image'] }}"
                             data-hover-image="{{ $swatch['hover_image'] }}"
                             data-price-usd="{{ $swatchDisplay }}"
@@ -125,24 +139,13 @@
                             data-on-sale="{{ $swatchOnSale ? '1' : '0' }}"
                             data-variant-on-sale="{{ $swatchVariantSale ? '1' : '0' }}"
                             title="{{ $swatch['color'] }}">
-                        <span class="shop-product-card__swatch-dot" aria-hidden="true"></span>
+                        <span class="shop-product-card__swatch-dot{{ !empty($swatch['swatch_color']) ? ' shop-product-card__swatch-dot--custom' : '' }}"
+                              aria-hidden="true"
+                              @if(!empty($swatch['swatch_color'])) style="background-color: {{ $swatch['swatch_color'] }};" @endif></span>
                     </button>
                 @endforeach
             </div>
         @endif
-
-        <h3 class="shop-product-card__title">
-            <a href="{{ route('shop.product', $product) }}">{{ $product->name }}</a>
-        </h3>
-
-        <div class="shop-product-card__prices{{ $onSale ? ' shop-product-card__prices--sale' : '' }}">
-            <span class="shop-product-card__price" data-product-card-price>{{ $currency->formatUsd($displayPrice) }}</span>
-            @if($comparePrice !== null)
-                <span class="shop-product-card__compare" data-product-card-compare>{{ $currency->formatUsd($comparePrice) }}</span>
-            @else
-                <span class="shop-product-card__compare" data-product-card-compare hidden></span>
-            @endif
-        </div>
     </div>
 
     @include('shop.partials.product-card-drawer', ['product' => $product, 'currency' => $currency])

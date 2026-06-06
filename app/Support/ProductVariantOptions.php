@@ -22,19 +22,22 @@ class ProductVariantOptions
     {
         $active = $variants->where('is_active', true)->values();
         $swatches = [];
-        $seen = [];
 
-        foreach ($active as $variant) {
+        $groups = $active->groupBy(static function (ProductVariant $variant): string {
             $color = trim((string) ($variant->option_color ?? ''));
-            $key = $color !== '' ? $color : '__default__';
 
-            if (isset($seen[$key])) {
-                continue;
-            }
+            return $color !== '' ? $color : '__default__';
+        });
 
-            $seen[$key] = true;
+        foreach ($groups as $key => $group) {
+            /** @var ProductVariant $variant */
+            $variant = $group->first(static fn (ProductVariant $v) => $v->normalizedSwatchColor() !== null)
+                ?? $group->first();
+            $color = trim((string) ($variant->option_color ?? ''));
+
             $swatches[] = [
                 'color' => $color !== '' ? $color : 'Default',
+                'swatch_color' => $variant->normalizedSwatchColor(),
                 'variant_id' => $variant->id,
                 'image' => $variant->frontImage($product),
                 'hover_image' => $variant->hoverImage($product),
@@ -95,6 +98,31 @@ class ProductVariantOptions
 
     /**
      * @param  Collection<int, ProductVariant>  $variants
+     * @return array<string, string|null>
+     */
+    public static function swatchColorsByOption(Collection $variants): array
+    {
+        $map = [];
+        $groups = $variants->where('is_active', true)->groupBy(static function (ProductVariant $variant): string {
+            return trim((string) ($variant->option_color ?? ''));
+        });
+
+        foreach ($groups as $color => $group) {
+            if ($color === '') {
+                continue;
+            }
+
+            /** @var ProductVariant $variant */
+            $variant = $group->first(static fn (ProductVariant $v) => $v->normalizedSwatchColor() !== null)
+                ?? $group->first();
+            $map[$color] = $variant->normalizedSwatchColor();
+        }
+
+        return $map;
+    }
+
+    /**
+     * @param  Collection<int, ProductVariant>  $variants
      * @return array<int, array<string, mixed>>
      */
     public static function toPickerJson(Product $product, Collection $variants): array
@@ -104,11 +132,14 @@ class ProductVariantOptions
             ->sortBy(['sort_order', 'id'])
             ->values()
             ->map(function (ProductVariant $variant) use ($product) {
+                $images = $variant->galleryImages($product)->all();
+
                 return [
                     'id' => $variant->id,
                     'color' => $variant->option_color,
                     'size' => $variant->option_size,
                     'label' => $variant->label(),
+                    'swatch_color' => $variant->normalizedSwatchColor(),
                     'price_usd' => (float) $variant->price_usd,
                     'compare_at_price_usd' => $variant->compare_at_price_usd !== null
                         ? (float) $variant->compare_at_price_usd
@@ -117,6 +148,7 @@ class ProductVariantOptions
                     'is_default' => (bool) $variant->is_default,
                     'image' => $variant->frontImage($product),
                     'hover_image' => $variant->hoverImage($product),
+                    'images' => $images !== [] ? $images : array_filter([$variant->frontImage($product)]),
                 ];
             })
             ->all();

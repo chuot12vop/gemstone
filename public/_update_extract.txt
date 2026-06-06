@@ -1,0 +1,126 @@
+I. Update
+Biển thể 200k
+Mỗi biến thể được bổ sung thêm 3-5 ảnh vào Hover image 
+Trong Admin : Mỗi biến thể được thêm option chọn màu để đánh dấu cho khách hàng dễ nhận biết 
+Thiết kế bảng chọn màu : 
+
+Chọn màu cho biến thể hiển thị tương ứng 
+Click vào màu nào thì chỉ hiện thị hình ảnh sản phẩm của biến thể đó
+đẩy phần hiển thị biến thể  xuống dưới giá để cho tên sản phẩm và giá giữa các sản phẩm thẳng hàng 
+
+
+
+Logo và tên trang có thêm chức năng để (bật/tắt) ẩn nội dung 
+Bật/tắt ẩn nội dung hiển thị Logo và Tên trang - 150k
+
+Miễn phí 3 mục sau :
+ sử dụng phông chữ cho website : https://www.missoma.com/
+Phần khung ảnh Logo làm giống https://www.missoma.com/
+Để ẩn tên ở bản Mobile (0K)
+
+font-family: "Cormorant Garamond", Georgia, serif;
+
+Thanh toán 
+Trong form điền thanh toán sẽ có thêm 
+
+Không bắt buộc khách hàng phải đăng nhập mới thanh toán được ( vì theo thống kế tỉ lệ khách hàng mua ẩn danh rất nhiều )
+Không cần đăng nhập thì số điện thoại là bắt buộc phải nhập để có thông tin liên hệ với khách hàng 
+Bổ sung thêm mục shipping fee và taxes ( ví dụ khách hàng mua từ 2 sản phẩm trở lên sẽ được miễn phí ship )
+
+1 lần cập nhật 500k - 1tr ( )
+
+
+
+
+
+
+II. Feedback
+Đánh dấu màu đỏ :  danh mục ưu tiên - cần được xử lý trước 
+Lỗi phông chữ “10%”
+
+
+có css màu nhưng không hiện màu 
+
+
+
+
+nên để thêm css background - color vì sẵn đang là button 
+Trang sản phẩm 
+
+
+
+mất tính năng read more….
+ẩn hiển thị số lượng ( stock)
+
+Thay đổi về dạng (+),(-) trong trang sản phẩm
+
+Tính năng đã có trong phần trang chủ : 
+Bổ sung thêm tính năng này trong trang sản phẩm vì trong trang sản phẩm khi thêm vào giỏ hàng vẫn đang sử dụng tính năng cũ 
+
+
+nhãn dán trong khung ảnh 
+
+vấn đề : nhãn dán đang để sát lề khung ảnh 
+chỉnh sửa khoảng cách hợp lý 
+
+Logo cổng thanh toán không đúng
+
+Vấn đề : để sai logo 
+=> giải quyết : chủ động sửa lại hoặc thiết kế giống phần footer background image để tự thay đổi
+
+
+
+Lỗi hiển thị khi có nhiều đơn hàng trong order history
+vấn đề : https://drive.google.com/drive/folders/1Xxf1INbEhCM-6Xn7CkL557sWGT8eL3TX?usp=sharing
+
+Account profile
+
+bắt buộc phải nhập tối thiểu 9 số thì mới được save
+thêm thay đổi mật khẩu
+
+Sign in ( quên mật khẩu)
+trường hợp khách hàng quên mật khẩu và muốn lấy lại mật khẩu để đăng nhập lại 
+
+Filter
+bỏ phần hiển thị số lượng 
+thiết kế cách mở bảng Filter trên desktop giống với cách mở trên mobile ( xếp thành hàng dọc từ trên xuống)4057650238125
+
+
+
+
+
+
+
+3362325114300
+
+
+màn hình nhỏ bị vỡ layout
+
+
+
+
+Bảng filter đang để hở khoảng trống => thiết kế vuông vức , khép kín chỗ hở 2381250228600
+
+
+
+
+
+Vấn đề trong khi sử dụng filter https://drive.google.com/drive/folders/1h5swLe0pxInPnp2-JHxW1fBy6rsvGufT?usp=sharing
+
+Mục Category và Sort By khi chọn xong chưa ấn Apply đã tự động nhảy đến trang khác 
+=> chỉ lọc khi người dùng đã chọn xong và ấn Apply
+
+Thanh toán
+https://drive.google.com/drive/folders/1dONwBpce58E1iCNJOuRQzEEuFpWD-naB?usp=drive_link ( không nhắc đến paypal )
+
+vấn đề : khách hàng đã điền đầy đủ thông tin và tiến đến bước thanh toán.
+trường hợp khách chọn sai phương thức thanh toán và muốn quay lại để thay đổi phương thức thanh toán khác => gặp phải vấn đề 
+b1 : chọn sai phương thức thanh toán 
+b2 : back lại 
+b3: chọn lại phương thức thanh toán khác => mất bước thanh toán và quay trở về trang chủ 
+=> gặp vấn đề : giỏ hàng bị mất . vì sản phẩm trong giỏ hàng đó đã được lưu về mục order history
+
+=> cách giải quyết : thêm nút Back để khách hàng quay lại và sửa thông tin sau đó tiếp hoàn thiện các bước sau 
+
+
+

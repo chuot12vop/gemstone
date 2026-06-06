@@ -7,6 +7,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class PaymentTransaction extends Model
 {
+    /** @var list<string> */
+    public const STATUSES = ['pending', 'paid', 'failed', 'refunded', 'cancelled'];
+
     protected $fillable = [
         'order_id',
         'payment_method',

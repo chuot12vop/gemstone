@@ -81,8 +81,6 @@
             @endif
         </button>
 
-        <p class="catalog-toolbar__count">{{ $products->total() }} {{ Str::plural('product', $products->total()) }}</p>
-
         <form class="catalog-toolbar__sort" method="get" action="{{ route('shop.products.index') }}">
             @if(!empty($filters['category_id']))
                 <input type="hidden" name="category_id" value="{{ $filters['category_id'] }}">
@@ -94,7 +92,7 @@
                 <input type="hidden" name="q" value="{{ $filters['q'] }}">
             @endif
             <label class="catalog-toolbar__sort-label">
-                <select name="sort" class="catalog-toolbar__sort-select" onchange="this.form.submit()" aria-label="Sort products">
+                <select name="sort" class="catalog-toolbar__sort-select" aria-label="Sort products">
                     <option value="newest" @selected(($filters['sort'] ?? 'related') === 'newest')>Newest</option>
                     <option value="related" @selected(($filters['sort'] ?? 'related') === 'related')>Featured</option>
                     <option value="price_desc" @selected(($filters['sort'] ?? 'related') === 'price_desc')>Price: high to low</option>

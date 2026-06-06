@@ -55,6 +55,13 @@ class SettingAdminController extends Controller
             'payment_logos.*.image' => 'nullable|file|mimes:jpg,jpeg,png,webp,svg|max:2048',
             'payment_logos_new' => 'nullable|array',
             'payment_logos_new.*' => 'file|mimes:jpg,jpeg,png,webp,svg|max:2048',
+            'show_site_logo' => 'nullable|boolean',
+            'show_site_name' => 'nullable|boolean',
+            'hide_site_name_mobile' => 'nullable|boolean',
+            'shipping_flat_fee_usd' => 'nullable|numeric|min:0',
+            'free_shipping_threshold_usd' => 'nullable|numeric|min:0.01',
+            'free_shipping_min_items' => 'nullable|integer|min:0',
+            'checkout_tax_percent' => 'nullable|numeric|min:0|max:100',
         ]);
 
         $settings = $this->getSettingsMap();
@@ -72,6 +79,13 @@ class SettingAdminController extends Controller
         }
 
         $settings['site_name'] = $validated['site_name'];
+        $settings['show_site_logo'] = $request->boolean('show_site_logo') ? '1' : '0';
+        $settings['show_site_name'] = $request->boolean('show_site_name') ? '1' : '0';
+        $settings['hide_site_name_mobile'] = $request->boolean('hide_site_name_mobile') ? '1' : '0';
+        $settings['shipping_flat_fee_usd'] = (string) ($validated['shipping_flat_fee_usd'] ?? $settings['shipping_flat_fee_usd'] ?? '5.99');
+        $settings['free_shipping_threshold_usd'] = (string) ($validated['free_shipping_threshold_usd'] ?? $settings['free_shipping_threshold_usd'] ?? '100');
+        $settings['free_shipping_min_items'] = (string) ($validated['free_shipping_min_items'] ?? $settings['free_shipping_min_items'] ?? '0');
+        $settings['checkout_tax_percent'] = (string) ($validated['checkout_tax_percent'] ?? $settings['checkout_tax_percent'] ?? '8');
         $settings['contact_whatsapp_phone'] = trim((string) ($validated['contact_whatsapp_phone'] ?? ''));
         $settings['contact_google_script_url'] = trim((string) ($validated['contact_google_script_url'] ?? ''));
         $settings['home_news_ticker'] = trim((string) ($validated['home_news_ticker'] ?? ''));
@@ -141,7 +155,14 @@ class SettingAdminController extends Controller
         $defaults = [
             'site_name' => config('app.name'),
             'site_logo' => '',
+            'show_site_logo' => '1',
+            'show_site_name' => '1',
+            'hide_site_name_mobile' => '0',
             'footer_background' => '',
+            'shipping_flat_fee_usd' => '5.99',
+            'free_shipping_threshold_usd' => '100',
+            'free_shipping_min_items' => '0',
+            'checkout_tax_percent' => '8',
             'contact_whatsapp_phone' => '',
             'contact_google_script_url' => '',
             'home_news_ticker' => '',

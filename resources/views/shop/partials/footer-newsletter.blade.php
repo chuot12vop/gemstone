@@ -1,5 +1,5 @@
 <div class="footer-newsletter" id="footer-newsletter" data-footer-newsletter>
-    <h2 class="footer-newsletter__title">Sign up for 10% off</h2>
+    <h2 class="footer-newsletter__title">Sign up for <span class="promo-numeric">10%</span> off</h2>
     <form class="footer-newsletter__form"
           method="post"
           action="{{ route('shop.promo.signup') }}"

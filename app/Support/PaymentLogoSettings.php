@@ -42,6 +42,41 @@ final class PaymentLogoSettings
     }
 
     /**
+     * Find an admin-configured logo for a checkout payment gateway.
+     *
+     * @return array{src: string, label: string}|null
+     */
+    public static function forGateway(string $code, string $label = ''): ?array
+    {
+        self::importLegacyIfEmpty();
+
+        $needles = self::gatewayMatchNeedles($code, $label);
+
+        foreach (self::decodedItems() as $item) {
+            if (! self::matchesGateway($item, $needles)) {
+                continue;
+            }
+
+            $path = trim((string) ($item['path'] ?? ''));
+            if ($path === '') {
+                continue;
+            }
+
+            $logoLabel = trim((string) ($item['label'] ?? ''));
+            if ($logoLabel === '') {
+                $logoLabel = self::labelFromPath($path);
+            }
+
+            return [
+                'src' => PublicAssetUrl::to($path) ?: $path,
+                'label' => $logoLabel,
+            ];
+        }
+
+        return null;
+    }
+
+    /**
      * @return list<array{src: string, label: string}>
      */
     public static function forDisplay(?string $excludePublicPath = null): array
@@ -249,6 +284,83 @@ final class PaymentLogoSettings
         $filename = pathinfo($path, PATHINFO_FILENAME);
 
         return self::labelFromFilename($filename);
+    }
+
+    /**
+     * @return list<string>
+     */
+    private static function gatewayMatchNeedles(string $code, string $label): array
+    {
+        $code = strtolower(trim($code));
+        $needles = [];
+
+        if ($code !== '') {
+            $needles[] = $code;
+            $needles[] = str_replace('_', '', $code);
+            $needles[] = str_replace('_', ' ', $code);
+        }
+
+        $aliases = [
+            'paypal' => ['paypal'],
+            'whatsapp' => ['whatsapp', 'whats app'],
+            'apple_pay' => ['apple pay', 'applepay', 'apple'],
+            'venmo' => ['venmo'],
+            'cashapp' => ['cash app', 'cashapp', 'cash-app'],
+            'zelle' => ['zelle'],
+        ];
+
+        if (isset($aliases[$code])) {
+            $needles = array_merge($needles, $aliases[$code]);
+        }
+
+        $label = strtolower(trim($label));
+        if ($label !== '') {
+            $needles[] = $label;
+        }
+
+        return array_values(array_unique(array_filter($needles)));
+    }
+
+    /**
+     * @param  array{path?: string, label?: string}  $item
+     * @param  list<string>  $needles
+     */
+    private static function matchesGateway(array $item, array $needles): bool
+    {
+        $path = strtolower((string) ($item['path'] ?? ''));
+        $logoLabel = strtolower((string) ($item['label'] ?? ''));
+        $filename = strtolower(pathinfo($path, PATHINFO_FILENAME));
+
+        foreach ($needles as $needle) {
+            if ($needle === '') {
+                continue;
+            }
+
+            $compactNeedle = str_replace([' ', '_', '-', '.'], '', $needle);
+            $haystacks = [
+                $path,
+                $logoLabel,
+                $filename,
+                str_replace([' ', '_', '-', '.'], '', $logoLabel),
+                str_replace([' ', '_', '-', '.'], '', $filename),
+            ];
+
+            foreach ($haystacks as $haystack) {
+                if ($haystack === '') {
+                    continue;
+                }
+
+                if (str_contains($haystack, $needle)) {
+                    return true;
+                }
+
+                if ($compactNeedle !== '' && str_contains($haystack, $compactNeedle)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     private static function labelFromFilename(string $filename): string

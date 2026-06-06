@@ -3,6 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ $title ?? ($siteSettings['site_name'] ?? config('app.name')) }}</title>
     @if(!empty($metaDescription))
         <meta name="description" content="{{ $metaDescription }}">
@@ -14,17 +15,22 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Source+Sans+3:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ asset('assets/css/shop.css') }}">
+    <link rel="stylesheet" href="{{ asset('assets/css/file-upload.css') }}">
     @stack('head')
 </head>
 <body class="site checkout-page">
     <a class="skip-link" href="#main">Skip to content</a>
     <header class="checkout-header">
         <div class="checkout-header__inner">
-            <a class="logo checkout-header__logo" href="{{ route('shop.home') }}">
-                @if(!empty($siteSettings['site_logo']))
-                    <img class="logo__img" src="{{ $siteSettings['site_logo'] }}" alt="">
+            <a class="logo checkout-header__logo logo--missoma {{ !($siteSettings['show_site_name'] ?? true) ? 'logo--name-hidden' : '' }} {{ ($siteSettings['hide_site_name_mobile'] ?? false) ? 'logo--hide-name-mobile' : '' }}" href="{{ route('shop.home') }}">
+                @if(($siteSettings['show_site_logo'] ?? true) && !empty($siteSettings['site_logo']))
+                    <span class="logo__frame">
+                        <img class="logo__img" src="{{ $siteSettings['site_logo'] }}" alt="{{ $siteSettings['site_name'] ?? config('app.name') }}">
+                    </span>
                 @endif
-                <span class="logo__name">{{ $siteSettings['site_name'] ?? config('app.name') }}</span>
+                @if($siteSettings['show_site_name'] ?? true)
+                    <span class="logo__name">{{ $siteSettings['site_name'] ?? config('app.name') }}</span>
+                @endif
             </a>
             <div class="checkout-header__actions">
                 <form class="currency-form currency-form--checkout" method="post" action="{{ route('shop.currency') }}">
@@ -62,6 +68,7 @@
         </div>
         <p class="checkout-footer__copy">&copy; {{ date('Y') }} {{ $siteSettings['site_name'] ?? config('app.name') }}</p>
     </footer>
+    <script src="{{ asset('assets/js/file-upload.js') }}" defer></script>
     <script src="{{ asset('assets/js/shop.js') }}" defer></script>
     @stack('scripts')
 </body>

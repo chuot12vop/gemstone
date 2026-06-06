@@ -36,6 +36,9 @@ class AppServiceProvider extends ServiceProvider
             $defaults = [
                 'site_name' => config('app.name'),
                 'site_logo' => '',
+                'show_site_logo' => true,
+                'show_site_name' => true,
+                'hide_site_name_mobile' => false,
                 'security_policy' => '',
                 'privacy_policy' => '',
                 'return_policy' => '',
@@ -44,13 +47,17 @@ class AppServiceProvider extends ServiceProvider
             ];
 
             $storedSettings = Setting::query()
-                ->whereIn('key', array_keys($defaults))
+                ->whereIn('key', array_merge(array_keys($defaults), ['show_site_logo', 'show_site_name', 'hide_site_name_mobile']))
                 ->pluck('value', 'key')
                 ->toArray();
 
             foreach ($storedSettings as $key => $value) {
                 if (array_key_exists($key, $defaults) && $value !== null) {
-                    $defaults[$key] = (string) $value;
+                    if (in_array($key, ['show_site_logo', 'show_site_name', 'hide_site_name_mobile'], true)) {
+                        $defaults[$key] = (string) $value === '1';
+                    } else {
+                        $defaults[$key] = (string) $value;
+                    }
                 }
             }
 

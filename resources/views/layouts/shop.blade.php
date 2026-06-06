@@ -22,6 +22,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Source+Sans+3:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ asset('assets/css/shop.css') }}">
+    <link rel="stylesheet" href="{{ asset('assets/css/file-upload.css') }}">
     @stack('head')
 </head>
 <body class="site">
@@ -41,11 +42,15 @@
                 </button>
                 @include('shop.partials.header-search-dropdown')
             </div>
-            <a class="logo site-header__logo" href="{{ route('shop.home') }}">
-                @if(!empty($siteSettings['site_logo']))
-                    <img class="logo__img" src="{{ $siteSettings['site_logo'] }}" alt="">
+            <a class="logo site-header__logo logo--missoma {{ !($siteSettings['show_site_name'] ?? true) ? 'logo--name-hidden' : '' }} {{ ($siteSettings['hide_site_name_mobile'] ?? false) ? 'logo--hide-name-mobile' : '' }}" href="{{ route('shop.home') }}">
+                @if(($siteSettings['show_site_logo'] ?? true) && !empty($siteSettings['site_logo']))
+                    <span class="logo__frame">
+                        <img class="logo__img" src="{{ $siteSettings['site_logo'] }}" alt="{{ $siteSettings['site_name'] ?? config('app.name') }}">
+                    </span>
                 @endif
-                <span class="logo__name">{{ $siteSettings['site_name'] ?? config('app.name') }}</span>
+                @if($siteSettings['show_site_name'] ?? true)
+                    <span class="logo__name">{{ $siteSettings['site_name'] ?? config('app.name') }}</span>
+                @endif
             </a>
             <div class="site-header__nav-desktop">
                 <nav class="site-nav site-nav--desktop" aria-label="Main menu">
@@ -124,6 +129,7 @@
     </footer>
     @include('shop.partials.mobile-nav-drawer')
 
+    <script src="{{ asset('assets/js/file-upload.js') }}" defer></script>
     <script src="{{ asset('assets/js/shop.js') }}" defer></script>
     @stack('scripts')
 </body>

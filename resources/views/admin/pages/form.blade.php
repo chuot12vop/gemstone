@@ -33,13 +33,13 @@
         Content
         <textarea id="page-content" class="js-rich-text" name="content" rows="8" data-rich-height="360">{{ old('content', $page->content ?? '') }}</textarea>
     </label>
-    <label>
-        Image
-        <input type="file" name="image" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp">
-        @if($page && $page->image)
-            <img src="{{ \App\Support\PublicAssetUrl::to($page->image) }}" alt="" width="160" style="margin-top:8px;border-radius:8px;">
-        @endif
-    </label>
+    @include('partials.file-upload', [
+        'name' => 'image',
+        'label' => 'Image',
+        'previewUrl' => ($page && $page->image) ? \App\Support\PublicAssetUrl::to($page->image) : null,
+        'previewWidth' => 160,
+        'previewHeight' => 160,
+    ])
     <label class="checkbox">
         <input type="checkbox" name="is_active" value="1" @checked(old('is_active', $page ? $page->is_active : true))>
         Active on storefront

@@ -24,9 +24,9 @@
             <tbody>
             @foreach($orders as $order)
                 <tr>
-                    <td class="account-orders-table__products">
+                    <td class="account-orders-table__products" data-label="Products">
                         <div class="account-order-thumbs">
-                            @foreach($order->items->take(4) as $item)
+                            @foreach($order->items->take(3) as $item)
                                 @php
                                     $product = $item->product;
                                     $thumb = $product
@@ -42,22 +42,26 @@
                                     loading="lazy"
                                 >
                             @endforeach
-                            @if($order->items->count() > 4)
-                                <span class="account-order-thumbs__more">+{{ $order->items->count() - 4 }}</span>
+                            @if($order->items->count() > 3)
+                                <span class="account-order-thumbs__more">{{ $order->items->count() }} items</span>
                             @endif
                         </div>
                     </td>
-                    <td>{{ $order->order_number }}</td>
-                    <td>{{ $order->created_at->format('M j, Y') }}</td>
-                    <td>{{ ucfirst($order->status) }}</td>
-                    <td>{{ $currency->formatUsd((float) $order->subtotal_usd) }}</td>
-                    <td class="account-orders-table__action"><a href="{{ route('shop.account.orders.show', $order->order_number) }}">Details</a></td>
+                    <td data-label="Order"><span class="account-orders-table__order-no">{{ $order->order_number }}</span></td>
+                    <td data-label="Date">{{ $order->created_at->format('M j, Y') }}</td>
+                    <td data-label="Status">{{ ucfirst($order->status) }}</td>
+                    <td data-label="Total">{{ $currency->formatUsd((float) $order->total_display) }}</td>
+                    <td class="account-orders-table__action" data-label=""><a href="{{ route('shop.account.orders.show', $order->order_number) }}">Details</a></td>
                 </tr>
             @endforeach
             </tbody>
         </table>
     </div>
-    {{ $orders->links() }}
+    @if($orders->hasPages())
+        <nav class="pagination-wrap" aria-label="Order history pagination">
+            {{ $orders->links() }}
+        </nav>
+    @endif
 @endif
 
 <p class="account-back-link"><a href="{{ route('shop.account.index') }}">← Back to account</a></p>

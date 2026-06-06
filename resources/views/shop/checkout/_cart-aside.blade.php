@@ -15,10 +15,12 @@
                 @if($productUrl)
                     <a class="checkout-aside__thumb" href="{{ $productUrl }}">
                         <img src="{{ $image ?: asset('assets/img/placeholder.svg') }}" alt="" width="64" height="64" loading="lazy">
+                        <span class="checkout-aside__qty-badge" aria-hidden="true">{{ $row['quantity'] }}</span>
                     </a>
                 @else
                     <span class="checkout-aside__thumb">
                         <img src="{{ $image ?: asset('assets/img/placeholder.svg') }}" alt="" width="64" height="64" loading="lazy">
+                        <span class="checkout-aside__qty-badge" aria-hidden="true">{{ $row['quantity'] }}</span>
                     </span>
                 @endif
                 <div class="checkout-aside__body">
@@ -43,9 +45,19 @@
         <strong data-checkout-subtotal>{{ $currency->formatUsd((float) $subtotalUsd) }}</strong>
     </p>
     @php($discountUsd = (float) ($discountUsd ?? 0))
+    @php($shippingUsd = (float) ($shippingUsd ?? 0))
+    @php($taxUsd = (float) ($taxUsd ?? 0))
     <p class="checkout-aside__discount" data-checkout-discount-row @if($discountUsd <= 0) hidden @endif>
         <span>Discount</span>
         <strong data-checkout-discount>−{{ $currency->formatUsd($discountUsd) }}</strong>
+    </p>
+    <p class="checkout-aside__shipping" data-checkout-shipping-row>
+        <span>Shipping</span>
+        <strong data-checkout-shipping>{{ $shippingUsd <= 0 ? 'FREE' : $currency->formatUsd($shippingUsd) }}</strong>
+    </p>
+    <p class="checkout-aside__tax" data-checkout-tax-row @if($taxUsd <= 0) hidden @endif>
+        <span>Taxes</span>
+        <strong data-checkout-tax>{{ $currency->formatUsd($taxUsd) }}</strong>
     </p>
     <p class="checkout-aside__total">
         <span>Total</span>

@@ -21,15 +21,54 @@
     </div>
 
     <fieldset class="form-fieldset">
+        <legend>Header visibility</legend>
+        <label class="checkbox">
+            <input type="checkbox" name="show_site_logo" value="1" @checked(old('show_site_logo', ($settings['show_site_logo'] ?? '1') === '1'))>
+            Show website logo
+        </label>
+        <label class="checkbox">
+            <input type="checkbox" name="show_site_name" value="1" @checked(old('show_site_name', ($settings['show_site_name'] ?? '1') === '1'))>
+            Show site name next to logo
+        </label>
+        <label class="checkbox">
+            <input type="checkbox" name="hide_site_name_mobile" value="1" @checked(old('hide_site_name_mobile', ($settings['hide_site_name_mobile'] ?? '0') === '1'))>
+            Hide site name on mobile
+        </label>
+    </fieldset>
+
+    <fieldset class="form-fieldset">
+        <legend>Checkout — shipping &amp; tax</legend>
+        <div class="form-grid">
+            <label>
+                Flat shipping fee (USD)
+                <input type="number" name="shipping_flat_fee_usd" min="0" step="0.01" value="{{ old('shipping_flat_fee_usd', $settings['shipping_flat_fee_usd'] ?? '5.99') }}">
+            </label>
+            <label>
+                Free shipping threshold (USD)
+                <input type="number" name="free_shipping_threshold_usd" min="0.01" step="0.01" value="{{ old('free_shipping_threshold_usd', $settings['free_shipping_threshold_usd'] ?? '100') }}">
+            </label>
+            <label>
+                Free shipping from item count (0 = off)
+                <input type="number" name="free_shipping_min_items" min="0" step="1" value="{{ old('free_shipping_min_items', $settings['free_shipping_min_items'] ?? '0') }}">
+                <small>Example: 2 = free shipping when cart has 2+ items.</small>
+            </label>
+            <label>
+                Tax percent (%)
+                <input type="number" name="checkout_tax_percent" min="0" max="100" step="0.01" value="{{ old('checkout_tax_percent', $settings['checkout_tax_percent'] ?? '8') }}">
+                <small>Applied to subtotal after discount plus shipping.</small>
+            </label>
+        </div>
+    </fieldset>
+
+    <fieldset class="form-fieldset">
         <legend>Website logo</legend>
-        <div id="site-logo-dropzone" style="margin-top:10px;padding:18px;border:2px dashed #c8d1dc;border-radius:10px;background:#f8fafc;text-align:center;cursor:pointer;">
-            <strong>Drop logo image here</strong><br>
-            <small>or click to choose 1 image</small>
-        </div>
-        <div style="margin-top:10px;">
-            <img id="site-logo-preview" src="{{ old('site_logo_preview', \App\Support\PublicAssetUrl::to($settings['site_logo']) ?: asset('assets/img/placeholder.svg')) }}" alt="Site logo preview" width="160" height="160" style="object-fit:cover;border:1px solid #d7dbe2;border-radius:8px;background:#fff;">
-        </div>
-        <input id="site-logo-input" class="display-none" type="file" name="site_logo" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp">
+        @include('partials.file-upload', [
+            'name' => 'site_logo',
+            'dropTitle' => 'Drop logo image here',
+            'previewUrl' => old('site_logo_preview', \App\Support\PublicAssetUrl::to($settings['site_logo'] ?? '') ?: null),
+            'previewWidth' => 160,
+            'previewHeight' => 160,
+        ])
         @error('site_logo')
             <p style="margin:8px 0 0;color:#b33a3a;">{{ $message }}</p>
         @enderror
@@ -67,19 +106,14 @@
             Success message
             <input type="text" name="welcome_popup_success_message" value="{{ old('welcome_popup_success_message', $welcomePopup['success_message'] ?? '') }}" maxlength="500">
         </label>
-        <p style="margin:0 0 6px;font-weight:600;font-size:0.9rem;">Background image (faint behind card)</p>
-        <div id="welcome-popup-dropzone" style="margin-top:6px;padding:18px;border:2px dashed #c8d1dc;border-radius:10px;background:#f8fafc;text-align:center;cursor:pointer;">
-            <strong>Drop welcome banner image here</strong><br>
-            <small>or click to choose 1 image</small>
-        </div>
-        <div style="margin-top:10px;">
-            <img id="welcome-popup-preview"
-                 src="{{ old('welcome_popup_image_preview', $welcomePopup['image_url'] ?? asset('assets/img/welcome-popup.png')) }}"
-                 alt="Welcome popup preview"
-                 width="280"
-                 style="max-width:100%;object-fit:cover;border:1px solid #d7dbe2;border-radius:12px;background:#fff;">
-        </div>
-        <input id="welcome-popup-input" class="display-none" type="file" name="welcome_popup_image" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp">
+        @include('partials.file-upload', [
+            'name' => 'welcome_popup_image',
+            'label' => 'Background image (faint behind card)',
+            'dropTitle' => 'Drop welcome banner image here',
+            'previewUrl' => old('welcome_popup_image_preview', $welcomePopup['image_url'] ?? asset('assets/img/welcome-popup.png')),
+            'previewWidth' => 280,
+            'previewHeight' => 160,
+        ])
         @error('welcome_popup_image')
             <p style="margin:8px 0 0;color:#b33a3a;">{{ $message }}</p>
         @enderror
@@ -101,13 +135,13 @@
             Home news ticker (one headline per line)
             <textarea name="home_news_ticker" rows="4" placeholder="New collection launched&#10;Free shipping over $99">{{ old('home_news_ticker', $settings['home_news_ticker'] ?? '') }}</textarea>
         </label>
-        <label>
-            Footer background image
-            <input type="file" name="footer_background" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp">
-            @if(!empty($settings['footer_background']))
-                <img src="{{ \App\Support\PublicAssetUrl::to($settings['footer_background']) }}" alt="" width="240" style="margin-top:8px;border-radius:8px;display:block;">
-            @endif
-        </label>
+        @include('partials.file-upload', [
+            'name' => 'footer_background',
+            'label' => 'Footer background image',
+            'previewUrl' => !empty($settings['footer_background']) ? \App\Support\PublicAssetUrl::to($settings['footer_background']) : null,
+            'previewWidth' => 240,
+            'previewHeight' => 120,
+        ])
     </fieldset>
 
     <fieldset class="form-fieldset">
@@ -119,17 +153,23 @@
             @foreach($paymentLogos as $i => $logo)
                 <div class="js-payment-logo-row form-fieldset" draggable="true" style="margin-top:12px;padding:12px;border:1px solid #e2e6ec;border-radius:10px;background:#fff;display:flex;flex-wrap:wrap;gap:12px;align-items:flex-start;">
                     <input type="hidden" class="js-payment-logo-path" name="payment_logos[{{ $i }}][path]" value="{{ old('payment_logos.'.$i.'.path', $logo['path'] ?? '') }}">
-                    <div style="flex:0 0 auto;">
-                        <img class="js-payment-logo-preview" src="{{ $logo['src'] ?? asset('assets/img/placeholder.svg') }}" alt="" width="72" height="44" style="object-fit:contain;border:1px solid #d7dbe2;border-radius:6px;background:#fff;padding:4px;">
+                    <div style="flex:0 0 120px;">
+                        @include('partials.file-upload', [
+                            'name' => "payment_logos[{$i}][image]",
+                            'variant' => 'compact',
+                            'previewUrl' => $logo['src'] ?? null,
+                            'previewFit' => 'contain',
+                            'accept' => \App\Support\FileUploadAccept::WITH_SVG,
+                            'dropTitle' => 'Drop icon',
+                            'dropHint' => 'or click',
+                            'previewWidth' => 72,
+                            'previewHeight' => 44,
+                        ])
                     </div>
                     <div style="flex:1 1 200px;min-width:180px;">
                         <label>
                             Label (accessibility)
                             <input type="text" name="payment_logos[{{ $i }}][label]" value="{{ old('payment_logos.'.$i.'.label', $logo['label'] ?? '') }}" maxlength="120" placeholder="e.g. Visa">
-                        </label>
-                        <label style="margin-top:8px;display:block;">
-                            Replace image
-                            <input class="js-payment-logo-file" type="file" name="payment_logos[{{ $i }}][image]" accept=".jpg,.jpeg,.png,.webp,.svg,image/jpeg,image/png,image/webp,image/svg+xml">
                         </label>
                     </div>
                     <div style="flex:0 0 auto;align-self:center;">
@@ -139,11 +179,14 @@
             @endforeach
         </div>
         <div style="margin-top:14px;">
-            <label>
-                Add new icons (multiple files)
-                <input id="payment-logos-new-input" type="file" name="payment_logos_new[]" accept=".jpg,.jpeg,.png,.webp,.svg,image/jpeg,image/png,image/webp,image/svg+xml" multiple>
-            </label>
-            <div id="payment-logos-new-preview" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;"></div>
+            @include('partials.file-upload', [
+                'name' => 'payment_logos_new[]',
+                'label' => 'Add new icons (multiple files)',
+                'multiple' => true,
+                'accept' => \App\Support\FileUploadAccept::WITH_SVG,
+                'previewFit' => 'contain',
+                'inputId' => 'payment-logos-new-input',
+            ])
         </div>
         <button class="btn-admin" type="button" id="add-payment-logo" style="margin-top:12px;">+ Add icon row</button>
         @error('payment_logos.*.image')
@@ -183,86 +226,55 @@
     </div>
 </form>
 
+<template id="payment-logo-row-template">
+    <div class="js-payment-logo-row form-fieldset" draggable="true" style="margin-top:12px;padding:12px;border:1px solid #e2e6ec;border-radius:10px;background:#fff;display:flex;flex-wrap:wrap;gap:12px;align-items:flex-start;">
+        <input type="hidden" class="js-payment-logo-path" name="" value="">
+        <div style="flex:0 0 120px;">
+            @include('partials.file-upload', [
+                'name' => '',
+                'dataName' => 'payment-logo-image',
+                'variant' => 'compact',
+                'previewFit' => 'contain',
+                'accept' => \App\Support\FileUploadAccept::WITH_SVG,
+                'dropTitle' => 'Drop icon',
+                'dropHint' => 'or click',
+                'previewWidth' => 72,
+                'previewHeight' => 44,
+                'required' => true,
+            ])
+        </div>
+        <div style="flex:1 1 200px;min-width:180px;">
+            <label>
+                Label (accessibility)
+                <input type="text" data-name="payment-logo-label" maxlength="120" placeholder="e.g. Visa">
+            </label>
+        </div>
+        <div style="flex:0 0 auto;align-self:center;">
+            <button class="btn-admin" type="button" data-action="remove-payment-logo">Remove</button>
+        </div>
+    </div>
+</template>
+
 <script>
 (() => {
-    const setupSingleImageDropzone = (inputId, previewId, zoneId) => {
-        const fileInput = document.getElementById(inputId);
-        const preview = document.getElementById(previewId);
-        const dropzone = document.getElementById(zoneId);
-        if (!(fileInput instanceof HTMLInputElement) || !(preview instanceof HTMLImageElement) || !(dropzone instanceof HTMLElement)) {
-            return;
-        }
-
-        const setFile = (file) => {
-            if (!file || !file.type.startsWith('image/')) return;
-            const dt = new DataTransfer();
-            dt.items.add(file);
-            fileInput.files = dt.files;
-            const url = URL.createObjectURL(file);
-            preview.src = url;
-            preview.addEventListener('load', () => URL.revokeObjectURL(url), { once: true });
-        };
-
-        fileInput.addEventListener('change', () => {
-            const file = fileInput.files && fileInput.files[0] ? fileInput.files[0] : null;
-            setFile(file);
-        });
-
-        const preventDefaults = (event) => {
-            event.preventDefault();
-            event.stopPropagation();
-        };
-        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach((eventName) => {
-            dropzone.addEventListener(eventName, preventDefaults);
-        });
-        ['dragenter', 'dragover'].forEach((eventName) => {
-            dropzone.addEventListener(eventName, () => dropzone.style.borderColor = '#1f6feb');
-        });
-        ['dragleave', 'drop'].forEach((eventName) => {
-            dropzone.addEventListener(eventName, () => dropzone.style.borderColor = '#c8d1dc');
-        });
-        dropzone.addEventListener('drop', (event) => {
-            const files = event.dataTransfer ? Array.from(event.dataTransfer.files).filter((file) => file.type.startsWith('image/')) : [];
-            if (files.length === 0) return;
-            setFile(files[0]);
-        });
-        dropzone.addEventListener('click', () => fileInput.click());
-    };
-
-    setupSingleImageDropzone('site-logo-input', 'site-logo-preview', 'site-logo-dropzone');
-    setupSingleImageDropzone('welcome-popup-input', 'welcome-popup-preview', 'welcome-popup-dropzone');
-
     const paymentLogosList = document.getElementById('payment-logos-list');
     const addPaymentLogoBtn = document.getElementById('add-payment-logo');
-    const paymentLogosNewInput = document.getElementById('payment-logos-new-input');
-    const paymentLogosNewPreview = document.getElementById('payment-logos-new-preview');
-    const placeholderSrc = @json(asset('assets/img/placeholder.svg'));
+    const paymentLogoTemplate = document.getElementById('payment-logo-row-template');
 
     const reindexPaymentLogoRows = () => {
         if (!paymentLogosList) return;
         paymentLogosList.querySelectorAll('.js-payment-logo-row').forEach((row, index) => {
-            row.querySelectorAll('[name^="payment_logos["]').forEach((input) => {
-                if (!(input instanceof HTMLInputElement)) return;
-                input.name = input.name.replace(/payment_logos\[\d+]/, `payment_logos[${index}]`);
-            });
+            const pathInput = row.querySelector('.js-payment-logo-path');
+            const labelInput = row.querySelector('[data-name="payment-logo-label"]');
+            const fileInput = row.querySelector('[data-file-upload-input]');
+            if (pathInput instanceof HTMLInputElement) pathInput.name = `payment_logos[${index}][path]`;
+            if (labelInput instanceof HTMLInputElement) labelInput.name = `payment_logos[${index}][label]`;
+            if (fileInput instanceof HTMLInputElement) fileInput.name = `payment_logos[${index}][image]`;
         });
     };
 
     const bindPaymentLogoRow = (row) => {
-        const fileInput = row.querySelector('.js-payment-logo-file');
-        const preview = row.querySelector('.js-payment-logo-preview');
         const removeBtn = row.querySelector('[data-action="remove-payment-logo"]');
-
-        if (fileInput instanceof HTMLInputElement && preview instanceof HTMLImageElement) {
-            fileInput.addEventListener('change', () => {
-                const file = fileInput.files && fileInput.files[0] ? fileInput.files[0] : null;
-                if (!file || !file.type.startsWith('image/')) return;
-                const url = URL.createObjectURL(file);
-                preview.src = url;
-                preview.addEventListener('load', () => URL.revokeObjectURL(url), { once: true });
-            });
-        }
-
         if (removeBtn instanceof HTMLButtonElement) {
             removeBtn.addEventListener('click', () => {
                 row.remove();
@@ -272,9 +284,7 @@
 
         row.addEventListener('dragstart', (event) => {
             row.classList.add('is-dragging');
-            if (event.dataTransfer) {
-                event.dataTransfer.effectAllowed = 'move';
-            }
+            if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move';
         });
         row.addEventListener('dragend', () => {
             row.classList.remove('is-dragging');
@@ -288,11 +298,8 @@
             const dragIndex = rows.indexOf(dragging);
             const hoverIndex = rows.indexOf(row);
             if (dragIndex < 0 || hoverIndex < 0) return;
-            if (dragIndex < hoverIndex) {
-                row.after(dragging);
-            } else {
-                row.before(dragging);
-            }
+            if (dragIndex < hoverIndex) row.after(dragging);
+            else row.before(dragging);
         });
     };
 
@@ -300,53 +307,15 @@
         paymentLogosList.querySelectorAll('.js-payment-logo-row').forEach(bindPaymentLogoRow);
     }
 
-    if (addPaymentLogoBtn && paymentLogosList) {
+    if (addPaymentLogoBtn && paymentLogosList && paymentLogoTemplate) {
         addPaymentLogoBtn.addEventListener('click', () => {
-            const index = paymentLogosList.querySelectorAll('.js-payment-logo-row').length;
-            const row = document.createElement('div');
-            row.className = 'js-payment-logo-row form-fieldset';
-            row.draggable = true;
-            row.style.cssText = 'margin-top:12px;padding:12px;border:1px solid #e2e6ec;border-radius:10px;background:#fff;display:flex;flex-wrap:wrap;gap:12px;align-items:flex-start;';
-            row.innerHTML = `
-                <input type="hidden" class="js-payment-logo-path" name="payment_logos[${index}][path]" value="">
-                <div style="flex:0 0 auto;">
-                    <img class="js-payment-logo-preview" src="${placeholderSrc}" alt="" width="72" height="44" style="object-fit:contain;border:1px solid #d7dbe2;border-radius:6px;background:#fff;padding:4px;">
-                </div>
-                <div style="flex:1 1 200px;min-width:180px;">
-                    <label>
-                        Label (accessibility)
-                        <input type="text" name="payment_logos[${index}][label]" maxlength="120" placeholder="e.g. Visa">
-                    </label>
-                    <label style="margin-top:8px;display:block;">
-                        Image
-                        <input class="js-payment-logo-file" type="file" name="payment_logos[${index}][image]" accept=".jpg,.jpeg,.png,.webp,.svg,image/jpeg,image/png,image/webp,image/svg+xml" required>
-                    </label>
-                </div>
-                <div style="flex:0 0 auto;align-self:center;">
-                    <button class="btn-admin" type="button" data-action="remove-payment-logo">Remove</button>
-                </div>
-            `;
+            const fragment = paymentLogoTemplate.content.cloneNode(true);
+            const row = fragment.querySelector('.js-payment-logo-row');
+            if (!row) return;
             paymentLogosList.appendChild(row);
             bindPaymentLogoRow(row);
-        });
-    }
-
-    if (paymentLogosNewInput instanceof HTMLInputElement && paymentLogosNewPreview) {
-        paymentLogosNewInput.addEventListener('change', () => {
-            paymentLogosNewPreview.replaceChildren();
-            const files = paymentLogosNewInput.files ? Array.from(paymentLogosNewInput.files) : [];
-            files.forEach((file) => {
-                if (!file.type.startsWith('image/')) return;
-                const img = document.createElement('img');
-                img.alt = file.name;
-                img.width = 72;
-                img.height = 44;
-                img.style.cssText = 'object-fit:contain;border:1px solid #d7dbe2;border-radius:6px;background:#fff;padding:4px;';
-                const url = URL.createObjectURL(file);
-                img.src = url;
-                img.addEventListener('load', () => URL.revokeObjectURL(url), { once: true });
-                paymentLogosNewPreview.appendChild(img);
-            });
+            reindexPaymentLogoRows();
+            document.dispatchEvent(new CustomEvent('file-upload:init', { detail: { root: row } }));
         });
     }
 })();

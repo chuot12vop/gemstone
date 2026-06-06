@@ -63,7 +63,7 @@ class CatalogController extends Controller
 
         $productsQuery = Product::query()
             ->where('is_active', true)
-            ->with(['category', 'brand', 'variants' => fn ($q) => $q->where('is_active', true)->orderBy('sort_order')->orderBy('id'), 'upsellProducts' => fn ($q) => $q->where('is_active', true)->with(['variants' => fn ($vq) => $vq->where('is_active', true)->orderBy('sort_order')->orderBy('id')])]);
+            ->with(['category', 'brand', 'variants' => fn ($q) => $q->where('is_active', true)->orderBy('sort_order')->orderBy('id')->with('hoverImages'), 'upsellProducts' => fn ($q) => $q->where('is_active', true)->with(['variants' => fn ($vq) => $vq->where('is_active', true)->orderBy('sort_order')->orderBy('id')->with('hoverImages')])]);
 
         if ($selectedBrand !== null) {
             $productsQuery->where('brand_id', $selectedBrand->id);

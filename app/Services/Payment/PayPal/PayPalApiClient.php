@@ -41,17 +41,24 @@ class PayPalApiClient
         return $this->clientId;
     }
 
-    public function sdkUrl(string $currencyCode): string
+    public function sdkUrl(string $currencyCode, string $components = 'buttons'): string
     {
         $host = $this->sandbox
             ? 'https://www.sandbox.paypal.com'
             : 'https://www.paypal.com';
 
-        return $host.'/sdk/js?'.http_build_query([
+        $query = [
             'client-id' => $this->clientId,
             'currency' => strtoupper($currencyCode),
             'intent' => 'capture',
-        ]);
+            'components' => $components,
+        ];
+
+        if (str_contains($components, 'googlepay')) {
+            $query['enable-funding'] = 'googlepay';
+        }
+
+        return $host.'/sdk/js?'.http_build_query($query);
     }
 
     /**
@@ -163,6 +170,78 @@ class PayPalApiClient
             'amount' => (string) ($amount['value'] ?? ''),
             'currency' => strtoupper((string) ($amount['currency_code'] ?? '')),
             'capture_id' => $capture['capture_id'] ?? null,
+        ];
+    }
+
+    /**
+     * @return array{
+     *   email: string,
+     *   given_name: string,
+     *   surname: string,
+     *   phone: string,
+     *   shipping: array<string, string>
+     * }|null
+     */
+    public function getPayerDetails(string $paypalOrderId): ?array
+    {
+        $response = $this->api()->get('/v2/checkout/orders/'.$paypalOrderId);
+        if (! $response->successful()) {
+            return null;
+        }
+
+        /** @var array<string, mixed> $data */
+        $data = $response->json();
+        $payer = $data['payer'] ?? null;
+        if (! is_array($payer)) {
+            return null;
+        }
+
+        $email = strtolower(trim((string) ($payer['email_address'] ?? '')));
+        if ($email === '' || ! filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            return null;
+        }
+
+        $name = is_array($payer['name'] ?? null) ? $payer['name'] : [];
+        $givenName = trim((string) ($name['given_name'] ?? ''));
+        $surname = trim((string) ($name['surname'] ?? ''));
+
+        $phone = '';
+        $phoneObj = $payer['phone'] ?? null;
+        if (is_array($phoneObj)) {
+            $phoneNumber = $phoneObj['phone_number'] ?? null;
+            if (is_array($phoneNumber)) {
+                $national = preg_replace('/\D/', '', (string) ($phoneNumber['national_number'] ?? ''));
+                $countryCode = preg_replace('/\D/', '', (string) ($phoneNumber['country_code'] ?? ''));
+                if ($national !== '') {
+                    $phone = $countryCode !== '' ? '+'.$countryCode.$national : $national;
+                }
+            }
+        }
+
+        $shipping = [];
+        $unit = $data['purchase_units'][0] ?? null;
+        if (is_array($unit) && is_array($unit['shipping'] ?? null)) {
+            $ship = $unit['shipping'];
+            $shipName = is_array($ship['name'] ?? null)
+                ? trim((string) ($ship['name']['full_name'] ?? ''))
+                : '';
+            $address = is_array($ship['address'] ?? null) ? $ship['address'] : [];
+            $shipping = [
+                'full_name' => $shipName,
+                'address_line1' => trim((string) ($address['address_line_1'] ?? '')),
+                'address_line2' => trim((string) ($address['address_line_2'] ?? '')),
+                'city' => trim((string) ($address['admin_area_2'] ?? '')),
+                'postcode' => trim((string) ($address['postal_code'] ?? '')),
+                'country' => strtoupper(trim((string) ($address['country_code'] ?? ''))),
+            ];
+        }
+
+        return [
+            'email' => $email,
+            'given_name' => $givenName,
+            'surname' => $surname,
+            'phone' => $phone,
+            'shipping' => $shipping,
         ];
     }
 

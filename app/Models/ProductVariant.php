@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Collection;
 
 class ProductVariant extends Model
 {
@@ -11,6 +13,7 @@ class ProductVariant extends Model
         'product_id',
         'sku',
         'option_color',
+        'swatch_color',
         'option_size',
         'price_usd',
         'compare_at_price_usd',
@@ -37,6 +40,38 @@ class ProductVariant extends Model
         return $this->belongsTo(Product::class);
     }
 
+    /** @return HasMany<ProductVariantHoverImage> */
+    public function hoverImages(): HasMany
+    {
+        return $this->hasMany(ProductVariantHoverImage::class)->orderBy('sort_order')->orderBy('id');
+    }
+
+    /**
+     * @return Collection<int, string>
+     */
+    public function galleryImages(?Product $product = null): Collection
+    {
+        $images = collect();
+        $front = $this->frontImage($product);
+        if ($front) {
+            $images->push($front);
+        }
+
+        if ($this->relationLoaded('hoverImages')) {
+            foreach ($this->hoverImages as $hover) {
+                if ($hover->path && ! $images->contains($hover->path)) {
+                    $images->push($hover->path);
+                }
+            }
+        }
+
+        if ($this->image_hover && ! $images->contains($this->image_hover)) {
+            $images->push($this->image_hover);
+        }
+
+        return $images->values();
+    }
+
     public function label(): string
     {
         $parts = array_filter([
@@ -60,6 +95,13 @@ class ProductVariant extends Model
 
     public function hoverImage(?Product $product = null): ?string
     {
+        if ($this->relationLoaded('hoverImages')) {
+            $firstHover = $this->hoverImages->first()?->path;
+            if ($firstHover) {
+                return $firstHover;
+            }
+        }
+
         if ($this->image_hover) {
             return $this->image_hover;
         }
@@ -74,5 +116,12 @@ class ProductVariant extends Model
             : null;
 
         return $secondGallery ?: $this->frontImage($product);
+    }
+
+    public function normalizedSwatchColor(): ?string
+    {
+        $hex = trim((string) ($this->swatch_color ?? ''));
+
+        return preg_match('/^#[0-9A-Fa-f]{6}$/', $hex) ? strtolower($hex) : null;
     }
 }

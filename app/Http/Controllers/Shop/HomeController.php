@@ -48,7 +48,7 @@ class HomeController extends Controller
 
         $homeNewProducts = Product::query()
             ->where('is_active', true)
-            ->with(['category', 'variants' => fn ($q) => $q->where('is_active', true)->orderBy('sort_order')->orderBy('id'), 'upsellProducts' => fn ($q) => $q->where('is_active', true)->with(['variants' => fn ($vq) => $vq->where('is_active', true)->orderBy('sort_order')->orderBy('id')])])
+            ->with(['category', 'variants' => fn ($q) => $q->where('is_active', true)->orderBy('sort_order')->orderBy('id')->with('hoverImages'), 'upsellProducts' => fn ($q) => $q->where('is_active', true)->with(['variants' => fn ($vq) => $vq->where('is_active', true)->orderBy('sort_order')->orderBy('id')->with('hoverImages')])])
             ->latest('id')
             ->limit(6)
             ->get();
@@ -60,7 +60,7 @@ class HomeController extends Controller
             $homeBestSellers = Product::query()
                 ->where('is_active', true)
                 ->where('category_id', $bestSellers->id)
-                ->with(['category', 'variants' => fn ($q) => $q->where('is_active', true)->orderBy('sort_order')->orderBy('id'), 'upsellProducts' => fn ($q) => $q->where('is_active', true)->with(['variants' => fn ($vq) => $vq->where('is_active', true)->orderBy('sort_order')->orderBy('id')])])
+                ->with(['category', 'variants' => fn ($q) => $q->where('is_active', true)->orderBy('sort_order')->orderBy('id')->with('hoverImages'), 'upsellProducts' => fn ($q) => $q->where('is_active', true)->with(['variants' => fn ($vq) => $vq->where('is_active', true)->orderBy('sort_order')->orderBy('id')->with('hoverImages')])])
                 ->limit(6)
                 ->get();
         } else {
