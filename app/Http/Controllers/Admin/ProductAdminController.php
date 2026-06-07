@@ -444,7 +444,7 @@ class ProductAdminController extends Controller
      */
     private function syncVariantHoverImages(ProductVariant $variant, Request $request, int $index, array $row): void
     {
-        $removeIds = collect($row['remove_hover_image_ids'] ?? [])
+        $removeIds = collect($request->input("variants.{$index}.remove_hover_image_ids", []))
             ->map(static fn ($id) => (int) $id)
             ->filter()
             ->all();
@@ -458,10 +458,7 @@ class ProductAdminController extends Controller
         }
 
         $existingCount = $variant->hoverImages()->count();
-        $uploads = $request->file("variants.{$index}.hover_images") ?? [];
-        if (! is_array($uploads)) {
-            $uploads = [$uploads];
-        }
+        $uploads = $this->normalizeUploadedFiles($request->file("variants.{$index}.hover_images"));
 
         $sortOrder = $existingCount;
         foreach ($uploads as $upload) {

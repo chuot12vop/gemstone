@@ -135,19 +135,29 @@
                     </label>
                     @include('partials.file-upload', [
                         'name' => "variants[{$i}][image]",
+                        'dataName' => 'variant-image',
                         'label' => 'Front image',
                         'variant' => 'compact',
                         'previewUrl' => $row['image'] ?? null,
                     ])
                     <div>
-                        @include('partials.file-upload', [
-                            'name' => "variants[{$i}][hover_images][]",
-                            'label' => 'Hover images (3–5)',
-                            'hint' => 'Upload up to 5 hover/gallery images for this variant.',
-                            'variant' => 'compact',
-                            'multiple' => true,
-                            'maxFiles' => 5,
-                        ])
+                        @php
+                            $hoverSlotsLeft = max(0, 5 - count($row['hover_images'] ?? []));
+                        @endphp
+                        @if($hoverSlotsLeft > 0)
+                            @include('partials.file-upload', [
+                                'name' => "variants[{$i}][hover_images][]",
+                                'dataName' => 'variant-hover-images',
+                                'label' => 'Hover images (3–5)',
+                                'hint' => 'Upload up to '.$hoverSlotsLeft.' more hover/gallery image'.($hoverSlotsLeft === 1 ? '' : 's').' for this variant.',
+                                'variant' => 'compact',
+                                'multiple' => true,
+                                'maxFiles' => $hoverSlotsLeft,
+                            ])
+                        @else
+                            <span class="file-upload__label">Hover images (3–5)</span>
+                            <small class="file-upload__hint">Maximum 5 hover images reached. Check Remove below to replace images.</small>
+                        @endif
                         @if(!empty($row['hover_images']) && is_array($row['hover_images']))
                             <div style="display:flex;flex-wrap:wrap;gap:0.5rem;margin-top:0.5rem;">
                                 @foreach($row['hover_images'] as $hoverImage)
@@ -164,6 +174,7 @@
                     </div>
                     @include('partials.file-upload', [
                         'name' => "variants[{$i}][image_hover]",
+                        'dataName' => 'variant-image-hover',
                         'label' => 'Legacy hover image',
                         'variant' => 'compact',
                         'previewUrl' => $row['image_hover'] ?? null,
@@ -438,21 +449,22 @@
             const rows = list.querySelectorAll('.js-variant-row');
             rows.forEach((row, index) => {
                 const map = [
-                    ['variant-color', `variants[${index}][option_color]`],
-                    ['variant-swatch-color', `variants[${index}][swatch_color]`],
-                    ['variant-size', `variants[${index}][option_size]`],
-                    ['variant-price', `variants[${index}][price_usd]`],
-                    ['variant-compare-price', `variants[${index}][compare_at_price_usd]`],
-                    ['variant-stock', `variants[${index}][stock]`],
-                    ['variant-sku', `variants[${index}][sku]`],
-                    ['variant-image', `variants[${index}][image]`],
-                    ['variant-hover-images', `variants[${index}][hover_images][]`],
-                    ['variant-image-hover', `variants[${index}][image_hover]`],
-                    ['variant-default', `variants[${index}][is_default]`],
-                    ['variant-active', `variants[${index}][is_active]`],
+                    ['variant-color', `variants[${index}][option_color]`, 'option_color'],
+                    ['variant-swatch-color', `variants[${index}][swatch_color]`, 'swatch_color'],
+                    ['variant-size', `variants[${index}][option_size]`, 'option_size'],
+                    ['variant-price', `variants[${index}][price_usd]`, 'price_usd'],
+                    ['variant-compare-price', `variants[${index}][compare_at_price_usd]`, 'compare_at_price_usd'],
+                    ['variant-stock', `variants[${index}][stock]`, 'stock'],
+                    ['variant-sku', `variants[${index}][sku]`, 'sku'],
+                    ['variant-image', `variants[${index}][image]`, 'image'],
+                    ['variant-hover-images', `variants[${index}][hover_images][]`, 'hover_images'],
+                    ['variant-image-hover', `variants[${index}][image_hover]`, 'image_hover'],
+                    ['variant-default', `variants[${index}][is_default]`, 'is_default'],
+                    ['variant-active', `variants[${index}][is_active]`, 'is_active'],
                 ];
-                map.forEach(([dataName, fieldName]) => {
-                    const input = row.querySelector(`[data-name="${dataName}"], [name*="[${dataName.replace('variant-', '')}]"]`);
+                map.forEach(([dataName, fieldName, fieldKey]) => {
+                    const input = row.querySelector(`[data-name="${dataName}"]`)
+                        || row.querySelector(`[name*="[${fieldKey}]"]`);
                     if (input) input.setAttribute('name', fieldName);
                 });
                 row.querySelectorAll('input[type="hidden"]').forEach((hidden) => {

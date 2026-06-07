@@ -1616,7 +1616,6 @@ body.site-nav-open {
   display: block;
 }
 .pd-gallery__thumb:hover { border-color: var(--gold); }
-.pd-gallery__thumb.is-active { border-color: var(--gold-deep); }
 
 @media (min-width: 900px) {
   .pd-gallery__thumb { flex: 0 0 80px; width: 80px; }
@@ -1854,7 +1853,6 @@ body.site-nav-open {
   text-align: center;
 }
 .cart-page__title {
-  font-family: "Cormorant Garamond", Georgia, serif;
   font-size: clamp(1.75rem, 4vw, 2.35rem);
   font-weight: 600;
   margin: 0;
