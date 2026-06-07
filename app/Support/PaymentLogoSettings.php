@@ -302,7 +302,6 @@ final class PaymentLogoSettings
 
         $aliases = [
             'paypal' => ['paypal'],
-            'whatsapp' => ['whatsapp', 'whats app'],
             'apple_pay' => ['apple pay', 'applepay', 'apple'],
             'venmo' => ['venmo'],
             'cashapp' => ['cash app', 'cashapp', 'cash-app'],

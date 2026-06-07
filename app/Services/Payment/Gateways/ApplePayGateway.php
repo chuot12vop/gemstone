@@ -4,7 +4,10 @@ namespace App\Services\Payment\Gateways;
 
 use App\Models\Order;
 use App\Services\Payment\Data\PaymentInitiationResult;
+use App\Services\Payment\Stripe\StripeApiClient;
+use App\Support\CheckoutCountries;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class ApplePayGateway extends AbstractPaymentGateway
 {
@@ -39,19 +42,139 @@ SVG;
 
     public function initiate(Order $order, Request $request): PaymentInitiationResult
     {
-        return PaymentInitiationResult::view(
-            viewData: [
-                'merchantId' => $this->setting('merchant_id'),
-                'domain' => $this->setting('domain'),
-            ],
-            notes: 'Awaiting Apple Pay session',
+        $client = $this->apiClient();
+
+        if ($client === null) {
+            return PaymentInitiationResult::view(
+                viewData: ['configured' => false],
+                notes: 'Stripe API credentials missing',
+            );
+        }
+
+        $existingId = (string) optional($order->paymentTransactions()->first())->gateway_transaction_id;
+        if ($existingId !== '') {
+            $summary = $client->getPaymentIntent($existingId);
+            if ($summary !== null
+                && $client->isReusableStatus($summary['status'])
+                && $client->amountMatchesOrder($order, $summary['amount'], $summary['currency'])) {
+                return $this->viewResult($client, $order, $existingId, $summary['client_secret'] ?? null);
+            }
+        }
+
+        $created = $client->createPaymentIntent($order);
+        if ($created === null || ($created['id'] ?? '') === '' || ($created['client_secret'] ?? '') === '') {
+            return PaymentInitiationResult::view(
+                viewData: [
+                    'configured' => true,
+                    'error' => 'Could not start Apple Pay checkout. Please try again or contact support.',
+                ],
+                notes: 'Stripe payment intent creation failed',
+            );
+        }
+
+        return $this->viewResult(
+            $client,
+            $order,
+            $created['id'],
+            $created['client_secret'],
+            'Stripe PaymentIntent '.$created['id'].' created',
         );
     }
 
     public function confirm(Order $order, Request $request): bool
     {
-        // Placeholder for Apple Pay merchant validation. Real implementation
-        // should validate the `paymentToken` against your processor.
+        $client = $this->apiClient();
+        if ($client === null) {
+            return false;
+        }
+
+        $paymentIntentId = trim((string) $request->input('payment_intent_id', ''));
+        if ($paymentIntentId === '') {
+            $paymentIntentId = trim((string) $request->input('gateway_transaction_id', ''));
+        }
+
+        $storedId = (string) optional($order->paymentTransactions()->first())->gateway_transaction_id;
+        if ($paymentIntentId === '' || $storedId === '' || ! hash_equals($storedId, $paymentIntentId)) {
+            Log::warning('Apple Pay confirm: payment intent ID mismatch', [
+                'order_number' => $order->order_number,
+            ]);
+
+            return false;
+        }
+
+        $summary = $client->getPaymentIntent($paymentIntentId);
+        if ($summary === null) {
+            return false;
+        }
+
+        if (! $client->amountMatchesOrder($order, $summary['amount'], $summary['currency'])) {
+            Log::warning('Apple Pay confirm: amount mismatch', [
+                'order_number' => $order->order_number,
+            ]);
+
+            return false;
+        }
+
+        if ($summary['status'] !== 'succeeded') {
+            Log::warning('Apple Pay confirm: payment not succeeded', [
+                'order_number' => $order->order_number,
+                'status' => $summary['status'],
+            ]);
+
+            return false;
+        }
+
+        $request->merge(['gateway_transaction_id' => $paymentIntentId]);
+
         return true;
+    }
+
+    private function viewResult(
+        StripeApiClient $client,
+        Order $order,
+        string $paymentIntentId,
+        ?string $clientSecret = null,
+        ?string $notes = null,
+    ): PaymentInitiationResult {
+        if ($clientSecret === null || $clientSecret === '') {
+            $summary = $client->getPaymentIntent($paymentIntentId);
+            $clientSecret = (string) ($summary['client_secret'] ?? '');
+        }
+
+        if ($clientSecret === '') {
+            return PaymentInitiationResult::view(
+                viewData: [
+                    'configured' => true,
+                    'error' => 'Could not load Apple Pay session. Please refresh and try again.',
+                ],
+                notes: 'Stripe client secret missing',
+            );
+        }
+
+        $currency = strtolower((string) $order->currency_code);
+
+        return PaymentInitiationResult::view(
+            viewData: [
+                'configured' => true,
+                'publishableKey' => $client->publishableKey(),
+                'clientSecret' => $clientSecret,
+                'paymentIntentId' => $paymentIntentId,
+                'amount' => $client->amountInSmallestUnit((float) $order->total_display, $currency),
+                'currency' => $currency,
+                'country' => CheckoutCountries::defaultCode(),
+                'testMode' => $client->isTestMode(),
+            ],
+            gatewayTransactionId: $paymentIntentId,
+            notes: $notes ?? 'Awaiting Apple Pay for PaymentIntent '.$paymentIntentId,
+        );
+    }
+
+    private function apiClient(): ?StripeApiClient
+    {
+        return StripeApiClient::fromSettings(
+            $this->setting('stripe_publishable_key'),
+            $this->setting('stripe_secret_key'),
+            $this->setting('stripe_test_mode', '1') === '1',
+        );
     }
 }

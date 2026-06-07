@@ -58,26 +58,7 @@
         </fieldset>
 
         <fieldset class="form-fieldset">
-            <legend>Whatsapp</legend>
-            <label class="switch-field">
-                <span class="switch-field__label">Enable method</span>
-                <span class="switch">
-                    <input type="checkbox" name="whatsapp_enabled" value="1" @checked(old('whatsapp_enabled', ($settings['payment_whatsapp_enabled'] ?? '0') === '1'))>
-                    <span class="switch__slider" aria-hidden="true"></span>
-                </span>
-            </label>
-            <label>
-                Phone number
-                <input type="text" name="whatsapp_phone" value="{{ old('whatsapp_phone', $settings['payment_whatsapp_phone'] ?? '') }}" placeholder="+849xxxxxxxx">
-            </label>
-            <label>
-                Message template
-                <textarea name="whatsapp_message_template" rows="4">{{ old('whatsapp_message_template', $settings['payment_whatsapp_message_template'] ?? 'Hello, I would like to pay for order #{order_number}') }}</textarea>
-            </label>
-        </fieldset>
-
-        <fieldset class="form-fieldset">
-            <legend>ApplePay</legend>
+            <legend>Apple Pay (Stripe)</legend>
             <label class="switch-field">
                 <span class="switch-field__label">Enable method</span>
                 <span class="switch">
@@ -86,13 +67,21 @@
                 </span>
             </label>
             <label>
-                Merchant ID
-                <input type="text" name="apple_pay_merchant_id" value="{{ old('apple_pay_merchant_id', $settings['payment_apple_pay_merchant_id'] ?? '') }}">
+                Stripe Publishable Key
+                <input type="text" name="apple_pay_stripe_publishable_key" value="{{ old('apple_pay_stripe_publishable_key', $settings['payment_apple_pay_stripe_publishable_key'] ?? '') }}" autocomplete="off" placeholder="pk_test_... or pk_live_...">
             </label>
             <label>
-                Verified domain
-                <input type="text" name="apple_pay_domain" value="{{ old('apple_pay_domain', $settings['payment_apple_pay_domain'] ?? '') }}" placeholder="example.com">
+                Stripe Secret Key
+                <input type="password" name="apple_pay_stripe_secret_key" value="" autocomplete="new-password" placeholder="{{ ($hasApplePayStripeSecret ?? false) ? 'Saved — leave blank to keep' : 'sk_test_... or sk_live_...' }}">
             </label>
+            <label class="switch-field">
+                <span class="switch-field__label">Test mode</span>
+                <span class="switch">
+                    <input type="checkbox" name="apple_pay_stripe_test_mode" value="1" @checked(old('apple_pay_stripe_test_mode', ($settings['payment_apple_pay_stripe_test_mode'] ?? '1') === '1'))>
+                    <span class="switch__slider" aria-hidden="true"></span>
+                </span>
+            </label>
+            <p class="muted" style="margin:0;">Powered by <a href="https://stripe.com/docs/apple-pay" target="_blank" rel="noopener">Stripe Apple Pay</a>. Add your domain under Stripe Dashboard → Settings → Payment methods → Apple Pay. Apple Pay works in Safari on Mac, iPhone, and iPad over HTTPS.</p>
         </fieldset>
 
         <fieldset class="form-fieldset">

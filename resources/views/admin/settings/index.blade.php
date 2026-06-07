@@ -124,7 +124,7 @@
         <label>
             WhatsApp contact number
             <input type="text" name="contact_whatsapp_phone" value="{{ old('contact_whatsapp_phone', $settings['contact_whatsapp_phone'] ?? '') }}" placeholder="+849xxxxxxxx">
-            <small style="color:#5c6470;">Used for the floating WhatsApp button on the shop. Falls back to payment WhatsApp if empty.</small>
+            <small style="color:#5c6470;">Used for the floating WhatsApp button on the shop.</small>
         </label>
         <label>
             Contact form Google Script URL

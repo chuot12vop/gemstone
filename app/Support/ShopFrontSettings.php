@@ -17,7 +17,6 @@ class ShopFrontSettings
     public static function resolve(): array
     {
         $keys = [
-            'payment_whatsapp_phone',
             'contact_whatsapp_phone',
             'footer_background',
             'home_news_ticker',
@@ -29,9 +28,6 @@ class ShopFrontSettings
             ->toArray();
 
         $phone = trim((string) ($stored['contact_whatsapp_phone'] ?? ''));
-        if ($phone === '') {
-            $phone = trim((string) ($stored['payment_whatsapp_phone'] ?? ''));
-        }
 
         $tickerRaw = trim((string) ($stored['home_news_ticker'] ?? ''));
         $tickerLines = $tickerRaw === ''

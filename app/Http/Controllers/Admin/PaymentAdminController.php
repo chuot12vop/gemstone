@@ -16,7 +16,6 @@ class PaymentAdminController extends Controller
 
     private const METHODS = [
         'paypal',
-        'whatsapp',
         'apple_pay',
         'venmo',
         'cashapp',
@@ -52,7 +51,8 @@ class PaymentAdminController extends Controller
 
         $settings = $this->paymentSettings();
         $hasPaypalSecret = ($settings['payment_paypal_client_secret'] ?? '') !== '';
-        unset($settings['payment_paypal_client_secret']);
+        $hasApplePayStripeSecret = ($settings['payment_apple_pay_stripe_secret_key'] ?? '') !== '';
+        unset($settings['payment_paypal_client_secret'], $settings['payment_apple_pay_stripe_secret_key']);
 
         return view('admin.payments.index', [
             'title' => 'Payments',
@@ -62,6 +62,7 @@ class PaymentAdminController extends Controller
             'tab' => $tab,
             'settings' => $settings,
             'hasPaypalSecret' => $hasPaypalSecret,
+            'hasApplePayStripeSecret' => $hasApplePayStripeSecret,
             'transactions' => $transactions,
             'q' => $q,
             'method' => $method,
@@ -78,12 +79,10 @@ class PaymentAdminController extends Controller
             'paypal_client_id' => 'nullable|string|max:255',
             'paypal_client_secret' => 'nullable|string|max:255',
             'paypal_sandbox' => 'nullable|boolean',
-            'whatsapp_enabled' => 'nullable|boolean',
-            'whatsapp_phone' => 'nullable|string|max:60',
-            'whatsapp_message_template' => 'nullable|string|max:500',
             'apple_pay_enabled' => 'nullable|boolean',
-            'apple_pay_merchant_id' => 'nullable|string|max:190',
-            'apple_pay_domain' => 'nullable|string|max:190',
+            'apple_pay_stripe_publishable_key' => 'nullable|string|max:255',
+            'apple_pay_stripe_secret_key' => 'nullable|string|max:255',
+            'apple_pay_stripe_test_mode' => 'nullable|boolean',
             'venmo_enabled' => 'nullable|boolean',
             'venmo_username' => 'nullable|string|max:80',
             'cashapp_enabled' => 'nullable|boolean',
@@ -111,12 +110,9 @@ class PaymentAdminController extends Controller
             'payment_paypal_merchant_email' => trim((string) ($validated['paypal_merchant_email'] ?? '')),
             'payment_paypal_client_id' => trim((string) ($validated['paypal_client_id'] ?? '')),
             'payment_paypal_sandbox' => $request->boolean('paypal_sandbox') ? '1' : '0',
-            'payment_whatsapp_enabled' => $request->boolean('whatsapp_enabled') ? '1' : '0',
-            'payment_whatsapp_phone' => trim((string) ($validated['whatsapp_phone'] ?? '')),
-            'payment_whatsapp_message_template' => trim((string) ($validated['whatsapp_message_template'] ?? '')),
             'payment_apple_pay_enabled' => $request->boolean('apple_pay_enabled') ? '1' : '0',
-            'payment_apple_pay_merchant_id' => trim((string) ($validated['apple_pay_merchant_id'] ?? '')),
-            'payment_apple_pay_domain' => trim((string) ($validated['apple_pay_domain'] ?? '')),
+            'payment_apple_pay_stripe_publishable_key' => trim((string) ($validated['apple_pay_stripe_publishable_key'] ?? '')),
+            'payment_apple_pay_stripe_test_mode' => $request->boolean('apple_pay_stripe_test_mode') ? '1' : '0',
             'payment_venmo_enabled' => $request->boolean('venmo_enabled') ? '1' : '0',
             'payment_venmo_username' => ltrim(trim((string) ($validated['venmo_username'] ?? '')), '@'),
             'payment_cashapp_enabled' => $request->boolean('cashapp_enabled') ? '1' : '0',
@@ -144,6 +140,14 @@ class PaymentAdminController extends Controller
             );
         }
 
+        $stripeSecret = trim((string) $request->input('apple_pay_stripe_secret_key', ''));
+        if ($stripeSecret !== '') {
+            Setting::query()->updateOrCreate(
+                ['key' => 'payment_apple_pay_stripe_secret_key'],
+                ['value' => $stripeSecret],
+            );
+        }
+
         return redirect()->route('admin.payments.index', ['tab' => 'settings'])->with('success', 'Payment settings updated.');
     }
 
@@ -158,12 +162,10 @@ class PaymentAdminController extends Controller
             'payment_paypal_client_id' => '',
             'payment_paypal_client_secret' => '',
             'payment_paypal_sandbox' => '1',
-            'payment_whatsapp_enabled' => '0',
-            'payment_whatsapp_phone' => '',
-            'payment_whatsapp_message_template' => '',
             'payment_apple_pay_enabled' => '0',
-            'payment_apple_pay_merchant_id' => '',
-            'payment_apple_pay_domain' => '',
+            'payment_apple_pay_stripe_publishable_key' => '',
+            'payment_apple_pay_stripe_secret_key' => '',
+            'payment_apple_pay_stripe_test_mode' => '1',
             'payment_venmo_enabled' => '0',
             'payment_venmo_username' => '',
             'payment_cashapp_enabled' => '0',

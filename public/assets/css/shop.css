@@ -5324,6 +5324,11 @@ body.pc-drawer-open {
   min-height: 48px;
   margin-top: 0.75rem;
 }
+.gateway-pane__apple-pay {
+  min-height: 48px;
+  margin-top: 0.75rem;
+  max-width: 320px;
+}
 .gateway-pane__details {
   background: var(--cream-dark);
   border-radius: 10px;
