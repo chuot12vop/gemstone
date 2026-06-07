@@ -107,7 +107,7 @@
     </div>
 
     <div class="checkout-field checkout-field--floating checkout-field--with-icon full">
-        <input type="tel" id="shipping_phone" name="shipping_phone" required autocomplete="tel" minlength="10" maxlength="9"
+        <input type="tel" id="shipping_phone" name="shipping_phone" required autocomplete="tel" minlength="10"
                value="{{ old('shipping_phone', $defaults['phone'] ?? '') }}" placeholder=" ">
         <label for="shipping_phone">Phone</label>
         <span class="checkout-field__icon checkout-field__icon--help" title="Used for delivery updates" aria-hidden="true">?</span>
