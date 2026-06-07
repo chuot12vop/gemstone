@@ -11,7 +11,7 @@
 <form class="stack-form form-inline" method="get" action="{{ route('admin.contacts.index') }}" style="margin-bottom:14px;">
     <label class="form-inline__field">
         Search
-        <input type="text" name="q" value="{{ $q }}" placeholder="Name, phone, address">
+        <input type="text" name="q" value="{{ $q }}" placeholder="Name, phone, email, address, message">
     </label>
     <label class="form-inline__field">
         Status
@@ -32,7 +32,9 @@
             <th>Received</th>
             <th>Name</th>
             <th>Phone</th>
+            <th>Email</th>
             <th>Address</th>
+            <th>Message</th>
             <th>Status</th>
             <th></th>
         </tr>
@@ -43,7 +45,26 @@
                 <td>{{ $contact->created_at?->format('Y-m-d H:i') }}</td>
                 <td><strong>{{ $contact->name }}</strong></td>
                 <td><a href="tel:{{ $contact->phone }}">{{ $contact->phone }}</a></td>
+                <td>
+                    @if($contact->email)
+                        <a href="mailto:{{ $contact->email }}">{{ $contact->email }}</a>
+                    @else
+                        <span class="muted">—</span>
+                    @endif
+                </td>
                 <td><span class="admin-contact-snippet">{{ Str::limit($contact->address, 80) }}</span></td>
+                <td>
+                    <span class="admin-contact-snippet">
+                        @if($contact->product)
+                            <span class="muted">Product:</span> {{ Str::limit($contact->product, 40) }}<br>
+                        @endif
+                        @if($contact->message)
+                            {{ Str::limit($contact->message, 60) }}
+                        @elseif(! $contact->product)
+                            <span class="muted">—</span>
+                        @endif
+                    </span>
+                </td>
                 <td><span class="badge badge--{{ $contact->status }}">{{ $contact->status }}</span></td>
                 <td class="data-table__actions">
                     <a class="btn-admin btn-admin--small" href="{{ route('admin.contacts.show', $contact) }}">View</a>
@@ -56,7 +77,7 @@
                 </td>
             </tr>
         @empty
-            <tr><td colspan="6" class="data-table__empty">No contacts match these filters.</td></tr>
+            <tr><td colspan="8" class="data-table__empty">No contacts match these filters.</td></tr>
         @endforelse
         </tbody>
     </table>

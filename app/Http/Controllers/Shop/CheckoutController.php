@@ -11,6 +11,7 @@ use App\Models\ProductVariant;
 use App\Models\Voucher;
 use App\Services\CartService;
 use App\Services\CurrencyService;
+use App\Services\OrderMailService;
 use App\Services\VoucherService;
 use App\Services\Payment\Contracts\PaymentGateway;
 use App\Services\Payment\Data\PaymentInitiationResult;
@@ -55,6 +56,7 @@ class CheckoutController extends Controller
         private PaymentMethodRegistry $registry,
         private CartService $cart,
         private VoucherService $vouchers,
+        private OrderMailService $orderMail,
     ) {}
 
     /** Unified checkout page. */
@@ -487,6 +489,8 @@ class CheckoutController extends Controller
         session()->forget(self::SESSION_VOUCHER_KEY);
         session([self::SESSION_LAST_ORDER_KEY => $order->order_number]);
 
+        $this->orderMail->sendPlaced($order->fresh(['items']));
+
         return match ($result->type) {
             PaymentInitiationResult::TYPE_REDIRECT => redirect()->away((string) $result->redirectUrl),
             PaymentInitiationResult::TYPE_COMPLETED => $this->markOrderPaid($order, $gateway, $result->gatewayTransactionId),
@@ -751,6 +755,8 @@ class CheckoutController extends Controller
                 'notes' => 'Payment captured',
             ]);
         });
+
+        $this->orderMail->sendPaid($order->fresh(['items']));
 
         return redirect()
             ->route('shop.order.show', ['order_number' => $order->order_number])

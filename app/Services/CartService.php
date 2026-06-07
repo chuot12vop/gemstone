@@ -4,11 +4,12 @@ namespace App\Services;
 
 use App\Models\Product;
 use App\Models\ProductVariant;
+use App\Support\ProductPricing;
 
 class CartService
 {
     /**
-     * @return array<int, array{qty: int, unit_price_usd: float|null, product_id: int}>
+     * @return array<int, array{qty: int, unit_price_usd: float|null, product_id: int, upsell_parent_product_id: int|null}>
      */
     public function all(): array
     {
@@ -35,17 +36,17 @@ class CartService
     }
 
     /**
-     * @return array{qty: int, unit_price_usd: float|null, product_id: int}|null
+     * @return array{qty: int, unit_price_usd: float|null, product_id: int, upsell_parent_product_id: int|null}|null
      */
     public function get(int $variantId): ?array
     {
         return $this->all()[$variantId] ?? null;
     }
 
-    public function add(int $variantId, int $quantity, ?float $unitPriceUsd = null): void
+    public function add(int $variantId, int $quantity, ?float $unitPriceUsd = null, ?int $upsellParentProductId = null): void
     {
         $cart = $this->all();
-        $existing = $cart[$variantId] ?? ['qty' => 0, 'unit_price_usd' => null, 'product_id' => 0];
+        $existing = $cart[$variantId] ?? ['qty' => 0, 'unit_price_usd' => null, 'product_id' => 0, 'upsell_parent_product_id' => null];
         $variant = ProductVariant::query()
             ->where('id', $variantId)
             ->where('is_active', true)
@@ -65,11 +66,15 @@ class CartService
         } elseif ($existing['unit_price_usd'] !== null) {
             $entry['unit_price_usd'] = $existing['unit_price_usd'];
         }
+        $parentId = $upsellParentProductId ?? ($existing['upsell_parent_product_id'] ?? null);
+        if ($parentId !== null && $parentId > 0) {
+            $entry['upsell_parent_product_id'] = $parentId;
+        }
         $cart[$variantId] = $entry;
         $this->persist($cart, $variantId);
     }
 
-    public function addProduct(int $productId, int $quantity, ?float $unitPriceUsd = null): void
+    public function addProduct(int $productId, int $quantity, ?float $unitPriceUsd = null, ?int $upsellParentProductId = null): void
     {
         $variant = ProductVariant::query()
             ->where('product_id', $productId)
@@ -83,7 +88,7 @@ class CartService
             return;
         }
 
-        $this->add($variant->id, $quantity, $unitPriceUsd);
+        $this->add($variant->id, $quantity, $unitPriceUsd, $upsellParentProductId);
     }
 
     public function set(int $variantId, int $quantity, ?float $unitPriceUsd = null): void
@@ -96,7 +101,7 @@ class CartService
             return;
         }
 
-        $existing = $cart[$variantId] ?? ['qty' => 0, 'unit_price_usd' => null, 'product_id' => 0];
+        $existing = $cart[$variantId] ?? ['qty' => 0, 'unit_price_usd' => null, 'product_id' => 0, 'upsell_parent_product_id' => null];
         $variant = ProductVariant::query()->where('id', $variantId)->first();
         $entry = [
             'qty' => $quantity,
@@ -105,6 +110,9 @@ class CartService
         $price = $unitPriceUsd ?? ($existing['unit_price_usd'] ?? null);
         if ($price !== null) {
             $entry['unit_price_usd'] = $price;
+        }
+        if (! empty($existing['upsell_parent_product_id'])) {
+            $entry['upsell_parent_product_id'] = (int) $existing['upsell_parent_product_id'];
         }
         $cart[$variantId] = $entry;
         session(['cart' => $cart]);
@@ -143,8 +151,11 @@ class CartService
      */
     public function buildLines(): array
     {
+        $cart = $this->all();
+        $productIdsInCart = array_values(array_unique(array_filter(array_column($cart, 'product_id'))));
         $lines = [];
-        foreach ($this->all() as $variantId => $entry) {
+
+        foreach ($cart as $variantId => $entry) {
             $variant = ProductVariant::query()
                 ->where('id', $variantId)
                 ->where('is_active', true)
@@ -160,7 +171,15 @@ class CartService
                 continue;
             }
 
-            $unit = $this->unitPriceUsd($variant, $entry['unit_price_usd'] ?? null);
+            $parentProductId = (int) ($entry['upsell_parent_product_id'] ?? 0);
+            if ($parentProductId > 0) {
+                $unit = in_array($parentProductId, $productIdsInCart, true)
+                    ? $this->upsellDiscountedPrice($parentProductId, $variant->product_id, $variant)
+                    : (float) $variant->price_usd;
+            } else {
+                $unit = $this->unitPriceUsd($variant, $entry['unit_price_usd'] ?? null);
+            }
+
             $lines[] = [
                 'product' => $variant->product,
                 'variant' => $variant,
@@ -174,9 +193,29 @@ class CartService
         return $lines;
     }
 
+    private function upsellDiscountedPrice(int $parentProductId, int $upsellProductId, ProductVariant $variant): float
+    {
+        $base = (float) $variant->price_usd;
+        $parent = Product::query()
+            ->where('id', $parentProductId)
+            ->with(['upsellProducts' => fn ($q) => $q->where('products.id', $upsellProductId)])
+            ->first();
+
+        if (! $parent || $parent->upsellProducts->isEmpty()) {
+            return $base;
+        }
+
+        $upsell = $parent->upsellProducts->first();
+        $upsalePct = (float) ($upsell->pivot->upsale_discount ?? 0);
+        $discountPct = (float) ($upsell->pivot->discount ?? 0);
+        $percent = $upsalePct > 0 ? $upsalePct : $discountPct;
+
+        return ProductPricing::afterPercentDiscount($base, $percent > 0 ? $percent : null);
+    }
+
     /**
      * @param mixed $value
-     * @return array{qty: int, unit_price_usd: float|null, product_id: int}
+     * @return array{qty: int, unit_price_usd: float|null, product_id: int, upsell_parent_product_id: int|null}
      */
     private function normalizeEntry(mixed $value): array
     {
@@ -184,23 +223,30 @@ class CartService
             $qty = max(0, (int) ($value['qty'] ?? $value['quantity'] ?? 0));
             $price = isset($value['unit_price_usd']) ? (float) $value['unit_price_usd'] : null;
             $productId = (int) ($value['product_id'] ?? 0);
+            $parentId = (int) ($value['upsell_parent_product_id'] ?? 0);
 
-            return [
+            $entry = [
                 'qty' => $qty,
                 'unit_price_usd' => $price !== null && $price >= 0 ? $price : null,
                 'product_id' => $productId,
             ];
+            if ($parentId > 0) {
+                $entry['upsell_parent_product_id'] = $parentId;
+            }
+
+            return $entry;
         }
 
         return [
             'qty' => max(0, (int) $value),
             'unit_price_usd' => null,
             'product_id' => 0,
+            'upsell_parent_product_id' => null,
         ];
     }
 
     /**
-     * @param array<int, array{qty: int, unit_price_usd?: float|null, product_id?: int}> $cart
+     * @param array<int, array{qty: int, unit_price_usd?: float|null, product_id?: int, upsell_parent_product_id?: int|null}> $cart
      */
     private function persist(array $cart, int $variantId): void
     {

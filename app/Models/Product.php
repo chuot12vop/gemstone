@@ -78,6 +78,12 @@ class Product extends Model
             ->first();
     }
 
+    /** @return HasMany<OrderItem> */
+    public function orderItems(): HasMany
+    {
+        return $this->hasMany(OrderItem::class);
+    }
+
     /** @return HasMany<Review> */
     public function reviews(): HasMany
     {

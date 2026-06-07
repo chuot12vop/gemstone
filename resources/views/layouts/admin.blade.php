@@ -22,12 +22,7 @@
         <div class="admin-main-wrap">
             @include('admin.partials.topbar')
 
-            @if(session('success'))
-                <p class="admin-banner admin-banner--ok" role="status">{{ session('success') }}</p>
-            @endif
-            @if(session('error'))
-                <p class="admin-banner admin-banner--err" role="alert">{{ session('error') }}</p>
-            @endif
+            @include('admin.partials.flash-toasts')
 
             <main id="admin-main" class="admin-main" tabindex="-1">
                 <header class="module-head">

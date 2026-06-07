@@ -10,8 +10,26 @@
         <h2 class="admin-h2">Contact</h2>
         <p><strong>{{ $contact->name }}</strong></p>
         <p>📞 <a href="tel:{{ $contact->phone }}">{{ $contact->phone }}</a></p>
+        <h2 class="admin-h2">Email</h2>
+        <p>
+            @if($contact->email)
+                <a href="mailto:{{ $contact->email }}">{{ $contact->email }}</a>
+            @else
+                <span class="muted">—</span>
+            @endif
+        </p>
         <h2 class="admin-h2">Address</h2>
         <p>{!! nl2br(e($contact->address)) !!}</p>
+        <h2 class="admin-h2">Product</h2>
+        <p>{{ $contact->product ?: '—' }}</p>
+        <h2 class="admin-h2">Message</h2>
+        <p>
+            @if($contact->message)
+                {!! nl2br(e($contact->message)) !!}
+            @else
+                <span class="muted">—</span>
+            @endif
+        </p>
     </div>
     <div>
         <h2 class="admin-h2">Status</h2>

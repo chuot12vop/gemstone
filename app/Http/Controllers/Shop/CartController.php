@@ -76,6 +76,7 @@ class CartController extends Controller
             'product_id' => 'nullable|integer|exists:products,id',
             'quantity' => 'nullable|integer|min:1',
             'unit_price_usd' => 'nullable|numeric|min:0',
+            'upsell_parent_product_id' => 'nullable|integer|exists:products,id',
         ]);
 
         $qty = max(1, (int) $request->input('quantity', 1));
@@ -108,7 +109,8 @@ class CartController extends Controller
         }
 
         $unitPrice = $request->filled('unit_price_usd') ? (float) $request->unit_price_usd : null;
-        $this->cart->add($variant->id, $qty, $unitPrice);
+        $upsellParentId = $request->filled('upsell_parent_product_id') ? (int) $request->upsell_parent_product_id : null;
+        $this->cart->add($variant->id, $qty, $unitPrice, $upsellParentId);
 
         if ($request->boolean('buy_now')) {
             if ($request->expectsJson()) {
@@ -201,7 +203,8 @@ class CartController extends Controller
                 $unitPrice = ProductPricing::afterPercentDiscount($base, $percent > 0 ? $percent : null);
             }
 
-            $this->cart->add($variant->id, $qty, $unitPrice);
+            $upsellParentId = $pid === $parent->id ? null : $parent->id;
+            $this->cart->add($variant->id, $qty, $unitPrice, $upsellParentId);
             $added++;
         }
 
@@ -297,6 +300,12 @@ class CartController extends Controller
             'message' => $message,
             'cart_count' => $this->cart->totalQuantity(),
             'subtotal_usd' => $subtotalUsd,
+            'shipping_usd' => $amounts['shippingUsd'],
+            'tax_usd' => $amounts['taxUsd'],
+            'total_usd' => $amounts['totalUsd'],
+            'shipping_formatted' => $currency->formatUsd($amounts['shippingUsd']),
+            'tax_formatted' => $currency->formatUsd($amounts['taxUsd']),
+            'total_formatted' => $currency->formatUsd($amounts['totalUsd']),
             'shipping' => $shippingProgress,
             'html' => view('shop.partials.cart-drawer-bag-body', [
                 'lines' => $lines,

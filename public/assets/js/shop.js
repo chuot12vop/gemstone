@@ -3015,6 +3015,9 @@ function initProductCardDrawers() {
         if (btn.dataset.unitPriceUsd) {
           payload.unit_price_usd = parseFloat(btn.dataset.unitPriceUsd);
         }
+        if (btn.dataset.upsellParentProductId) {
+          payload.upsell_parent_product_id = parseInt(btn.dataset.upsellParentProductId, 10);
+        }
         try {
           const data = await postCart(addUrl, payload);
           await refreshFromResponse(drawer, data);
@@ -3095,6 +3098,34 @@ function initCartPage() {
     });
   };
 
+  const updateCartSummary = (data) => {
+    const shippingEl = root.querySelector('[data-cart-shipping]');
+    const shippingRow = root.querySelector('[data-cart-shipping-row]');
+    const taxRow = root.querySelector('[data-cart-tax-row]');
+    const taxEl = root.querySelector('[data-cart-tax]');
+    const totalEl = root.querySelector('[data-cart-total]');
+
+    if (shippingEl) {
+      const shipping = parseFloat(data.shipping_usd || '0', 10) || 0;
+      shippingEl.textContent = shipping <= 0 ? 'FREE' : (data.shipping_formatted || formatUsd(shipping));
+      if (shippingRow) {
+        shippingRow.hidden = false;
+      }
+    }
+    if (taxRow && taxEl) {
+      const tax = parseFloat(data.tax_usd || '0', 10) || 0;
+      if (tax > 0) {
+        taxEl.textContent = data.tax_formatted || formatUsd(tax);
+        taxRow.hidden = false;
+      } else {
+        taxRow.hidden = true;
+      }
+    }
+    if (totalEl) {
+      totalEl.textContent = data.total_formatted || formatUsd(data.total_usd || data.subtotal_usd || 0);
+    }
+  };
+
   const updateFreeShippingBar = (shipping) => {
     const bar = document.querySelector('[data-free-shipping-bar]');
     if (!bar || !shipping) return;
@@ -3153,6 +3184,7 @@ function initCartPage() {
         if (data.subtotal_usd != null) {
           updateSubtotal(data.subtotal_usd);
         }
+        updateCartSummary(data);
         if (data.shipping) {
           updateFreeShippingBar(data.shipping);
         }

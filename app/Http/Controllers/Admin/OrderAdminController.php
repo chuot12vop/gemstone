@@ -4,12 +4,15 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Order;
+use App\Services\OrderMailService;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 
 class OrderAdminController extends Controller
 {
+    public function __construct(private OrderMailService $orderMail) {}
+
     /** @var list<string> */
     private const PAYMENT_METHODS = [
         'paypal',
@@ -74,8 +77,13 @@ class OrderAdminController extends Controller
         $request->validate([
             'status' => 'required|in:'.implode(',', Order::STATUSES),
         ]);
+        $previousStatus = $order->status;
         $order->status = $request->status;
         $order->save();
+
+        if ($previousStatus !== 'paid' && $order->status === 'paid') {
+            $this->orderMail->sendPaid($order->fresh(['items']));
+        }
 
         return redirect()->route('admin.orders.show', $order)->with('success', 'Status updated.');
     }

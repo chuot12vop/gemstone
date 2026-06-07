@@ -33,7 +33,9 @@
                             $upsellImage = $upsellVariant?->frontImage($upsell) ?: ($upsell->thumbnail ?: ($upsell->image ?: asset('assets/img/placeholder.svg')));
                             $base = $upsellVariant ? (float) $upsellVariant->price_usd : (float) $upsell->price_usd;
                             $discountPct = (float) ($upsell->pivot->discount ?? 0);
+                            $upsalePct = (float) ($upsell->pivot->upsale_discount ?? 0);
                             $displayUsd = ProductPricing::afterPercentDiscount($base, $discountPct > 0 ? $discountPct : null);
+                            $cartUsd = ProductPricing::afterPercentDiscount($base, $upsalePct > 0 ? $upsalePct : ($discountPct > 0 ? $discountPct : null));
                             $upsellInStock = ($upsellVariant?->stock ?? $upsell->stock) > 0;
                         @endphp
                         <li class="pc-drawer__upsell-item">
@@ -47,7 +49,8 @@
                                         class="pc-drawer__upsell-add"
                                         data-pc-upsell-add
                                         data-variant-id="{{ $upsellVariant?->id }}"
-                                        data-unit-price-usd="{{ $displayUsd }}"
+                                        data-upsell-parent-product-id="{{ $product->id }}"
+                                        data-unit-price-usd="{{ $cartUsd }}"
                                         {{ ! $upsellInStock || ! $upsellVariant ? 'disabled' : '' }}>
                                     Add to Bag
                                 </button>

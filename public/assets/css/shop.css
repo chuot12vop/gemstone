@@ -6583,6 +6583,7 @@ body.pc-drawer-open {
   height: 1.45rem;
 }
 .floating-actions__label {
+  display: none;
   position: absolute;
   width: 1px;
   height: 1px;
@@ -6607,6 +6608,7 @@ body.pc-drawer-open {
     height: 1.35rem;
   }
   .floating-actions__label {
+    display: block;
     position: static;
     width: auto;
     height: auto;

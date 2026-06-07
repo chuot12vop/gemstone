@@ -21,7 +21,10 @@ class ContactAdminController extends Controller
             $query->where(function ($w) use ($q): void {
                 $w->where('name', 'like', '%'.$q.'%')
                     ->orWhere('phone', 'like', '%'.$q.'%')
-                    ->orWhere('address', 'like', '%'.$q.'%');
+                    ->orWhere('email', 'like', '%'.$q.'%')
+                    ->orWhere('address', 'like', '%'.$q.'%')
+                    ->orWhere('product', 'like', '%'.$q.'%')
+                    ->orWhere('message', 'like', '%'.$q.'%');
             });
         }
         if (in_array($status, Contact::STATUSES, true)) {

@@ -15,6 +15,7 @@ class Order extends Model
         'user_id', 'order_number', 'customer_email', 'customer_name', 'shipping_address',
         'shipping_phone', 'marketing_sms_opt_in', 'marketing_email_opt_in',
         'currency_code', 'subtotal_usd', 'voucher_code', 'discount_usd', 'shipping_usd', 'tax_usd', 'total_display', 'status',
+        'placed_email_sent_at', 'paid_email_sent_at',
     ];
 
     protected $casts = [
@@ -25,6 +26,8 @@ class Order extends Model
         'total_display' => 'float',
         'marketing_sms_opt_in' => 'boolean',
         'marketing_email_opt_in' => 'boolean',
+        'placed_email_sent_at' => 'datetime',
+        'paid_email_sent_at' => 'datetime',
     ];
 
     /** @return BelongsTo<User, Order> */

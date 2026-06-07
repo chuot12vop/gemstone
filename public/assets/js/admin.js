@@ -251,3 +251,58 @@
     initColorPickers();
   }
 })();
+
+(function () {
+  'use strict';
+
+  function dismissToast(toast) {
+    if (!toast || toast.dataset.dismissed === 'true') {
+      return;
+    }
+    toast.dataset.dismissed = 'true';
+    toast.classList.remove('is-visible');
+    toast.classList.add('is-leaving');
+    window.setTimeout(function () {
+      const stack = toast.parentElement;
+      toast.remove();
+      if (stack && stack.matches('[data-toast-stack]') && !stack.querySelector('[data-toast]')) {
+        stack.remove();
+      }
+    }, 350);
+  }
+
+  function initFlashToasts() {
+    const stack = document.querySelector('[data-toast-stack]');
+    if (!stack) {
+      return;
+    }
+
+    const toasts = Array.prototype.slice.call(stack.querySelectorAll('[data-toast]'));
+    if (!toasts.length) {
+      return;
+    }
+
+    toasts.forEach(function (toast, index) {
+      window.setTimeout(function () {
+        toast.classList.add('is-visible');
+      }, 80 + index * 120);
+
+      window.setTimeout(function () {
+        dismissToast(toast);
+      }, 5200 + index * 120);
+
+      const closeBtn = toast.querySelector('[data-toast-close]');
+      if (closeBtn) {
+        closeBtn.addEventListener('click', function () {
+          dismissToast(toast);
+        });
+      }
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initFlashToasts);
+  } else {
+    initFlashToasts();
+  }
+})();

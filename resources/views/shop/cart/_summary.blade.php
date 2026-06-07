@@ -4,19 +4,17 @@
         <span>Subtotal</span>
         <strong data-cart-subtotal>{{ $currency->formatUsd($subtotalUsd) }}</strong>
     </p>
-    <p class="cart-page__shipping">
+    <p class="cart-page__shipping" data-cart-shipping-row>
         <span>Shipping</span>
-        <strong>{{ ($shippingUsd ?? 0) <= 0 ? 'FREE' : $currency->formatUsd((float) $shippingUsd) }}</strong>
+        <strong data-cart-shipping>{{ ($shippingUsd ?? 0) <= 0 ? 'FREE' : $currency->formatUsd((float) $shippingUsd) }}</strong>
     </p>
-    @if(($taxUsd ?? 0) > 0)
-        <p class="cart-page__tax">
-            <span>Taxes</span>
-            <strong>{{ $currency->formatUsd((float) $taxUsd) }}</strong>
-        </p>
-    @endif
+    <p class="cart-page__tax" data-cart-tax-row @if(($taxUsd ?? 0) <= 0) hidden @endif>
+        <span>Taxes</span>
+        <strong data-cart-tax>{{ $currency->formatUsd((float) ($taxUsd ?? 0)) }}</strong>
+    </p>
     <p class="cart-page__total">
         <span>Total</span>
-        <strong>{{ $currency->formatUsd((float) ($totalUsd ?? $subtotalUsd)) }}</strong>
+        <strong data-cart-total>{{ $currency->formatUsd((float) ($totalUsd ?? $subtotalUsd)) }}</strong>
     </p>
     <p class="cart-page__note">Have a discount code? Enter it at checkout.</p>
     <a class="btn btn--primary cart-page__checkout" href="{{ route('shop.checkout') }}">Secure Checkout</a>

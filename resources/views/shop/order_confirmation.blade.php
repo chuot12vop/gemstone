@@ -18,7 +18,12 @@
 @endif
 
 <div class="prose">
-    <p>We sent a confirmation to <strong>{{ $order->customer_email }}</strong>.</p>
+    @php($isPlaceholderEmail = str_ends_with(strtolower((string) $order->customer_email), '@checkout.pending'))
+    @if($order->status === 'paid')
+        <p>Payment confirmed@if(! $isPlaceholderEmail) — check your inbox at <strong>{{ $order->customer_email }}</strong>@endif.</p>
+    @else
+        <p>@if(! $isPlaceholderEmail)We emailed your order details to <strong>{{ $order->customer_email }}</strong>.@else Your order has been received.@endif</p>
+    @endif
     <p>Total (display currency at checkout): {{ $order->currency_code }} {{ number_format((float) $order->total_display, 2) }}</p>
 </div>
 
