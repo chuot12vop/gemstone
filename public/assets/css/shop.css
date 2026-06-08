@@ -5180,7 +5180,7 @@ body.pc-drawer-open {
   display: grid;
   place-items: center;
   border-radius: 12px;
-  background: var(--cream-dark);
+  background: #00000000;
 }
 .payment-card__icon-img {
   width: 32px;
