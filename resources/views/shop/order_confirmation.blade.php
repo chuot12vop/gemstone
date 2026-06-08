@@ -19,11 +19,21 @@
 
 <div class="prose">
     @php($isPlaceholderEmail = str_ends_with(strtolower((string) $order->customer_email), '@checkout.pending'))
+
     @if($order->status === 'paid')
-        <p>Payment confirmed@if(! $isPlaceholderEmail) — check your inbox at <strong>{{ $order->customer_email }}</strong>@endif.</p>
+        @if($isPlaceholderEmail)
+            <p>Payment confirmed.</p>
+        @else
+            <p>Payment confirmed — check your inbox at <strong>{{ $order->customer_email }}</strong>.</p>
+        @endif
     @else
-        <p>@if(! $isPlaceholderEmail)We emailed your order details to <strong>{{ $order->customer_email }}</strong>.@else Your order has been received.@endif</p>
+        @if($isPlaceholderEmail)
+            <p>Your order has been received.</p>
+        @else
+            <p>We emailed your order details to <strong>{{ $order->customer_email }}</strong>.</p>
+        @endif
     @endif
+
     <p>Total (display currency at checkout): {{ $order->currency_code }} {{ number_format((float) $order->total_display, 2) }}</p>
 </div>
 
