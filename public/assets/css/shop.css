@@ -5488,7 +5488,7 @@ body.pc-drawer-open {
 
 /* Review submission form */
 .review-form-wrap { display: grid; gap: 1.25rem; max-width: 720px; margin: 0 auto; }
-@media (min-width: 720px) { .review-form-wrap { grid-template-columns: 220px 1fr; align-items: start; } }
+@media (min-width: 720px) { .review-form-wrap { align-items: start; } }
 .review-form-product { display: flex; gap: 0.85rem; background: #fff; border: 1px solid var(--border); border-radius: var(--radius); padding: 0.85rem; }
 .review-form-product img { border-radius: 10px; flex-shrink: 0; object-fit: cover; }
 .review-form-product__title { margin: 0.25rem 0 0; font-family: "Cormorant Garamond", Georgia, serif; font-size: 1.15rem; }

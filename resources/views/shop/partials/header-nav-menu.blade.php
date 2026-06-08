@@ -85,7 +85,6 @@
         @endforeach
     </select>
 </form>
-<a class="btn btn--small btn--header-buy" href="{{ route('shop.products.index') }}">Buy now</a>
 <div class="site-nav__account site-nav__account--desktop-dropdown">
     <button type="button"
             class="site-account-menu__trigger"
