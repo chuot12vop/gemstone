@@ -1884,11 +1884,12 @@ function initCatalogMega() {
 
     trigger.addEventListener('click', function (e) {
       if (!isMobileNav()) return;
-      if (!li.classList.contains('is-mega-open')) {
-        e.preventDefault();
-        li.classList.add('is-mega-open');
-        trigger.setAttribute('aria-expanded', 'true');
-      }
+      e.preventDefault();
+
+      const shouldOpen = !li.classList.contains('is-mega-open');
+      if (shouldOpen) closeAllMega();
+      li.classList.toggle('is-mega-open', shouldOpen);
+      trigger.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false');
     });
   });
 

@@ -32,6 +32,8 @@ class SettingAdminController extends Controller
     {
         $validated = $request->validate([
             'site_name' => 'required|string|max:190',
+            'home_title' => 'nullable|string|max:190',
+            'home_meta_description' => 'nullable|string|max:500',
             'security_policy' => 'nullable|string',
             'privacy_policy' => 'nullable|string',
             'return_policy' => 'nullable|string',
@@ -79,6 +81,8 @@ class SettingAdminController extends Controller
         }
 
         $settings['site_name'] = $validated['site_name'];
+        $settings['home_title'] = trim((string) ($validated['home_title'] ?? ''));
+        $settings['home_meta_description'] = trim((string) ($validated['home_meta_description'] ?? ''));
         $settings['show_site_logo'] = $request->boolean('show_site_logo') ? '1' : '0';
         $settings['show_site_name'] = $request->boolean('show_site_name') ? '1' : '0';
         $settings['hide_site_name_mobile'] = $request->boolean('hide_site_name_mobile') ? '1' : '0';
@@ -155,6 +159,8 @@ class SettingAdminController extends Controller
         $defaults = [
             'site_name' => config('app.name'),
             'site_logo' => '',
+            'home_title' => '',
+            'home_meta_description' => '',
             'show_site_logo' => '1',
             'show_site_name' => '1',
             'hide_site_name_mobile' => '0',

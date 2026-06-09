@@ -21,6 +21,18 @@
     </div>
 
     <fieldset class="form-fieldset">
+        <legend>Homepage SEO</legend>
+        <label>
+            Title
+            <input type="text" name="home_title" maxlength="190" value="{{ old('home_title', $settings['home_title'] ?? '') }}" placeholder="Gemstone Jewelry & Feng Shui — Taichi-inspired wellness">
+        </label>
+        <label>
+            Meta description
+            <textarea name="home_meta_description" rows="3" maxlength="500" placeholder="Premium gemstone jewelry for balance, luck, and intention.">{{ old('home_meta_description', $settings['home_meta_description'] ?? '') }}</textarea>
+        </label>
+    </fieldset>
+
+    <fieldset class="form-fieldset">
         <legend>Header visibility</legend>
         <label class="checkbox">
             <input type="checkbox" name="show_site_logo" value="1" @checked(old('show_site_logo', ($settings['show_site_logo'] ?? '1') === '1'))>
