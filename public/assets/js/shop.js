@@ -1884,11 +1884,12 @@ function initCatalogMega() {
 
     trigger.addEventListener('click', function (e) {
       if (!isMobileNav()) return;
-      if (!li.classList.contains('is-mega-open')) {
-        e.preventDefault();
-        li.classList.add('is-mega-open');
-        trigger.setAttribute('aria-expanded', 'true');
-      }
+      e.preventDefault();
+
+      const shouldOpen = !li.classList.contains('is-mega-open');
+      if (shouldOpen) closeAllMega();
+      li.classList.toggle('is-mega-open', shouldOpen);
+      trigger.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false');
     });
   });
 
@@ -2781,6 +2782,24 @@ function initProductCardDrawers() {
     return res.json();
   };
 
+  const payloadFromForm = (form) => {
+    const payload = {};
+    new FormData(form).forEach(function (value, key) {
+      if (key === '_token' || value instanceof File) return;
+      payload[key] = value;
+    });
+
+    if (payload.variant_id != null) {
+      payload.variant_id = parseInt(payload.variant_id || '0', 10);
+    }
+    if (payload.product_id != null) {
+      payload.product_id = parseInt(payload.product_id || '0', 10);
+    }
+    payload.quantity = Math.max(1, parseInt(payload.quantity || '1', 10) || 1);
+
+    return payload;
+  };
+
   const refreshFromResponse = async (drawer, data) => {
     if (!data || !data.ok) return false;
     const bagBody = drawer.querySelector('[data-pc-drawer-bag-body]');
@@ -3030,7 +3049,7 @@ function initProductCardDrawers() {
 
   document.querySelectorAll('[data-pc-drawer-open]:not([data-pc-drawer-open-bound])').forEach(function (btn) {
     btn.setAttribute('data-pc-drawer-open-bound', '1');
-    btn.addEventListener('click', function (event) {
+    btn.addEventListener('click', async function (event) {
       event.preventDefault();
       event.stopPropagation();
       const card = btn.closest('[data-product-card]');
@@ -3039,9 +3058,34 @@ function initProductCardDrawers() {
       const drawer = productId
         ? document.querySelector('[data-pc-drawer][data-product-id="' + productId + '"]')
         : card?.querySelector('[data-pc-drawer]');
+      const form = btn.closest('form');
+      let addData = null;
+
+      if (form instanceof HTMLFormElement && btn.hasAttribute('data-pd-submit')) {
+        const addAction = form.getAttribute('action') || addUrl;
+        const wasDisabled = btn.disabled;
+        btn.disabled = true;
+        try {
+          addData = await postCart(addAction, payloadFromForm(form));
+          if (!addData || !addData.ok) {
+            throw new Error(addData?.message || 'Could not add to bag.');
+          }
+          btn.disabled = wasDisabled;
+        } catch (error) {
+          btn.disabled = wasDisabled;
+          form.submit();
+          return;
+        }
+      }
+
       if (drawer) {
         if (detailRoot) syncDrawerFromProductDetail(drawer);
-        openDrawerEl(drawer);
+        await openDrawerEl(drawer);
+        if (addData) {
+          await refreshFromResponse(drawer, addData);
+        }
+      } else if (form instanceof HTMLFormElement && !addData) {
+        form.submit();
       }
     });
   });

@@ -340,13 +340,31 @@ ul.site-nav__list li:hover {
   color: var(--ink);
   text-decoration: none;
   font-weight: 500;
+  font-size: 16px;
+}
+.site-nav__expand-toggle {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
+  justify-content: space-between;
+  height: 1.65rem;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--gold-deep);
+  cursor: pointer;
+  padding: 0;
+  width: 100%;
+  color: var(--ink);
+  text-decoration: none;
+  font-weight: 500;
+}
+.site-nav__expand-toggle:focus-visible {
+  outline: 2px solid rgba(166, 124, 61, 0.35);
+  outline-offset: 2px;
 }
 .site-nav__expand-icon {
   flex-shrink: 0;
-  color: var(--gold-deep);
+  color: currentColor;
   transition: transform 0.2s ease;
 }
 .site-nav__item--mega.is-mega-open .site-nav__expand-icon {
@@ -361,7 +379,10 @@ ul.site-nav__list li:hover {
   border-top: 1px solid var(--border);
 }
 .site-nav__account--desktop-dropdown { display: none; }
-.site-nav__account--mobile { display: flex; }
+.site-nav__account-icon {
+  display: inline-flex;
+  color: var(--gold-deep);
+}
 .site-account-menu__trigger,
 .site-account-menu__item--button {
   font: inherit;
@@ -730,10 +751,6 @@ ul.site-nav__list li:hover {
   .mobile-nav-drawer.is-open .site-nav--mobile .currency-form { transition-delay: 0.32s; }
   .mobile-nav-drawer.is-open .site-nav--mobile .btn--header-buy { transition-delay: 0.36s; }
   .mobile-nav-drawer.is-open .site-nav--mobile .site-nav__account { transition-delay: 0.4s; }
-  .site-nav--mobile .site-nav__account {
-    display: flex;
-    margin-top: 0.25rem;
-  }
   .nav-toggle.is-active .nav-toggle__icon .nav-toggle__bar:nth-child(1) {
     transform: translateY(7px) rotate(45deg);
   }
@@ -818,9 +835,6 @@ ul.site-nav__list li:hover {
   }
 }
 @media (min-width: 1024px) {
-  .site-nav__item--mega {
-    padding-bottom: 0.35rem;
-  }
   .catalog-mega {
     position: absolute;
     z-index: 45;
@@ -970,8 +984,10 @@ ul.site-nav__list li:hover {
   .site-header__nav-desktop .site-nav__list a {
     font-size: 0.92rem;
     white-space: nowrap;
+    font-family: "Source Sans 3", system-ui, sans-serif;
   }
-  .site-header__nav-desktop .site-nav__expand-icon { display: none; }
+
+  .site-nav__expand-icon { display: none; }
   .site-header__nav-desktop .site-nav__account {
     padding-top: 0;
     border-top: 0;
@@ -4400,8 +4416,24 @@ body.pc-drawer-open {
   width: 100%;
   background: #a67c3d;
   border-color: #a67c3d;
-  text-transform: uppercase;
   letter-spacing: 0.05em;
+}
+.product-detail--missoma .add-form .btn--add-to-bag::after {
+  content: "+";
+  display: inline-block;
+  max-width: 0;
+  margin-left: 0;
+  overflow: hidden;
+  opacity: 0;
+  transform: translateX(-0.2rem);
+  transition: opacity 0.18s ease, max-width 0.18s ease, margin-left 0.18s ease, transform 0.18s ease;
+}
+.product-detail--missoma .add-form .btn--add-to-bag:hover:not(:disabled)::after,
+.product-detail--missoma .add-form .btn--add-to-bag:focus-visible:not(:disabled)::after {
+  max-width: 1em;
+  margin-left: 0.45rem;
+  opacity: 1;
+  transform: translateX(0);
 }
 .product-detail--missoma .add-form .btn--buy-now {
   width: 100%;
@@ -5491,7 +5523,7 @@ body.pc-drawer-open {
 
 /* Review submission form */
 .review-form-wrap { display: grid; gap: 1.25rem; max-width: 720px; margin: 0 auto; }
-@media (min-width: 720px) { .review-form-wrap { align-items: start; } }
+@media (min-width: 720px) { .review-form-wrap { grid-template-columns: 220px 1fr; align-items: start; } }
 .review-form-product { display: flex; gap: 0.85rem; background: #fff; border: 1px solid var(--border); border-radius: var(--radius); padding: 0.85rem; }
 .review-form-product img { border-radius: 10px; flex-shrink: 0; object-fit: cover; }
 .review-form-product__title { margin: 0.25rem 0 0; font-family: "Cormorant Garamond", Georgia, serif; font-size: 1.15rem; }

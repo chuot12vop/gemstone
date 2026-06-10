@@ -230,6 +230,7 @@ class CheckoutController extends Controller
                 $variant = $row['variant'];
                 $q = (int) $row['quantity'];
                 $unit = (float) $row['unit_price_usd'];
+                $lineTotal = (float) $row['line_usd'];
                 OrderItem::query()->create([
                     'order_id' => $order->id,
                     'product_id' => $p->id,
@@ -238,7 +239,7 @@ class CheckoutController extends Controller
                     'product_name' => $p->name,
                     'quantity' => $q,
                     'unit_price_usd' => $unit,
-                    'line_total_usd' => $unit * $q,
+                    'line_total_usd' => $lineTotal,
                 ]);
 
                 $variant->stock = max(0, $variant->stock - $q);
@@ -419,6 +420,7 @@ class CheckoutController extends Controller
                 $variant = $row['variant'];
                 $q = (int) $row['quantity'];
                 $unit = (float) $row['unit_price_usd'];
+                $lineTotal = (float) $row['line_usd'];
                 OrderItem::query()->create([
                     'order_id' => $order->id,
                     'product_id' => $p->id,
@@ -427,7 +429,7 @@ class CheckoutController extends Controller
                     'product_name' => $p->name,
                     'quantity' => $q,
                     'unit_price_usd' => $unit,
-                    'line_total_usd' => $unit * $q,
+                    'line_total_usd' => $lineTotal,
                 ]);
 
                 $variant->stock = max(0, $variant->stock - $q);
