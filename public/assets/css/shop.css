@@ -832,9 +832,6 @@ body.site-nav-open {
   }
 }
 @media (min-width: 1024px) {
-  .site-nav__item--mega {
-    padding-bottom: 0.35rem;
-  }
   .catalog-mega {
     position: absolute;
     z-index: 45;
@@ -986,7 +983,7 @@ body.site-nav-open {
     white-space: nowrap;
   }
 
-  .site-header__nav-desktop .site-nav__expand-toggle { display: none; }
+  .site-nav__expand-icon { display: none; }
   .site-header__nav-desktop .site-nav__account {
     padding-top: 0;
     border-top: 0;
