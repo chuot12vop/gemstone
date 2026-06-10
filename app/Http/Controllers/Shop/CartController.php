@@ -108,9 +108,8 @@ class CartController extends Controller
             return $this->addErrorResponse($request, 'This variant is out of stock.');
         }
 
-        $unitPrice = $request->filled('unit_price_usd') ? (float) $request->unit_price_usd : null;
         $upsellParentId = $request->filled('upsell_parent_product_id') ? (int) $request->upsell_parent_product_id : null;
-        $this->cart->add($variant->id, $qty, $unitPrice, $upsellParentId);
+        $this->cart->add($variant->id, $qty, null, $upsellParentId);
 
         if ($request->boolean('buy_now')) {
             if ($request->expectsJson()) {
@@ -191,9 +190,7 @@ class CartController extends Controller
                 continue;
             }
 
-            if ($request->has('items') && array_key_exists('unit_price_usd', $row) && $row['unit_price_usd'] !== null && $row['unit_price_usd'] !== '') {
-                $unitPrice = (float) $row['unit_price_usd'];
-            } elseif ($pid === $parent->id) {
+            if ($pid === $parent->id) {
                 $unitPrice = (float) $variant->price_usd;
             } else {
                 $base = (float) $variant->price_usd;

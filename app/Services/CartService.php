@@ -172,12 +172,18 @@ class CartService
             }
 
             $parentProductId = (int) ($entry['upsell_parent_product_id'] ?? 0);
+            $baseUnit = (float) $variant->price_usd;
             if ($parentProductId > 0) {
-                $unit = in_array($parentProductId, $productIdsInCart, true)
+                $hasParentInCart = in_array($parentProductId, $productIdsInCart, true);
+                $unit = $hasParentInCart
                     ? $this->upsellDiscountedPrice($parentProductId, $variant->product_id, $variant)
-                    : (float) $variant->price_usd;
+                    : $baseUnit;
+                $lineUsd = $hasParentInCart
+                    ? $this->upsellLinePrice($unit, $baseUnit, $q)
+                    : $unit * $q;
             } else {
                 $unit = $this->unitPriceUsd($variant, $entry['unit_price_usd'] ?? null);
+                $lineUsd = $unit * $q;
             }
 
             $lines[] = [
@@ -185,7 +191,7 @@ class CartService
                 'variant' => $variant,
                 'quantity' => $q,
                 'unit_price_usd' => $unit,
-                'line_usd' => $unit * $q,
+                'line_usd' => $lineUsd,
                 'variant_label' => $variant->label(),
             ];
         }
@@ -211,6 +217,15 @@ class CartService
         $percent = $upsalePct > 0 ? $upsalePct : $discountPct;
 
         return ProductPricing::afterPercentDiscount($base, $percent > 0 ? $percent : null);
+    }
+
+    private function upsellLinePrice(float $discountedUnitPrice, float $baseUnitPrice, int $quantity): float
+    {
+        if ($quantity < 2) {
+            return $discountedUnitPrice;
+        }
+
+        return $discountedUnitPrice + ($baseUnitPrice * ($quantity - 1));
     }
 
     /**

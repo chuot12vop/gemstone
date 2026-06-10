@@ -158,7 +158,7 @@
                     <input type="number" name="quantity" value="1" min="1" max="{{ max(1, $displayStock) }}" data-pd-qty readonly>
                     <button type="button" class="pd-qty-stepper__btn" data-pd-qty-inc aria-label="Increase quantity">+</button>
                 </div>
-                <button class="btn btn--primary"
+                <button class="btn btn--primary btn--add-to-bag"
                         type="button"
                         data-pc-drawer-open
                         data-pd-submit
