@@ -331,8 +331,11 @@ body.site-nav-open {
   overflow: hidden;
 }
 .site-nav__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.5rem; }
-.site-nav__list a { color: var(--ink); text-decoration: none; font-weight: 500; }
+.site-nav__list a { color: var(--ink); text-decoration: none; font-weight: 500; font-family: "Source Sans 3", system-ui, sans-serif;}
 .site-nav__item--mega { position: relative; list-style: none; }
+ul.site-nav__list li:hover {
+  border-bottom: 2px #000000 solid;
+}
 .site-nav__mega-trigger {
   color: var(--ink);
   text-decoration: none;
