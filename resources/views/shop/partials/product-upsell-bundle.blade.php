@@ -68,8 +68,8 @@
                     $base = $upsellVariant ? (float) $upsellVariant->price_usd : (float) $upsell->price_usd;
                     $discountPct = (float) ($upsell->pivot->discount ?? 0);
                     $upsalePct = (float) ($upsell->pivot->upsale_discount ?? 0);
-                    $displayUsd = ProductPricing::afterPercentDiscount($base, $discountPct > 0 ? $discountPct : null);
                     $cartUsd = ProductPricing::afterPercentDiscount($base, $upsalePct > 0 ? $upsalePct : ($discountPct > 0 ? $discountPct : null));
+                    $displayUsd = $cartUsd;
                     $inStock = ($upsellVariant?->stock ?? $upsell->stock) > 0;
                 @endphp
                 <li class="product-upsell__item">

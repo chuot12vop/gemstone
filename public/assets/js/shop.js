@@ -3,6 +3,7 @@ let pcDrawerOpenEl = null;
 (function () {
   initMobileNavDrawer();
   initHeaderSearchDropdown();
+  initCurrencyPickers();
 
   const revealItems = document.querySelectorAll('.reveal-on-scroll');
   if (revealItems.length) {
@@ -51,6 +52,48 @@ let pcDrawerOpenEl = null;
   initContactForm();
   initFlashToasts();
 })();
+
+function initCurrencyPickers() {
+  const pickers = Array.from(document.querySelectorAll('[data-currency-picker] details'));
+  if (!pickers.length) {
+    return;
+  }
+
+  document.addEventListener('click', (event) => {
+    pickers.forEach((picker) => {
+      if (picker.open && !picker.contains(event.target)) {
+        picker.removeAttribute('open');
+      }
+    });
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key !== 'Escape') {
+      return;
+    }
+
+    pickers.forEach((picker) => {
+      if (!picker.open) {
+        return;
+      }
+      picker.removeAttribute('open');
+      picker.querySelector('summary')?.focus();
+    });
+  });
+
+  pickers.forEach((picker) => {
+    picker.addEventListener('toggle', () => {
+      if (!picker.open) {
+        return;
+      }
+      pickers.forEach((otherPicker) => {
+        if (otherPicker !== picker) {
+          otherPicker.removeAttribute('open');
+        }
+      });
+    });
+  });
+}
 
 function initProductUpsellBundle() {
   const root = document.querySelector('[data-product-upsell]');
@@ -459,7 +502,33 @@ function initHeaderPromoBar() {
 }
 
 function initCatalogCategoryFilter() {
-  // Filters apply only when the user clicks Apply in the drawer form.
+  const categorySelect = document.querySelector('[data-catalog-category-filter]');
+  const brandSelect = document.querySelector('[data-catalog-brand-filter]');
+  if (!categorySelect || !brandSelect) {
+    return;
+  }
+
+  const brandOptions = Array.from(brandSelect.options).filter(function (option) {
+    return option.value !== '';
+  });
+
+  function updateBrandOptions() {
+    const categoryId = categorySelect.value;
+
+    brandOptions.forEach(function (option) {
+      const categoryIds = (option.dataset.brandCategories || '').split(',');
+      const isAvailable = categoryId === '' || categoryIds.includes(categoryId);
+      option.hidden = !isAvailable;
+      option.disabled = !isAvailable;
+    });
+
+    if (brandSelect.selectedOptions[0]?.disabled) {
+      brandSelect.value = '';
+    }
+  }
+
+  categorySelect.addEventListener('change', updateBrandOptions);
+  updateBrandOptions();
 }
 
 function initFooterNewsletter() {
