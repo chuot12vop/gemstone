@@ -333,9 +333,6 @@ body.site-nav-open {
 .site-nav__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.5rem; }
 .site-nav__list a { color: var(--ink); text-decoration: none; font-weight: 500; font-family: "Source Sans 3", system-ui, sans-serif;}
 .site-nav__item--mega { position: relative; list-style: none; }
-ul.site-nav__list li:hover {
-  border-bottom: 2px #000000 solid;
-}
 .site-nav__mega-trigger {
   color: var(--ink);
   text-decoration: none;
@@ -835,12 +832,24 @@ ul.site-nav__list li:hover {
   }
 }
 @media (min-width: 1024px) {
+  ul.site-nav__list > li:hover {
+    box-shadow: inset 0 -2px #000;
+  }
+  .site-nav__item--mega::after {
+    content: "";
+    position: absolute;
+    z-index: 44;
+    top: 100%;
+    left: 0;
+    width: 100%;
+    height: 1.875rem;
+  }
   .catalog-mega {
     position: absolute;
     z-index: 45;
     left: 50%;
-    top: 100%;
-    margin-top: -0.35rem;
+    top: calc(100% + 1.875rem);
+    margin-top: 0;
     padding-top: 0.55rem;
     width: min(960px, calc(100vw - 2rem));
     margin-left: 0;
@@ -862,6 +871,7 @@ ul.site-nav__list li:hover {
 }
 .currency-form {
   position: relative;
+  z-index: 60;
   margin: 0;
   flex-shrink: 0;
 }
@@ -926,7 +936,7 @@ ul.site-nav__list li:hover {
 .currency-picker[open] .currency-picker__chevron { transform: rotate(180deg); }
 .currency-picker__menu {
   position: absolute;
-  z-index: 40;
+  z-index: 70;
   top: calc(100% + 0.55rem);
   right: 0;
   width: 15.5rem;

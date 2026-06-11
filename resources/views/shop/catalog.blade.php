@@ -100,10 +100,10 @@
                     aria-label="Sort products"
                     onchange="this.form.submit()"
                 >
-                    <option value="newest">Newest</option>
-                    <option value="related" selected>Featured</option>
-                    <option value="price_desc">Price: high to low</option>
-                    <option value="price_asc">Price: low to high</option>
+                    <option value="newest" @selected(($filters['sort'] ?? 'related') === 'newest')>Newest</option>
+                    <option value="related" @selected(($filters['sort'] ?? 'related') === 'related')>Featured</option>
+                    <option value="price_desc" @selected(($filters['sort'] ?? 'related') === 'price_desc')>Price: high to low</option>
+                    <option value="price_asc" @selected(($filters['sort'] ?? 'related') === 'price_asc')>Price: low to high</option>
                 </select>
             </label>
         </form>
