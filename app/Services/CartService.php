@@ -68,6 +68,7 @@ class CartService
         }
         $parentId = $upsellParentProductId ?? ($existing['upsell_parent_product_id'] ?? null);
         if ($parentId !== null && $parentId > 0) {
+            $entry['qty'] = 1;
             $entry['upsell_parent_product_id'] = $parentId;
         }
         $cart[$variantId] = $entry;
@@ -102,6 +103,9 @@ class CartService
         }
 
         $existing = $cart[$variantId] ?? ['qty' => 0, 'unit_price_usd' => null, 'product_id' => 0, 'upsell_parent_product_id' => null];
+        if (! empty($existing['upsell_parent_product_id'])) {
+            $quantity = min($quantity, max(1, (int) $existing['qty']));
+        }
         $variant = ProductVariant::query()->where('id', $variantId)->first();
         $entry = [
             'qty' => $quantity,
@@ -146,7 +150,8 @@ class CartService
      *     quantity: int,
      *     unit_price_usd: float,
      *     line_usd: float,
-     *     variant_label: string
+     *     variant_label: string,
+     *     is_upsell: bool
      * }>
      */
     public function buildLines(): array
@@ -193,6 +198,7 @@ class CartService
                 'unit_price_usd' => $unit,
                 'line_usd' => $lineUsd,
                 'variant_label' => $variant->label(),
+                'is_upsell' => $parentProductId > 0,
             ];
         }
 
@@ -246,6 +252,7 @@ class CartService
                 'product_id' => $productId,
             ];
             if ($parentId > 0) {
+                $entry['qty'] = min(1, $entry['qty']);
                 $entry['upsell_parent_product_id'] = $parentId;
             }
 

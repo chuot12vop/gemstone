@@ -5,6 +5,18 @@
     $newsMegaTriggerId = 'news-mega-trigger-' . $navPrefix;
     $newsMegaPanelId = 'news-mega-panel-' . $navPrefix;
     $currencyId = 'currency-' . $navPrefix;
+    $currencies = $currency->activeCurrencies();
+    $currentCurrencyCode = $currency->currentCode();
+    $currentCurrency = collect($currencies)->firstWhere('code', $currentCurrencyCode) ?? $currencies[0] ?? [
+        'code' => 'USD',
+        'label' => 'US Dollar',
+        'symbol' => '$',
+    ];
+    $currencyFlags = [
+        'USD' => asset('assets/img/flags/us.svg'),
+        'EUR' => asset('assets/img/flags/eu.svg'),
+        'GBP' => asset('assets/img/flags/gb.svg'),
+    ];
 @endphp
 <ul class="site-nav__list">
     <li><a href="{{ route('shop.home') }}">Home</a></li>
@@ -76,16 +88,54 @@
     <li><a href="{{ route('shop.about') }}">About</a></li>
     <li><a href="{{ route('shop.contact') }}">Contact</a></li>
 </ul>
-<form class="currency-form" method="post" action="{{ route('shop.currency') }}">
+<form class="currency-form" method="post" action="{{ route('shop.currency') }}" data-currency-picker>
     @csrf
-    <label class="sr-only" for="{{ $currencyId }}">Currency</label>
-    <select name="currency" id="{{ $currencyId }}" onchange="this.form.submit()">
-        @foreach($currency->activeCurrencies() as $c)
-            <option value="{{ $c['code'] }}" @selected($currency->currentCode() === $c['code'])>
-                {{ $c['code'] }} ({{ $c['symbol'] }})
-            </option>
-        @endforeach
-    </select>
+    <span class="sr-only" id="{{ $currencyId }}-label">Currency</span>
+    <details class="currency-picker">
+        <summary class="currency-picker__trigger" aria-labelledby="{{ $currencyId }}-label {{ $currencyId }}-value"> 
+            <div class="currency-picker__trigger-inner">
+                <span class="currency-picker__flag" aria-hidden="true">
+                    @if(isset($currencyFlags[$currentCurrency['code']]))
+                        <img src="{{ $currencyFlags[$currentCurrency['code']] }}" alt="">
+                    @else
+                        <span>{{ substr($currentCurrency['code'], 0, 2) }}</span>
+                    @endif
+                </span>
+                <span class="currency-picker__code" id="{{ $currencyId }}-value">{{ $currentCurrency['code'] }}</span>
+                
+            </div>
+            <svg class="currency-picker__chevron" viewBox="0 0 12 8" aria-hidden="true">
+                <path d="M1 1.5 6 6.5l5-5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        </summary>
+        <div class="currency-picker__menu" role="listbox" aria-labelledby="{{ $currencyId }}-label">
+            @foreach($currencies as $c)
+                @php($isCurrentCurrency = $currentCurrencyCode === $c['code'])
+                <button class="currency-picker__option{{ $isCurrentCurrency ? ' is-selected' : '' }}"
+                        type="submit"
+                        name="currency"
+                        value="{{ $c['code'] }}"
+                        role="option"
+                        aria-selected="{{ $isCurrentCurrency ? 'true' : 'false' }}">
+                    <span class="currency-picker__flag" aria-hidden="true">
+                        @if(isset($currencyFlags[$c['code']]))
+                            <img src="{{ $currencyFlags[$c['code']] }}" alt="">
+                        @else
+                            <span>{{ substr($c['code'], 0, 2) }}</span>
+                        @endif
+                    </span>
+                    <span class="currency-picker__option-copy">
+                        <strong>{{ $c['code'] }}</strong>
+                        <small>{{ $c['label'] }}</small>
+                    </span>
+                    <span class="currency-picker__symbol">{{ $c['symbol'] }}</span>
+                    <svg class="currency-picker__check" viewBox="0 0 16 16" aria-hidden="true">
+                        <path d="m3 8.5 3.1 3L13 4.8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </button>
+            @endforeach
+        </div>
+    </details>
 </form>
 <!-- <a class="btn btn--small btn--header-buy" href="{{ route('shop.products.index') }}">Buy now</a> --> <!-- Không có button này -->
 <div class="site-nav__account site-nav__account--desktop-dropdown">

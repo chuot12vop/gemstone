@@ -43,21 +43,30 @@ class CatalogController extends Controller
             $sort = 'related';
         }
 
+        $brandCategoryIds = Product::query()
+            ->where('is_active', true)
+            ->whereNotNull('brand_id')
+            ->select(['brand_id', 'category_id'])
+            ->distinct()
+            ->get()
+            ->groupBy('brand_id')
+            ->map(fn ($products) => $products->pluck('category_id')->map(fn ($id) => (int) $id)->values()->all());
+
         $brands = Brand::query()
-            ->whereHas('products', function ($query) use ($selectedCategoryId) {
-                $query->where('is_active', true);
-                if ($selectedCategoryId !== null) {
-                    $query->where('category_id', $selectedCategoryId);
-                }
-            })
+            ->whereHas('products', fn ($query) => $query->where('is_active', true))
             ->orderBy('sort_order')
             ->orderBy('name')
             ->get();
 
         $brandSlug = trim((string) $request->query('brand', ''));
-        $selectedBrand = $brandSlug !== ''
-            ? $brands->firstWhere('slug', $brandSlug)
-            : null;
+        $selectedBrand = $brandSlug !== '' ? $brands->firstWhere('slug', $brandSlug) : null;
+        if (
+            $selectedBrand !== null
+            && $selectedCategoryId !== null
+            && ! in_array($selectedCategoryId, $brandCategoryIds->get($selectedBrand->id, []), true)
+        ) {
+            $selectedBrand = null;
+        }
 
         $searchQuery = trim((string) $request->query('q', ''));
 
@@ -117,6 +126,7 @@ class CatalogController extends Controller
             'products' => $products,
             'categories' => $categories,
             'brands' => $brands,
+            'brandCategoryIds' => $brandCategoryIds,
             'currentCategory' => $currentCategory,
             'currentBrand' => $selectedBrand,
             'currency' => $currency,

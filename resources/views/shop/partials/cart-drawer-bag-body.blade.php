@@ -33,7 +33,11 @@
                     <div class="pc-drawer__line-qty">
                         <button type="button" class="pc-drawer__qty-btn" data-cart-qty-dec aria-label="Decrease quantity">−</button>
                         <span class="pc-drawer__qty-val" data-cart-qty-val>{{ $row['quantity'] }}</span>
-                        <button type="button" class="pc-drawer__qty-btn" data-cart-qty-inc aria-label="Increase quantity">+</button>
+                        <button type="button"
+                                class="pc-drawer__qty-btn"
+                                data-cart-qty-inc
+                                aria-label="Increase quantity"
+                                {{ ! empty($row['is_upsell']) ? 'disabled' : '' }}>+</button>
                     </div>
                 </div>
                 <button type="button" class="pc-drawer__line-remove" data-cart-remove aria-label="Remove item">×</button>

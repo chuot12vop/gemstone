@@ -57,7 +57,9 @@
                 <a class="catalog-chips__link {{ $isAllProducts ? 'is-active' : '' }}"
                    href="{{ route('shop.products.index') }}">All products</a>
                 @foreach($categories as $c)
-                    @php($chipActive = (int) ($filters['category_id'] ?? 0) === $c->id)
+                    @php
+                        $chipActive = (int) ($filters['category_id'] ?? 0) === $c->id;
+                    @endphp
                     <a class="catalog-chips__link {{ $chipActive ? 'is-active' : '' }}"
                        href="{{ route('shop.catalog.category', $c) }}"
                        @if($chipActive) aria-current="page" @endif>{{ $c->name }}</a>
@@ -92,11 +94,16 @@
                 <input type="hidden" name="q" value="{{ $filters['q'] }}">
             @endif
             <label class="catalog-toolbar__sort-label">
-                <select name="sort" class="catalog-toolbar__sort-select" aria-label="Sort products">
-                    <option value="newest" @selected(($filters['sort'] ?? 'related') === 'newest')>Newest</option>
-                    <option value="related" @selected(($filters['sort'] ?? 'related') === 'related')>Featured</option>
-                    <option value="price_desc" @selected(($filters['sort'] ?? 'related') === 'price_desc')>Price: high to low</option>
-                    <option value="price_asc" @selected(($filters['sort'] ?? 'related') === 'price_asc')>Price: low to high</option>
+                <select
+                    name="sort"
+                    class="catalog-toolbar__sort-select"
+                    aria-label="Sort products"
+                    onchange="this.form.submit()"
+                >
+                    <option value="newest">Newest</option>
+                    <option value="related" selected>Featured</option>
+                    <option value="price_desc">Price: high to low</option>
+                    <option value="price_asc">Price: low to high</option>
                 </select>
             </label>
         </form>
@@ -127,10 +134,20 @@
                 </label>
                 <label>
                     Brand
-                    <select name="brand">
+                    <select name="brand" data-catalog-brand-filter>
                         <option value="">All brands</option>
                         @foreach($brands as $b)
-                            <option value="{{ $b->slug }}" @selected(($filters['brand_slug'] ?? '') === $b->slug)>{{ $b->name }}</option>
+                            @php
+                                $categoryIds = $brandCategoryIds->get($b->id, []);
+                                $brandMatchesCategory = empty($filters['category_id'])
+                                    || in_array((int) $filters['category_id'], $categoryIds, true);
+                            @endphp
+                            <option
+                                value="{{ $b->slug }}"
+                                data-brand-categories="{{ implode(',', $categoryIds) }}"
+                                @selected(($filters['brand_slug'] ?? '') === $b->slug)
+                                @disabled(! $brandMatchesCategory)
+                            >{{ $b->name }}</option>
                         @endforeach
                     </select>
                 </label>
