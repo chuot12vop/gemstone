@@ -6770,7 +6770,7 @@ body.pc-drawer-open {
     width: auto;
     height: auto;
     gap: 0.45rem;
-    padding: 0.7rem 1rem;
+    padding: 1rem;
     border-radius: 999px;
   }
   .floating-actions__icon {
