@@ -20,7 +20,7 @@
                 <dt>Phone</dt><dd>{{ $user->phone ?: '—' }}</dd>
             </div>
         </dl>
-        <a class="btn btn--small" href="{{ route('shop.account.profile') }}">Edit profile</a>
+        <button class="btn btn--small btn--ghost" type="button" data-navigate="{{ route('shop.account.profile') }}">Edit profile</button>
     </section>
 
     <section class="account-card">
@@ -31,16 +31,17 @@
             <ul class="account-orders-list">
                 @foreach($recentOrders as $order)
                     <li>
-                        <a href="{{ route('shop.account.orders.show', $order->order_number) }}">
+                        <button class="account-order-button" type="button" data-navigate="{{ route('shop.account.orders.show', $order->order_number) }}">
                             <strong class="account-order-no">{{ $order->order_number }}</strong>
                             <span>{{ ucfirst($order->status) }}</span>
                             <span>{{ $order->created_at->format('M j, Y') }}</span>
-                        </a>
+                            <span class="account-order-button__icon" aria-hidden="true">&rarr;</span>
+                        </button>
                     </li>
                 @endforeach
             </ul>
         @endif
-        <a class="btn btn--small" href="{{ route('shop.account.orders') }}">View all orders</a>
+        <button class="btn btn--small btn--ghost" type="button" data-navigate="{{ route('shop.account.orders') }}">View all orders</button>
     </section>
 </div>
 @endsection

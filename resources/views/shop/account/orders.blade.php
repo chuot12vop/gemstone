@@ -7,7 +7,11 @@
 </header>
 
 @if($orders->isEmpty())
-    <p class="muted">You have not placed any orders yet. <a href="{{ route('shop.products.index') }}">Start shopping</a>.</p>
+    <section class="account-empty-state">
+        <h2>No orders yet</h2>
+        <p class="muted">When you place an order, its status and details will appear here.</p>
+        <button class="btn btn--primary" type="button" data-navigate="{{ route('shop.products.index') }}">Start shopping</button>
+    </section>
 @else
     <div class="account-orders-table-wrap">
         <table class="account-orders-table">
@@ -51,7 +55,9 @@
                     <td data-label="Date">{{ $order->created_at->format('M j, Y') }}</td>
                     <td data-label="Status">{{ ucfirst($order->status) }}</td>
                     <td data-label="Total">{{ $currency->formatUsd((float) $order->total_display) }}</td>
-                    <td class="account-orders-table__action" data-label=""><a href="{{ route('shop.account.orders.show', $order->order_number) }}">Details</a></td>
+                    <td class="account-orders-table__action" data-label="">
+                        <button class="btn btn--small btn--ghost" type="button" data-navigate="{{ route('shop.account.orders.show', $order->order_number) }}">View details</button>
+                    </td>
                 </tr>
             @endforeach
             </tbody>
@@ -64,5 +70,7 @@
     @endif
 @endif
 
-<p class="account-back-link"><a href="{{ route('shop.account.index') }}">← Back to account</a></p>
+<div class="account-back-link">
+    <button class="btn btn--small btn--ghost" type="button" data-navigate="{{ route('shop.account.index') }}">&larr; Back to account</button>
+</div>
 @endsection

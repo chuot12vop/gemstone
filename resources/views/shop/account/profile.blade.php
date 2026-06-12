@@ -41,7 +41,7 @@
         </div>
         <div class="account-profile-form__actions">
             <button class="btn btn--primary" type="submit">Save profile</button>
-            <a class="btn" href="{{ route('shop.account.index') }}">Back</a>
+            <button class="btn btn--ghost" type="button" data-navigate="{{ route('shop.account.index') }}">Back</button>
         </div>
     </form>
 </section>

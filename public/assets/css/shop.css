@@ -1763,7 +1763,7 @@ body.site-nav-open {
   inset: 0;
   width: 100%;
   height: 100%;
-  object-fit: contain;
+  object-fit: cover;
   object-position: center;
   display: block;
 }
@@ -7325,3 +7325,88 @@ body.welcome-popup-open { overflow: hidden; }
   color: var(--muted);
 }
 .checkout-gateway-fields[hidden] { display: none !important; }
+
+/* Account navigation buttons */
+.account-order-button {
+  position: relative;
+  display: grid;
+  width: 100%;
+  gap: 0.15rem;
+  padding: 0.65rem 2.25rem 0.65rem 0;
+  border: 0;
+  border-bottom: 1px dashed var(--border);
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+.account-orders-list li:last-child .account-order-button { border-bottom: none; }
+.account-order-button:hover .account-order-no,
+.account-order-button:focus-visible .account-order-no { color: var(--gold-deep); }
+.account-order-button:focus-visible { outline: 2px solid var(--gold-deep); outline-offset: 3px; border-radius: 6px; }
+.account-order-button__icon { position: absolute; right: 0.25rem; top: 50%; color: var(--gold-deep); font-size: 1.1rem; transform: translateY(-50%); }
+.account-empty-state { max-width: 620px; margin: 0 auto; padding: 2.5rem 1.5rem; border: 1px solid var(--border); border-radius: var(--radius); background: #fff; box-shadow: var(--shadow); text-align: center; }
+.account-empty-state h2 { margin: 0 0 0.5rem; font-family: "Cormorant Garamond", Georgia, serif; font-size: 1.75rem; }
+.account-empty-state p { margin: 0 0 1.25rem; }
+
+/* Review page */
+.site-main--review { max-width: 1160px; padding-top: clamp(2rem, 5vw, 4.5rem); }
+.review-page-head { max-width: 760px; margin: 0 auto 2rem; text-align: center; }
+.review-page-head .eyebrow { margin-bottom: 0.65rem; }
+.review-page-head .page-head__title { font-size: clamp(2.3rem, 5vw, 3.5rem); }
+.review-page-head .page-head__summary { max-width: 38rem; margin-inline: auto; }
+.review-form-wrap { gap: 1.5rem; max-width: 980px; }
+.review-form-product { display: grid; gap: 0; overflow: hidden; padding: 0; border-radius: 18px; box-shadow: 0 18px 45px rgba(43, 38, 31, 0.08); }
+.review-form-product__media { display: block; aspect-ratio: 1 / 1; overflow: hidden; background: var(--cream-dark); }
+.review-form-product img { display: block; width: 100%; height: 100%; border-radius: 0; object-fit: cover; transition: transform 0.3s ease; }
+.review-form-product__media:hover img { transform: scale(1.025); }
+.review-form-product__body { padding: 1.25rem; }
+.review-form-product__title { margin: 0.25rem 0 1.25rem; font-size: clamp(1.45rem, 3vw, 1.8rem); line-height: 1.15; }
+.review-order-meta { display: grid; gap: 0.65rem; margin: 0; padding-top: 1rem; border-top: 1px solid var(--border); }
+.review-order-meta div { display: grid; grid-template-columns: 5rem minmax(0, 1fr); gap: 0.75rem; }
+.review-order-meta dt { color: var(--muted); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.08em; }
+.review-order-meta dd { margin: 0; overflow-wrap: anywhere; font-size: 0.9rem; font-weight: 600; }
+.review-form { gap: 0; overflow: hidden; padding: 0; border-radius: 18px; box-shadow: 0 18px 45px rgba(43, 38, 31, 0.09); }
+.review-form > .banner { width: calc(100% - 3rem); margin: 1.5rem 1.5rem 0; border-radius: 10px; }
+.review-form__section { display: grid; gap: 1rem; padding: 1.5rem; border-bottom: 1px solid var(--border); }
+.review-form__section--rating { background: linear-gradient(145deg, #fffdf8 0%, #fff 100%); }
+.review-form label > span { display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem; }
+.review-form label small { color: var(--muted); font-weight: 400; }
+.review-form input[type="text"], .review-form textarea { padding: 0.8rem 0.9rem; border-radius: 10px; transition: border-color 0.18s ease, box-shadow 0.18s ease; }
+.review-form textarea { min-height: 170px; resize: vertical; line-height: 1.55; }
+.review-form input[type="text"]:focus, .review-form textarea:focus { outline: none; border-color: var(--gold-deep); box-shadow: 0 0 0 3px rgba(166, 124, 61, 0.12); }
+.review-form__field-meta { display: flex; justify-content: space-between; gap: 1rem; color: var(--muted); font-size: 0.8rem; }
+.review-form__rating legend { font-family: "Cormorant Garamond", Georgia, serif; font-size: 1.5rem; font-weight: 600; margin-bottom: 0.2rem; }
+.review-form__hint { margin: 0 0 0.8rem; color: var(--muted); font-size: 0.88rem; }
+.review-rating-row { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+.review-rating-label { color: var(--gold-deep); font-size: 0.9rem; }
+.review-form__actions { gap: 0.75rem; padding: 1.25rem 1.5rem; background: #fffdf8; }
+.rating-stars { gap: 0.2rem; }
+.rating-stars label { display: block; }
+.rating-stars svg { display: block; width: 36px; height: 36px; }
+@media (min-width: 820px) {
+  .review-form-wrap { grid-template-columns: minmax(260px, 0.72fr) minmax(0, 1.4fr); }
+}
+@media (max-width: 819px) {
+  .review-form-product { grid-template-columns: 110px minmax(0, 1fr); }
+  .review-form-product__media { aspect-ratio: auto; min-height: 100%; }
+  .review-form-product__body { padding: 1rem; }
+  .review-form-product__title { margin-bottom: 0.75rem; font-size: 1.35rem; }
+  .review-order-meta { padding-top: 0.75rem; }
+}
+@media (max-width: 520px) {
+  .site-main--review { padding-inline: 0.75rem; }
+  .review-page-head { text-align: left; margin-bottom: 1.25rem; }
+  .review-form-product { grid-template-columns: 92px minmax(0, 1fr); border-radius: 14px; }
+  .review-form-product__body { padding: 0.85rem; }
+  .review-form-product__body .eyebrow { display: none; }
+  .review-form-product__title { font-size: 1.2rem; }
+  .review-order-meta div { grid-template-columns: 4.9rem minmax(0, 1fr); gap: 0.5rem; }
+  .review-order-meta dt { font-size: 0.7rem; letter-spacing: 0.06em; }
+  .review-form { border-radius: 14px; }
+  .review-form__section { padding: 1.15rem; }
+  .rating-stars svg { width: 32px; height: 32px; }
+  .review-form__actions { padding: 1rem 1.15rem; }
+  .review-form__actions .btn { flex: 1 1 8rem; }
+}

@@ -131,6 +131,14 @@
 
     <script src="{{ asset('assets/js/file-upload.js') }}" defer></script>
     <script src="{{ asset('assets/js/shop.js') }}" defer></script>
+    <script>
+    document.addEventListener('click', function (event) {
+        var button = event.target.closest('button[data-navigate]');
+        if (button && !button.disabled) {
+            window.location.assign(button.dataset.navigate);
+        }
+    });
+    </script>
     @stack('scripts')
 </body>
 </html>

@@ -68,5 +68,7 @@
     </section>
 </div>
 
-<p class="account-back-link"><a href="{{ route('shop.account.orders') }}">← All orders</a></p>
+<div class="account-back-link">
+    <button class="btn btn--small btn--ghost" type="button" data-navigate="{{ route('shop.account.orders') }}">&larr; All orders</button>
+</div>
 @endsection
