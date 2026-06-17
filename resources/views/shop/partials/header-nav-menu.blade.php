@@ -17,9 +17,14 @@
         'EUR' => asset('assets/img/flags/eu.svg'),
         'GBP' => asset('assets/img/flags/gb.svg'),
     ];
+    $bestSellersCategory = $catalogNavCategories->firstWhere('slug', 'Best-Sellers');
+    $catalogMenuCategories = $catalogNavCategories->reject(fn ($cat) => $cat->slug === 'Best-Sellers');
 @endphp
 <ul class="site-nav__list">
     <li><a href="{{ route('shop.home') }}">Home</a></li>
+    <li>
+        <a href="{{ $bestSellersCategory ? route('shop.catalog.category', $bestSellersCategory) : route('shop.products.index') }}">Best Sellers</a>
+    </li>
     <li class="site-nav__item site-nav__item--mega" data-nav-mega>
         <button type="button"
                 class="site-nav__expand-toggle"
@@ -39,11 +44,11 @@
              data-catalog-mega-panel>
             <div class="catalog-mega__inner">
                 <p class="catalog-mega__lede"><a href="{{ route('shop.catalog') }}">Collections</a></p>
-                @if($catalogNavCategories->isEmpty())
+                @if($catalogMenuCategories->isEmpty())
                     <p class="catalog-mega__empty">No categories yet.</p>
                 @else
                     <div class="catalog-mega__list">
-                        @foreach($catalogNavCategories as $cat)
+                        @foreach($catalogMenuCategories as $cat)
                             @if($cat->products->count() > 1)
                                 <details class="catalog-mega__group catalog-mega__group--expandable">
                                     <summary class="catalog-mega__summary">

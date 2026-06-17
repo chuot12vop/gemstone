@@ -39,14 +39,13 @@
     <div class="product-detail__grid">
         <div class="product-detail__media">
             <div class="pd-gallery" data-pd-gallery>
-                <div class="pd-gallery__main" data-pd-zoom>
+                <div class="pd-gallery__main" data-pd-zoom data-pd-lightbox-open role="button" tabindex="0" aria-label="Open full-size product image">
                     <img class="pd-gallery__main-img"
                          data-pd-main
                          itemprop="image"
                          src="{{ $galleryImages->first() }}"
                          alt="{{ $product->name }}"
                          width="800" height="800">
-                    <span class="pd-gallery__zoom-lens" data-pd-lens aria-hidden="true"></span>
                     <button type="button" class="pd-gallery__nav pd-gallery__nav--prev" data-pd-prev aria-label="Previous image">&#10094;</button>
                     <button type="button" class="pd-gallery__nav pd-gallery__nav--next" data-pd-next aria-label="Next image">&#10095;</button>
                 </div>
@@ -187,7 +186,7 @@
                         </button>
                         <div class="pd-accordion__panel" data-pd-acc-panel hidden>
                             @foreach($product->productAttributes as $attribute)
-                                <p><strong>{{ $attribute->name }}:</strong> {!! nl2br(e($attribute->value)) !!}</p>
+                                <p><strong>{{ $attribute->name }}:</strong> <br>{!! nl2br(e($attribute->value)) !!}</p>
                             @endforeach
                         </div>
                     </article>

@@ -168,6 +168,22 @@
         </aside>
     </div>
 
+    @if($currentCategory && ! empty($currentCategory->image))
+        @php($categoryHeroImage = \App\Support\PublicAssetUrl::to($currentCategory->image))
+        @if($categoryHeroImage)
+            <div class="catalog-category-hero" aria-label="{{ $currentCategory->name }}">
+                <div class="catalog-category-hero__media">
+                    <img class="catalog-category-hero__img"
+                         src="{{ $categoryHeroImage }}"
+                         alt="{{ $currentCategory->name }}"
+                         width="1400"
+                         height="280"
+                         loading="lazy">
+                </div>
+            </div>
+        @endif
+    @endif
+
     <div class="shop-product-grid shop-product-grid--catalog" data-catalog-grid>
         @foreach($products as $p)
             @include('shop.partials.product-card', ['product' => $p, 'currency' => $currency])

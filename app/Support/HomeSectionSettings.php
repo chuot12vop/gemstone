@@ -141,7 +141,7 @@ final class HomeSectionSettings
 
         if ($imageUrl !== '') {
             $parts[] = '--home-section-bg-image: url('.e($imageUrl).')';
-            $parts[] = 'background-image: linear-gradient(rgba(255, 253, 249, 0.82), rgba(255, 253, 249, 0.82)), url('.e($imageUrl).')';
+            $parts[] = 'background-image: linear-gradient(rgba(255, 253, 249, 0.64), rgba(255, 253, 249, 0.64)), url('.e($imageUrl).')';
         }
 
         return implode('; ', $parts);
