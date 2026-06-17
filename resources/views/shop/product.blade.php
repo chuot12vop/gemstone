@@ -181,7 +181,7 @@
                 @if($product->productAttributes->isNotEmpty())
                     <article class="pd-accordion__item">
                         <button type="button" class="pd-accordion__btn" data-pd-acc-btn aria-expanded="false">
-                            <span>Details</span>
+                            <strong class="pd-accordion__btn-text">Details</strong>
                             <span class="pd-accordion__icon" aria-hidden="true"></span>
                         </button>
                         <div class="pd-accordion__panel" data-pd-acc-panel hidden>
@@ -194,7 +194,7 @@
 
                 <article class="pd-accordion__item">
                     <button type="button" class="pd-accordion__btn" data-pd-acc-btn aria-expanded="false">
-                        <span>Delivery &amp; Returns</span>
+                        <strong class="pd-accordion__btn-text">Delivery &amp; Returns</strong>
                         <span class="pd-accordion__icon" aria-hidden="true"></span>
                     </button>
                     <div class="pd-accordion__panel" data-pd-acc-panel hidden>

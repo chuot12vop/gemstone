@@ -54,6 +54,7 @@ class HomeController extends Controller
             ->latest('id')
             ->limit(6)
             ->get();
+        $homeNewCategory = $homeNewProducts->first()?->category;
         
         $bestSellers = Category::query()
             ->where('slug', 'Best-Sellers')
@@ -110,7 +111,9 @@ class HomeController extends Controller
             'title' => $defaults['home_title'] ?: 'Gemstone Jewelry & Feng Shui — Taichi-inspired wellness',
             'metaDescription' => $defaults['home_meta_description'] ?: 'Premium gemstone jewelry for balance, luck, and intention. Ethically sourced, handcrafted for the US market.',
             'homeNewProducts' => $homeNewProducts,
+            'homeNewCategory' => $homeNewCategory,
             'homeBestSellers' => $homeBestSellers,
+            'homeBestSellersCategory' => $bestSellers,
             'homeCollections' => $homeCollections,
             'homeCertificates' => $homeCertificates,
             'homeStoryPage' => $homeStoryPage,

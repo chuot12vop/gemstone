@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Services\Payment\Contracts\PaymentGateway;
 use App\Services\Payment\Gateways\ApplePayGateway;
+use App\Services\Payment\Gateways\CardGateway;
 use App\Services\Payment\Gateways\CashAppGateway;
 use App\Services\Payment\Gateways\PayPalGateway;
 use App\Services\Payment\Gateways\VenmoGateway;
@@ -25,6 +26,7 @@ class PaymentServiceProvider extends ServiceProvider
 {
     /** @var array<int, class-string<PaymentGateway>> */
     private const GATEWAYS = [
+        CardGateway::class,
         PayPalGateway::class,
         ApplePayGateway::class,
         VenmoGateway::class,

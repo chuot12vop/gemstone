@@ -17,6 +17,6 @@
     @elseif($post->excerpt)
         <p class="lede">{{ $post->excerpt }}</p>
     @endif
-    <p><a href="{{ route('shop.news.index') }}">← Back to journal</a></p>
+    <p><a class="btn btn--ghost" href="{{ route('shop.news.index') }}">&larr; Back to journal</a></p>
 </article>
 @endsection

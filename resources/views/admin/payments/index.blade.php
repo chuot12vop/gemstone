@@ -27,6 +27,18 @@
     <form class="stack-form" method="post" action="{{ route('admin.payments.settings') }}" enctype="multipart/form-data">
         @csrf
         <fieldset class="form-fieldset">
+            <legend>Credit or Debit Card (Stripe)</legend>
+            <label class="switch-field">
+                <span class="switch-field__label">Enable method</span>
+                <span class="switch">
+                    <input type="checkbox" name="card_enabled" value="1" @checked(old('card_enabled', ($settings['payment_card_enabled'] ?? '0') === '1'))>
+                    <span class="switch__slider" aria-hidden="true"></span>
+                </span>
+            </label>
+            <p class="muted" style="margin:0;">Accept Visa, Mastercard, American Express, and other card brands through Stripe Elements. Uses the Stripe keys in the Apple Pay section below.</p>
+        </fieldset>
+
+        <fieldset class="form-fieldset">
             <legend>PayPal</legend>
             <label class="switch-field">
                 <span class="switch-field__label">Enable method</span>

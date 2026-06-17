@@ -7,7 +7,7 @@
          data-home-slider
          data-slider-loop="true"
          data-slide-interval="4000"
-         data-slides-mobile="1"
+         data-slides-mobile="2"
          data-slides-tablet="2"
          data-slides-desktop="{{ $count }}"
          data-slide-breakpoint-tablet="700"

@@ -15,6 +15,7 @@ class OrderAdminController extends Controller
 
     /** @var list<string> */
     private const PAYMENT_METHODS = [
+        'card',
         'paypal',
         'apple_pay',
         'venmo',

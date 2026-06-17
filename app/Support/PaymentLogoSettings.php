@@ -301,6 +301,7 @@ final class PaymentLogoSettings
         }
 
         $aliases = [
+            'card' => ['card', 'credit card', 'debit card', 'visa', 'mastercard', 'amex'],
             'paypal' => ['paypal'],
             'apple_pay' => ['apple pay', 'applepay', 'apple'],
             'venmo' => ['venmo'],

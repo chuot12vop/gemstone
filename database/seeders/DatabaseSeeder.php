@@ -52,6 +52,7 @@ class DatabaseSeeder extends Seeder
             'privacy_policy' => PolicySeedBodies::privacyPolicyText(),
             'return_policy' => PolicySeedBodies::returnPolicyText(),
             'terms_of_service' => PolicySeedBodies::termsOfServiceText(),
+            'payment_card_enabled' => '1',
             'payment_paypal_enabled' => '1',
             'payment_paypal_merchant_email' => 'sales@gemstone.local',
             'payment_paypal_client_id' => '',

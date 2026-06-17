@@ -50,16 +50,6 @@
                     'selected' => $selected,
                 ])
 
-                @foreach($methods as $method)
-                    @if($method->customerFieldsView())
-                        <section class="checkout-block checkout-gateway-fields"
-                                 data-gateway-fields="{{ $method->code() }}"
-                                 @if(($selected ?? '') !== $method->code() && !(empty($selected) && $loop->first)) hidden @endif>
-                            @include($method->customerFieldsView(), ['gateway' => $method])
-                        </section>
-                    @endif
-                @endforeach
-
                 @include('shop.checkout._voucher-fields', [
                     'appliedVoucher' => $appliedVoucher ?? null,
                     'discountUsd' => $discountUsd ?? 0,

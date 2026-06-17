@@ -53,13 +53,12 @@
         <span>Shipping</span>
         <strong data-checkout-shipping>{{ $shippingUsd <= 0 ? 'FREE' : $currency->formatUsd($shippingUsd) }}</strong>
     </p>
-    <p class="checkout-aside__tax" data-checkout-tax-row @if($taxUsd <= 0) hidden @endif>
-        <span>Taxes</span>
-        <strong data-checkout-tax>{{ $currency->formatUsd($taxUsd) }}</strong>
-    </p>
     <p class="checkout-aside__total">
         <span>Total</span>
         <strong data-checkout-total>{{ $currency->formatUsd((float) ($totalUsd ?? $subtotalUsd)) }}</strong>
+    </p>
+    <p class="checkout-aside__tax" data-checkout-tax-row @if($taxUsd <= 0) hidden @endif>
+        Including <strong data-checkout-tax>{{ $currency->formatUsd($taxUsd) }}</strong> in taxes
     </p>
     @if(!empty($asideNote))
         <p class="checkout-aside__note">{{ $asideNote }}</p>

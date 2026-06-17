@@ -46,6 +46,8 @@ let pcDrawerOpenEl = null;
   initCheckoutVoucher();
   initCheckoutMobileSummary();
   initCheckoutGatewayFields();
+  initPaymentLogoPopover();
+  initCardBillingFields();
   initCheckoutExpress();
   initWelcomePopup();
   initFooterNewsletter();
@@ -1246,8 +1248,10 @@ function initCheckoutGatewayFields() {
   if (!form) {
     return;
   }
-  const blocks = form.querySelectorAll('[data-gateway-fields]');
   const radios = form.querySelectorAll('[data-payment-method-radio]');
+  const moreItem = form.querySelector('[data-payment-more-item]');
+  const moreToggle = form.querySelector('[data-payment-more-toggle]');
+  const morePanel = form.querySelector('[data-payment-more-panel]');
   if (!radios.length) {
     return;
   }
@@ -1255,15 +1259,71 @@ function initCheckoutGatewayFields() {
   function sync() {
     const checked = form.querySelector('[data-payment-method-radio]:checked');
     const code = checked ? checked.value : '';
-    blocks.forEach(function (block) {
-      block.hidden = block.getAttribute('data-gateway-fields') !== code;
+    form.querySelectorAll('[data-payment-method-item]').forEach(function (item) {
+      const radio = item.querySelector('[data-payment-method-radio]');
+      const selected = radio && radio.value === code;
+      item.classList.toggle('is-selected', !!selected);
     });
+    if (moreItem && morePanel && moreToggle) {
+      const selectedInMore = !!morePanel.querySelector('[data-payment-method-radio]:checked');
+      moreItem.classList.toggle('is-selected', selectedInMore);
+      if (selectedInMore) {
+        setMoreOpen(true);
+      }
+    }
+  }
+
+  function setMoreOpen(open) {
+    if (!moreItem || !morePanel || !moreToggle) {
+      return;
+    }
+    moreItem.classList.toggle('is-open', open);
+    morePanel.hidden = !open;
+    moreToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
   }
 
   radios.forEach(function (radio) {
     radio.addEventListener('change', sync);
   });
+  if (moreToggle) {
+    moreToggle.addEventListener('click', function () {
+      setMoreOpen(!moreItem.classList.contains('is-open'));
+    });
+  }
   sync();
+}
+
+function initCardBillingFields() {
+  document.querySelectorAll('[data-card-checkout-fields]').forEach(function (root) {
+    const radios = root.querySelectorAll('[data-card-billing-radio]');
+    const valueInput = root.querySelector('[data-card-billing-value]');
+    const fields = root.querySelector('[data-card-billing-fields]');
+    if (!radios.length || !valueInput || !fields) {
+      return;
+    }
+
+    function sync() {
+      const selected = root.querySelector('[data-card-billing-radio]:checked');
+      const same = !selected || selected.value === 'same';
+      valueInput.value = same ? '1' : '0';
+      fields.hidden = same;
+    }
+
+    radios.forEach(function (radio) {
+      radio.addEventListener('change', sync);
+    });
+    sync();
+  });
+}
+
+function initPaymentLogoPopover() {
+  document.querySelectorAll('.payment-card__more').forEach(function (button) {
+    button.addEventListener('keydown', function (event) {
+      if (event.key === 'Escape') {
+        button.blur();
+      }
+    });
+  });
 }
 
 function initCatalogFiltersCollapse() {

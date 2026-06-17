@@ -15,6 +15,7 @@ class PaymentAdminController extends Controller
     private const PUBLIC_STORAGE_PREFIX = '/storage/';
 
     private const METHODS = [
+        'card',
         'paypal',
         'apple_pay',
         'venmo',
@@ -74,6 +75,7 @@ class PaymentAdminController extends Controller
     public function saveSettings(Request $request)
     {
         $validated = $request->validate([
+            'card_enabled' => 'nullable|boolean',
             'paypal_enabled' => 'nullable|boolean',
             'paypal_merchant_email' => 'nullable|email|max:190',
             'paypal_client_id' => 'nullable|string|max:255',
@@ -106,6 +108,7 @@ class PaymentAdminController extends Controller
         }
 
         $settings = [
+            'payment_card_enabled' => $request->boolean('card_enabled') ? '1' : '0',
             'payment_paypal_enabled' => $request->boolean('paypal_enabled') ? '1' : '0',
             'payment_paypal_merchant_email' => trim((string) ($validated['paypal_merchant_email'] ?? '')),
             'payment_paypal_client_id' => trim((string) ($validated['paypal_client_id'] ?? '')),
@@ -157,6 +160,7 @@ class PaymentAdminController extends Controller
     private function paymentSettings(): array
     {
         $defaults = [
+            'payment_card_enabled' => '0',
             'payment_paypal_enabled' => '0',
             'payment_paypal_merchant_email' => '',
             'payment_paypal_client_id' => '',

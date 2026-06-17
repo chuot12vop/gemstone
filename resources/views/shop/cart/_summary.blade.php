@@ -8,13 +8,12 @@
         <span>Shipping</span>
         <strong data-cart-shipping>{{ ($shippingUsd ?? 0) <= 0 ? 'FREE' : $currency->formatUsd((float) $shippingUsd) }}</strong>
     </p>
-    <p class="cart-page__tax" data-cart-tax-row @if(($taxUsd ?? 0) <= 0) hidden @endif>
-        <span>Taxes</span>
-        <strong data-cart-tax>{{ $currency->formatUsd((float) ($taxUsd ?? 0)) }}</strong>
-    </p>
     <p class="cart-page__total">
         <span>Total</span>
         <strong data-cart-total>{{ $currency->formatUsd((float) ($totalUsd ?? $subtotalUsd)) }}</strong>
+    </p>
+    <p class="cart-page__tax" data-cart-tax-row @if(($taxUsd ?? 0) <= 0) hidden @endif>
+        Including <strong data-cart-tax>{{ $currency->formatUsd((float) ($taxUsd ?? 0)) }}</strong> in taxes
     </p>
     <p class="cart-page__note">Have a discount code? Enter it at checkout.</p>
     <a class="btn btn--primary cart-page__checkout" href="{{ route('shop.checkout') }}">Secure Checkout</a>

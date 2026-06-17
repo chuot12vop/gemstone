@@ -89,7 +89,23 @@
 
 @if($homeBestSellers)
     <section class="home-section home-section--bestsellers reveal-on-scroll{{ !empty($homeSectionStyles['bestsellers']['background_image_url']) ? ' home-section--has-bg-image' : '' }}" aria-labelledby="home-bestsellers-title" style="{{ \App\Support\HomeSectionSettings::inlineStyle($homeSectionStyles['bestsellers'] ?? []) }}">
-        <h2 id="home-bestsellers-title" class="section__title section__title--center">Best sellers</h2>
+        @php($bestSellersUrl = isset($homeBestSellersCategory) && $homeBestSellersCategory ? route('shop.catalog.category', $homeBestSellersCategory) : route('shop.products.index'))
+        <h2 id="home-bestsellers-title" class="section__title section__title--center">
+            <a class="section__title-link" href="{{ $bestSellersUrl }}">Best sellers</a>
+        </h2>
+        @if(isset($homeBestSellersCategory) && $homeBestSellersCategory && !empty($homeBestSellersCategory->image))
+            <a class="home-category-feature" href="{{ route('shop.catalog.category', $homeBestSellersCategory) }}" aria-label="Shop {{ $homeBestSellersCategory->name }}">
+                <span class="home-category-feature__media">
+                    <img src="{{ \App\Support\PublicAssetUrl::to($homeBestSellersCategory->image) }}" alt="{{ $homeBestSellersCategory->name }}" loading="lazy">
+                </span>
+                <span class="home-category-feature__body">
+                    <span class="home-category-feature__title">{{ $homeBestSellersCategory->name }}</span>
+                    @if(trim((string) $homeBestSellersCategory->description) !== '')
+                        <span class="home-category-feature__desc">{{ $homeBestSellersCategory->description }}</span>
+                    @endif
+                </span>
+            </a>
+        @endif
         @if($homeBestSellers->isEmpty())
             <p class="home-section__empty home-section__empty--center">No best sellers yet — check back soon or <a href="{{ route('shop.products.index') }}">browse the shop</a>.</p>
         @else
@@ -123,7 +139,22 @@
 </section>
 
 <section class="home-section home-section--new reveal-on-scroll{{ !empty($homeSectionStyles['new']['background_image_url']) ? ' home-section--has-bg-image' : '' }}" aria-labelledby="home-new-title" style="{{ \App\Support\HomeSectionSettings::inlineStyle($homeSectionStyles['new'] ?? []) }}">
-    <h2 id="home-new-title" class="section__title section__title--center">New arrivals</h2>
+    <h2 id="home-new-title" class="section__title section__title--center">
+        <a class="section__title-link" href="{{ route('shop.products.index', ['sort' => 'newest']) }}">New arrivals</a>
+    </h2>
+    @if(isset($homeNewCategory) && $homeNewCategory && !empty($homeNewCategory->image))
+        <a class="home-category-feature" href="{{ route('shop.catalog.category', $homeNewCategory) }}" aria-label="Shop {{ $homeNewCategory->name }}">
+            <span class="home-category-feature__media">
+                <img src="{{ \App\Support\PublicAssetUrl::to($homeNewCategory->image) }}" alt="{{ $homeNewCategory->name }}" loading="lazy">
+            </span>
+            <span class="home-category-feature__body">
+                <span class="home-category-feature__title">{{ $homeNewCategory->name }}</span>
+                @if(trim((string) $homeNewCategory->description) !== '')
+                    <span class="home-category-feature__desc">{{ $homeNewCategory->description }}</span>
+                @endif
+            </span>
+        </a>
+    @endif
     @if($homeNewProducts->isEmpty())
         <p class="home-section__empty home-section__empty--center">New pieces are on the way — check back soon or <a href="{{ route('shop.products.index') }}">browse the shop</a>.</p>
     @else
@@ -142,6 +173,44 @@
     @else
         @include('shop.partials.home-review-slider', ['posts' => $homeReviews, 'type' => 'reviews'])
     @endif
+</section>
+
+<section class="home-service-band" aria-label="Store benefits">
+    <div class="home-service-band__item">
+        <span class="home-service-band__icon" aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M24 4.5l3.5 3 4.6-1 2 4.2 4.6.8.1 4.7 3.6 3-1.8 4.3 1.8 4.3-3.6 3-.1 4.7-4.6.8-2 4.2-4.6-1-3.5 3-3.5-3-4.6 1-2-4.2-4.6-.8-.1-4.7-3.6-3 1.8-4.3-1.8-4.3 3.6-3 .1-4.7 4.6-.8 2-4.2 4.6 1 3.5-3z"/>
+                <circle cx="24" cy="23.5" r="9.5"/>
+                <path d="M18.8 23.8l3.7 3.7 6.9-7.4"/>
+            </svg>
+        </span>
+        <span class="home-service-band__label">2 YEAR WARRANTY</span>
+    </div>
+    <div class="home-service-band__item">
+        <span class="home-service-band__icon" aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M5 30h26.5V16H12"/>
+                <path d="M31.5 22.5h6.7l4.8 5.2V30h-11.5"/>
+                <path d="M10 34.5a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9z"/>
+                <path d="M35.5 34.5a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9z"/>
+                <path d="M4 18h11M2.5 22h9.5M6 26h9"/>
+            </svg>
+        </span>
+        <span class="home-service-band__label">FREE DELIVERY ${{ number_format(\App\Support\CheckoutShipping::freeShippingThresholdUsd(), 0) }}+</span>
+    </div>
+    <div class="home-service-band__item">
+        <span class="home-service-band__icon" aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M16 10h21v26H16z"/>
+                <path d="M16 10l4-5h21l-4 5"/>
+                <path d="M37 10l4-5v26l-4 5"/>
+                <path d="M20 18h13"/>
+                <path d="M15 30H6.5"/>
+                <path d="M10 24l-6 6 6 6"/>
+            </svg>
+        </span>
+        <span class="home-service-band__label">60-DAY RETURNS</span>
+    </div>
 </section>
 
 @if($homeStoryPage)
