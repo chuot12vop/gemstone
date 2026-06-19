@@ -72,4 +72,11 @@ abstract class AbstractPaymentGateway implements PaymentGateway
 
         return $this->cachedSettings[$key] ?? $default;
     }
+
+    protected function settingFor(string $gateway, string $key, string $default = ''): string
+    {
+        $value = Setting::query()->where('key', 'payment_'.$gateway.'_'.$key)->value('value');
+
+        return $value === null ? $default : (string) $value;
+    }
 }

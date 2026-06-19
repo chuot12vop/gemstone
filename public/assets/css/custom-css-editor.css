@@ -1,0 +1,172 @@
+.custom-css-workspace {
+  display: grid;
+  grid-template-columns: minmax(320px, 0.9fr) minmax(420px, 1.1fr);
+  gap: 1rem;
+  min-height: 70vh;
+}
+
+.custom-css-panel {
+  min-width: 0;
+  padding: 1rem;
+  border: 1px solid var(--border-soft);
+  border-radius: 12px;
+  background: #fff;
+}
+
+.custom-css-panel__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 3rem;
+}
+
+.custom-css-panel__head .admin-h2 { margin-bottom: 0.2rem; }
+.custom-css-panel__path,
+.custom-css-preview__status { margin: 0; color: var(--muted); font-size: 0.85rem; }
+.custom-css-panel__path code { overflow-wrap: anywhere; }
+
+.custom-css-tabs {
+  display: flex;
+  gap: 0.35rem;
+  margin-top: 0.75rem;
+  padding: 0.3rem;
+  border-radius: 10px;
+  background: #f4f5f7;
+}
+
+.custom-css-tab {
+  position: relative;
+  flex: 1;
+  padding: 0.5rem 0.7rem;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.custom-css-tab:hover { color: var(--ink); }
+.custom-css-tab:focus-visible { outline: 2px solid var(--gold); outline-offset: 1px; }
+.custom-css-tab.is-active { border-color: var(--border); background: #fff; color: var(--ink); box-shadow: var(--shadow-sm); }
+.custom-css-tab__dirty {
+  position: absolute;
+  top: 0.4rem;
+  right: 0.45rem;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--gold-deep);
+  opacity: 0;
+}
+.custom-css-tab.is-dirty .custom-css-tab__dirty { opacity: 1; }
+
+.custom-css-status {
+  flex: 0 0 auto;
+  padding: 0.25rem 0.55rem;
+  border-radius: 999px;
+  background: #eef7ee;
+  color: #27632a;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.custom-css-status.is-dirty { background: #fff4d6; color: #805b00; }
+.custom-css-status.is-invalid { background: #fdeeee; color: var(--danger); }
+
+.custom-css-editor {
+  width: 100%;
+  min-height: 56vh;
+  margin-top: 0.75rem;
+  padding: 0.85rem;
+  resize: vertical;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #17202a;
+  color: #f5f7fa;
+  font: 13px/1.55 Consolas, "Courier New", monospace;
+  tab-size: 2;
+}
+
+.custom-css-editor-panel[hidden] { display: none; }
+
+.custom-css-editor:focus {
+  outline: none;
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px rgba(201, 166, 107, 0.18);
+}
+
+.custom-css-editor__meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 0.4rem;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.custom-css-error { margin: 0.5rem 0 0; color: var(--danger); font-size: 0.9rem; }
+.custom-css-asset-hint { margin-top: 1rem; }
+
+.custom-css-preview { display: flex; flex-direction: column; }
+.custom-css-preview__size {
+  flex: 0 0 auto;
+  padding: 0.25rem 0.55rem;
+  border: 1px solid var(--border-soft);
+  border-radius: 999px;
+  color: var(--muted);
+  font: 600 0.78rem/1.4 Consolas, "Courier New", monospace;
+}
+.custom-css-preview__controls { display: flex; gap: 0.5rem; margin: 0.75rem 0; }
+.custom-css-preview__controls input {
+  min-width: 0;
+  flex: 1;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font: inherit;
+}
+.custom-css-preview__controls input:focus { outline: none; border-color: var(--gold); box-shadow: 0 0 0 3px rgba(201, 166, 107, 0.18); }
+
+.custom-css-preview__stage {
+  flex: 1;
+  min-height: 58vh;
+  overflow: auto;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #f4f5f7;
+}
+
+.custom-css-preview__frame-wrap {
+  position: relative;
+  margin: 0 auto;
+  overflow: hidden;
+  background: #fff;
+  box-shadow: 0 4px 18px rgba(25, 31, 38, 0.16);
+}
+
+.custom-css-preview__frame {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: block;
+  border: 0;
+  background: #fff;
+  transform-origin: top left;
+}
+
+@media (max-width: 1100px) {
+  .custom-css-workspace { grid-template-columns: 1fr; }
+  .custom-css-editor { min-height: 45vh; }
+}
+
+@media (max-width: 560px) {
+  .custom-css-panel { padding: 0.75rem; }
+  .custom-css-tabs { overflow-x: auto; }
+  .custom-css-tab { min-width: 92px; }
+  .custom-css-preview__controls { flex-wrap: wrap; }
+  .custom-css-preview__controls input { flex-basis: 100%; }
+}

@@ -22,6 +22,14 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ asset('assets/css/shop.css') }}">
+    @foreach(\App\Support\CustomThemeStylesheet::LOAD_ORDER as $customThemeViewport)
+        @php($customThemeConfig = \App\Support\CustomThemeStylesheet::VIEWPORTS[$customThemeViewport])
+        @if($customThemeUrl = \App\Support\CustomThemeStylesheet::versionedUrl($customThemeViewport))
+            <link rel="stylesheet" href="{{ $customThemeUrl }}"
+                  @if($customThemeConfig['media']) media="{{ $customThemeConfig['media'] }}" @endif
+                  data-custom-theme-stylesheet="{{ $customThemeViewport }}">
+        @endif
+    @endforeach
     <link rel="stylesheet" href="{{ asset('assets/css/file-upload.css') }}">
     @stack('head')
 </head>

@@ -35,7 +35,7 @@
     <button type="submit" class="btn btn--primary">Create account</button>
 </form>
 
-<p class="auth-form__switch">Already have an account? <a href="{{ route('login') }}">Sign in</a></p>
+<p class="auth-form__switch">Already have an account? <a class="btn btn--ghost btn--small" href="{{ route('login') }}">Sign in</a></p>
 
 <p class="auth-form__divider" role="presentation"><span>or</span></p>
 

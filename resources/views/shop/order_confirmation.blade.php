@@ -63,5 +63,5 @@
     </ul>
 </section>
 
-<p class="order-items__continue"><a href="{{ route('shop.products.index') }}">Continue shopping →</a></p>
+<p class="order-items__continue"><a class="btn btn--primary" href="{{ route('shop.products.index') }}">Continue shopping →</a></p>
 @endsection

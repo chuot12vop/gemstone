@@ -2260,12 +2260,7 @@ body.pd-lightbox-open { overflow: hidden; }
   color: var(--ink);
 }
 .cart-page__continue {
-  display: inline-block;
   margin-top: 1rem;
-  font-size: 0.92rem;
-  color: var(--gold-deep);
-  text-decoration: underline;
-  text-underline-offset: 0.15em;
 }
 .cart-page__summary {
   padding: 1.15rem 1.2rem;
@@ -2670,6 +2665,9 @@ body.pd-lightbox-open { overflow: hidden; }
 .checkout-express__buttons--2 {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
+.checkout-express__buttons--3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
 .checkout-express__slot {
   min-height: 3rem;
   display: flex;
@@ -2737,7 +2735,8 @@ body.pd-lightbox-open { overflow: hidden; }
   margin-right: 0.15rem;
 }
 .checkout-express__paypal-mount,
-.checkout-express__gpay-mount {
+.checkout-express__gpay-mount,
+.checkout-express__applepay-mount {
   width: 100%;
   min-height: 3rem;
   display: flex;
@@ -2745,14 +2744,22 @@ body.pd-lightbox-open { overflow: hidden; }
   overflow: hidden;
 }
 .checkout-express__paypal-mount iframe,
-.checkout-express__gpay-mount iframe {
+.checkout-express__gpay-mount iframe,
+.checkout-express__applepay-mount apple-pay-button {
   max-width: 100%;
 }
 .checkout-express__paypal-mount > div,
-.checkout-express__gpay-mount > div {
+.checkout-express__gpay-mount > div,
+.checkout-express__applepay-mount apple-pay-button {
   flex: 1;
   width: 100% !important;
   max-width: none !important;
+}
+.checkout-express__applepay-mount apple-pay-button {
+  min-height: 3rem;
+  --apple-pay-button-height: 48px;
+  --apple-pay-button-width: 100%;
+  --apple-pay-button-border-radius: 8px;
 }
 .checkout-express__mount-error {
   margin: 0;
@@ -2782,7 +2789,8 @@ body.pd-lightbox-open { overflow: hidden; }
 }
 @media (max-width: 520px) {
   .checkout-express__buttons--1,
-  .checkout-express__buttons--2 {
+  .checkout-express__buttons--2,
+  .checkout-express__buttons--3 {
     grid-template-columns: 1fr;
     gap: 0.5rem;
   }
@@ -3214,7 +3222,11 @@ body.pd-lightbox-open { overflow: hidden; }
   font-size: 1.08rem;
   font-weight: 700;
 }
-.checkout-aside__total strong { font-size: 1.32rem; font-weight: 800; color: var(--ink); }
+.checkout-aside__total strong { 
+  font-size: 16px; 
+  font-weight: bold; 
+  color: var(--ink); 
+}
 .cart-page__total {
   display: flex;
   justify-content: space-between;
@@ -3779,10 +3791,10 @@ body.pd-lightbox-open { overflow: hidden; }
   top: 0.5rem;
   left: 0.5rem;
   padding: 0.32rem 0.5rem;
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 600;
-  background: #111;
-  color: #fff;
+  background: transparent;
+  color: black;
   border-radius: 0;
   box-shadow: none;
 }
@@ -3892,7 +3904,7 @@ body.pd-lightbox-open { overflow: hidden; }
   line-height: 1.35;
   min-height: auto;
   max-height: none;
-  font-weight: 500;
+  font-weight: 600;
   font-family: inherit;
 }
 .shop-product-card--missoma .shop-product-card__title a {
@@ -3906,9 +3918,9 @@ body.pd-lightbox-open { overflow: hidden; }
 }
 .shop-product-card--missoma .shop-product-card__price {
   margin: 0;
-  font-size: 0.92rem;
+  font-size: 16px;
   font-weight: 600;
-  color: var(--ink);
+  color: red;
   min-height: auto;
 }
 .shop-product-card--missoma .shop-product-card__compare {
@@ -4220,6 +4232,8 @@ body.pd-lightbox-open { overflow: hidden; }
 .catalog-category-hero {
   width: 100%;
   margin: 1.15rem 0;
+  padding-top: 5px;
+  padding-bottom: 2%;
 }
 .catalog-category-hero__media {
   width: 100%;
@@ -4243,7 +4257,7 @@ body.pd-lightbox-open { overflow: hidden; }
 }
 @media (min-width: 640px) {
   .catalog-category-hero__media {
-    height: 220px;
+    height: 100%;
   }
   .site-main--catalog .shop-product-grid--catalog {
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -4252,7 +4266,7 @@ body.pd-lightbox-open { overflow: hidden; }
 }
 @media (min-width: 1100px) {
   .catalog-category-hero__media {
-    height: 280px;
+    height: 100%;
   }
   .site-main--catalog .shop-product-grid--catalog {
     grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -5591,7 +5605,7 @@ body.pc-drawer-open {
 .payment-card__body { display: grid; gap: 0.15rem; }
 .payment-card__label { font-weight: 600; color: var(--ink); }
 .payment-card__desc { color: var(--muted); font-size: 0.92rem; }
-.payment-card--stripe-card {
+.payment-card--paypal-card {
   grid-template-columns: minmax(0, 1fr) auto auto;
 }
 .payment-card__brand-icons {
@@ -5678,7 +5692,7 @@ body.pc-drawer-open {
   gap: 0.65rem;
   padding: 0.78rem 0.9rem;
 }
-.payment-method-item .payment-card--stripe-card {
+.payment-method-item .payment-card--paypal-card {
   grid-template-columns: auto minmax(0, 1fr) auto;
 }
 .payment-method-item .payment-card__check {
@@ -5761,35 +5775,35 @@ body.pc-drawer-open {
   display: none !important;
 }
 
-.stripe-card-form {
+.paypal-card-form {
   display: grid;
   gap: 0.85rem;
 }
-.stripe-card-form__label {
+.paypal-card-form__label {
   font-weight: 600;
 }
-.stripe-card-form__element {
+.paypal-card-form__element {
   min-height: 3.1rem;
   padding: 0.95rem 0.85rem;
   border: 1px solid #c9c4bc;
   border-radius: 8px;
   background: #fff;
 }
-.stripe-card-form__element.StripeElement--focus {
+.paypal-card-form__element:focus-within {
   border-color: var(--gold-deep);
   box-shadow: 0 0 0 3px rgba(166, 124, 61, 0.15);
 }
-.stripe-card-form__element.StripeElement--invalid {
+.paypal-card-form__element.is-invalid {
   border-color: #9b2c20;
 }
-.stripe-card-form__message {
+.paypal-card-form__message {
   margin: 0;
   font-size: 0.9rem;
 }
-.stripe-card-form__message--err {
+.paypal-card-form__message--err {
   color: #8b1e16;
 }
-.stripe-card-form__submit {
+.paypal-card-form__submit {
   width: 100%;
 }
 @media (min-width: 560px) {
@@ -5798,17 +5812,17 @@ body.pc-drawer-open {
   }
 }
 @media (max-width: 559px) {
-  .payment-card--stripe-card {
+  .payment-card--paypal-card {
     grid-template-columns: minmax(0, 1fr) auto;
   }
-  .payment-card--stripe-card .payment-card__brand-icons {
+  .payment-card--paypal-card .payment-card__brand-icons {
     grid-column: 1 / -1;
     justify-content: flex-start;
   }
-  .payment-method-item .payment-card--stripe-card {
+  .payment-method-item .payment-card--paypal-card {
     grid-template-columns: auto minmax(0, 1fr) auto;
   }
-  .payment-method-item .payment-card--stripe-card .payment-card__brand-icons {
+  .payment-method-item .payment-card--paypal-card .payment-card__brand-icons {
     grid-column: auto;
     justify-content: flex-end;
   }
@@ -7901,6 +7915,62 @@ body.welcome-popup-open { overflow: hidden; }
   font-size: 0.95rem;
   color: var(--muted);
 }
+
+.checkout-loading[hidden] {
+  display: none !important;
+}
+.checkout-loading {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: grid;
+  place-items: center;
+  padding: 1.25rem;
+  background: rgba(20, 18, 15, 0.62);
+  backdrop-filter: blur(2px);
+}
+.checkout-loading__panel {
+  width: min(100%, 22rem);
+  padding: 1.75rem 1.5rem;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 18px 55px rgba(0, 0, 0, 0.24);
+  color: var(--ink);
+  text-align: center;
+}
+.checkout-loading__spinner {
+  display: inline-block;
+  width: 2.75rem;
+  height: 2.75rem;
+  border: 3px solid rgba(166, 124, 61, 0.24);
+  border-top-color: var(--gold-deep);
+  border-radius: 50%;
+  animation: checkout-loading-spin 0.8s linear infinite;
+}
+.checkout-loading__message {
+  margin: 1rem 0 0;
+  font-size: 1.08rem;
+  font-weight: 700;
+}
+.checkout-loading__hint {
+  margin: 0.35rem 0 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+body.checkout-loading-open {
+  overflow: hidden;
+}
+.checkout-express__slot[hidden] {
+  display: none;
+}
+@keyframes checkout-loading-spin {
+  to { transform: rotate(360deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .checkout-loading__spinner {
+    animation: none;
+  }
+}
 .checkout-gateway-fields[hidden] { display: none !important; }
 
 /* Missoma-style checkout payment picker */
@@ -7949,7 +8019,7 @@ body.welcome-popup-open { overflow: hidden; }
   font: inherit;
   text-align: left;
 }
-.payment-methods--missoma .payment-card--stripe-card {
+.payment-methods--missoma .payment-card--paypal-card {
   grid-template-columns: auto minmax(0, 1fr) auto;
 }
 .payment-more-toggle {
@@ -8169,7 +8239,7 @@ body.welcome-popup-open { overflow: hidden; }
   .payment-card__brand-icons img:nth-child(n+3) {
     display: none;
   }
-  .payment-methods--missoma .payment-card--stripe-card {
+  .payment-methods--missoma .payment-card--paypal-card {
     grid-template-columns: auto minmax(0, 1fr) auto;
   }
   .payment-card__brand-icons {
@@ -8210,7 +8280,7 @@ body.welcome-popup-open { overflow: hidden; }
   border-color: var(--gold-deep);
   box-shadow: 0 0 0 1px var(--gold-deep);
 }
-.payment-methods--missoma .payment-card--stripe-card,
+.payment-methods--missoma .payment-card--paypal-card,
 .payment-more-toggle,
 .payment-more-option,
 .card-billing__choice {

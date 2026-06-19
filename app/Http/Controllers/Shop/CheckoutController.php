@@ -15,8 +15,10 @@ use App\Services\OrderMailService;
 use App\Services\VoucherService;
 use App\Services\Payment\Contracts\PaymentGateway;
 use App\Services\Payment\Data\PaymentInitiationResult;
+use App\Services\Payment\Gateways\ApplePayGateway;
 use App\Services\Payment\Gateways\PayPalGateway;
 use App\Services\Payment\PaymentMethodRegistry;
+use App\Services\Payment\PaymentCompletionService;
 use App\Services\Payment\PayPal\PayPalApiClient;
 use App\Support\CheckoutCountries;
 use App\Support\CheckoutShipping;
@@ -57,6 +59,7 @@ class CheckoutController extends Controller
         private CartService $cart,
         private VoucherService $vouchers,
         private OrderMailService $orderMail,
+        private PaymentCompletionService $paymentCompletion,
     ) {}
 
     /** Unified checkout page. */
@@ -110,16 +113,21 @@ class CheckoutController extends Controller
                 'postcode' => old('shipping_postcode', ''),
                 'phone' => old('shipping_phone', ''),
             ],
-            'expressCheckout' => $this->expressCheckoutConfig($currency),
+            'expressCheckout' => $this->expressCheckoutConfig($currency, $totals['totalUsd']),
         ]);
     }
 
-    /** Create a PayPal order for express checkout (JSON). */
+    /** Create a PayPal-backed order for express checkout (JSON). */
     public function expressPaypal(Request $request, CurrencyService $currency): JsonResponse
     {
-        $gateway = $this->registry->findEnabled('paypal');
-        if (! $gateway instanceof PayPalGateway) {
-            return response()->json(['message' => 'PayPal is not available.'], 422);
+        $paymentMethod = $request->input('payment_method', 'paypal');
+        if (! in_array($paymentMethod, ['paypal', 'apple_pay'], true)) {
+            return response()->json(['message' => 'Express payment method is not available.'], 422);
+        }
+
+        $gateway = $this->registry->findEnabled($paymentMethod);
+        if (! $gateway instanceof PayPalGateway && ! $gateway instanceof ApplePayGateway) {
+            return response()->json(['message' => 'Express payment method is not available.'], 422);
         }
 
         $client = $gateway->checkoutClient();
@@ -197,7 +205,7 @@ class CheckoutController extends Controller
 
         $this->cancelPendingOrderBySession();
 
-        $order = DB::transaction(function () use ($validated, $customerName, $shippingAddress, $lines, $subtotalUsd, $discountUsd, $amounts, $totalDisplay, $currencyCode, $userId, $voucher, $request) {
+        $order = DB::transaction(function () use ($validated, $customerName, $shippingAddress, $lines, $subtotalUsd, $discountUsd, $amounts, $totalDisplay, $currencyCode, $userId, $voucher, $request, $paymentMethod) {
             $order = Order::query()->create([
                 'user_id' => $userId,
                 'order_number' => $this->makeOrderNumber(),
@@ -251,11 +259,13 @@ class CheckoutController extends Controller
 
             PaymentTransaction::query()->create([
                 'order_id' => $order->id,
-                'payment_method' => 'paypal',
+                'payment_method' => $paymentMethod,
                 'amount' => $totalDisplay,
                 'currency_code' => $currencyCode,
                 'status' => 'pending',
-                'notes' => 'Express PayPal checkout',
+                'notes' => $paymentMethod === 'apple_pay'
+                    ? 'Express Apple Pay checkout'
+                    : 'Express PayPal checkout',
             ]);
 
             return $order;
@@ -264,7 +274,8 @@ class CheckoutController extends Controller
         try {
             $result = $gateway->initiate($order, $request);
         } catch (\Throwable $e) {
-            Log::error('Express PayPal initiation failed', [
+            Log::error('Express payment initiation failed', [
+                'payment_method' => $paymentMethod,
                 'order_number' => $order->order_number,
                 'message' => $e->getMessage(),
             ]);
@@ -297,13 +308,16 @@ class CheckoutController extends Controller
         session([
             self::SESSION_LAST_ORDER_KEY => $order->order_number,
             self::SESSION_PENDING_ORDER_KEY => $order->order_number,
-            'checkout.method' => 'paypal',
+            'checkout.method' => $paymentMethod,
         ]);
 
         return response()->json([
             'paypal_order_id' => $paypalOrderId,
             'order_number' => $order->order_number,
             'confirm_url' => route('shop.checkout.confirm', ['order_number' => $order->order_number]),
+            'amount' => $result->viewData['amount'] ?? number_format((float) $order->total_display, 2, '.', ''),
+            'currency' => $result->viewData['currency'] ?? strtoupper((string) $order->currency_code),
+            'country' => $result->viewData['country'] ?? CheckoutCountries::defaultCode(),
         ]);
     }
 
@@ -646,6 +660,7 @@ class CheckoutController extends Controller
                 'shipping_usd' => $amounts['shippingUsd'],
                 'tax_usd' => $amounts['taxUsd'],
                 'total_usd' => $amounts['totalUsd'],
+                'total_display' => $currency->convertUsdToCurrent($amounts['totalUsd']),
                 'subtotal_usd' => $subtotalUsd,
                 'discount_formatted' => $currency->formatUsd($discountUsd),
                 'shipping_formatted' => $currency->formatUsd($amounts['shippingUsd']),
@@ -669,6 +684,7 @@ class CheckoutController extends Controller
                 'shipping_usd' => $amounts['shippingUsd'],
                 'tax_usd' => $amounts['taxUsd'],
                 'total_usd' => $amounts['totalUsd'],
+                'total_display' => $currency->convertUsdToCurrent($amounts['totalUsd']),
                 'subtotal_usd' => $subtotalUsd,
                 'shipping_formatted' => $currency->formatUsd($amounts['shippingUsd']),
                 'tax_formatted' => $currency->formatUsd($amounts['taxUsd']),
@@ -681,6 +697,15 @@ class CheckoutController extends Controller
     public function confirm(Request $request, string $order_number): RedirectResponse|JsonResponse
     {
         $order = Order::query()->where('order_number', $order_number)->firstOrFail();
+
+        if ($order->status === 'paid') {
+            $redirect = redirect()->route('shop.order.show', ['order_number' => $order->order_number]);
+
+            return $request->expectsJson()
+                ? response()->json(['redirect' => $redirect->getTargetUrl()])
+                : $redirect;
+        }
+
         $tx = $order->paymentTransactions()->first();
         $gateway = $this->registry->find((string) optional($tx)->payment_method);
 
@@ -747,18 +772,7 @@ class CheckoutController extends Controller
         session()->forget(self::SESSION_VOUCHER_KEY);
         session()->forget(self::SESSION_PENDING_ORDER_KEY);
 
-        DB::transaction(function () use ($order, $txId) {
-            $order->status = 'paid';
-            $order->save();
-            $this->updateLatestTransaction($order, [
-                'status' => 'paid',
-                'paid_at' => now(),
-                'gateway_transaction_id' => $txId,
-                'notes' => 'Payment captured',
-            ]);
-        });
-
-        $this->orderMail->sendPaid($order->fresh(['items']));
+        $this->paymentCompletion->complete($order, (string) $txId);
 
         return redirect()
             ->route('shop.order.show', ['order_number' => $order->order_number])
@@ -858,30 +872,49 @@ class CheckoutController extends Controller
     /**
      * @return array{show: bool, slots: list<string>, paypal: ?array<string, mixed>}
      */
-    private function expressCheckoutConfig(CurrencyService $currency): array
+    private function expressCheckoutConfig(CurrencyService $currency, float $totalUsd): array
     {
         $paypalGateway = $this->registry->findEnabled('paypal');
-        if (! $paypalGateway instanceof PayPalGateway) {
-            return ['show' => false, 'slots' => [], 'paypal' => null];
-        }
+        $applePayGateway = $this->registry->findEnabled('apple_pay');
+        $paypalEnabled = $paypalGateway instanceof PayPalGateway;
+        $applePayEnabled = $applePayGateway instanceof ApplePayGateway;
+        $client = $paypalEnabled
+            ? $paypalGateway->checkoutClient()
+            : ($applePayEnabled ? $applePayGateway->checkoutClient() : null);
 
-        $client = $paypalGateway->checkoutClient();
         if ($client === null) {
             return ['show' => false, 'slots' => [], 'paypal' => null];
         }
 
+        $slots = [];
+        if ($paypalEnabled) {
+            $slots = ['paypal', 'google_pay'];
+        }
+        if ($applePayEnabled) {
+            $slots[] = 'apple_pay';
+        }
+
         $code = strtoupper($currency->currentCode());
+        $sdkComponents = ['buttons'];
+        if ($paypalEnabled) {
+            $sdkComponents[] = 'googlepay';
+        }
+        if ($applePayEnabled) {
+            $sdkComponents[] = 'applepay';
+        }
         $paypal = [
             'clientId' => $client->clientId(),
-            'sdkUrl' => $client->sdkUrl($code, 'buttons'),
+            'sdkUrl' => $client->sdkUrl($code, implode(',', $sdkComponents)),
             'sandbox' => $client->isSandbox(),
             'initUrl' => route('shop.checkout.express.paypal'),
             'currency' => $code,
+            'amount' => number_format($currency->convertUsdToCurrent($totalUsd), 2, '.', ''),
+            'country' => CheckoutCountries::defaultCode(),
         ];
 
         return [
             'show' => true,
-            'slots' => ['paypal', 'google_pay'],
+            'slots' => $slots,
             'paypal' => $paypal,
         ];
     }

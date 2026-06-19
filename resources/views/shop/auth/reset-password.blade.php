@@ -26,7 +26,7 @@
             <p class="form-error">{{ $message }}</p>
         @enderror
         <button class="btn btn--primary" type="submit">Reset password</button>
-        <p class="auth-form__footer"><a href="{{ route('login') }}">Back to sign in</a></p>
+        <p class="auth-form__footer"><a class="btn btn--ghost btn--small" href="{{ route('login') }}">Back to sign in</a></p>
     </form>
 </section>
 @endsection

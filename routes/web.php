@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\BrandAdminController;
 use App\Http\Controllers\Admin\CertificateAdminController;
 use App\Http\Controllers\Admin\CategoryAdminController;
 use App\Http\Controllers\Admin\ContactAdminController;
+use App\Http\Controllers\Admin\CustomCssAdminController;
 use App\Http\Controllers\Admin\CurrencyAdminController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\OrderAdminController;
@@ -32,6 +33,7 @@ use App\Http\Controllers\Shop\ProductController;
 use App\Http\Controllers\Shop\ReviewController;
 use App\Http\Controllers\Shop\PromoSignupController;
 use App\Http\Controllers\Shop\WelcomeOfferController;
+use App\Http\Controllers\PayPalWebhookController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -40,6 +42,9 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', [HomeController::class, 'index'])->name('shop.home');
 Route::post('/welcome-offer', [WelcomeOfferController::class, 'store'])->name('shop.welcome.offer');
 Route::post('/promo-signup', [PromoSignupController::class, 'store'])->name('shop.promo.signup');
+Route::post('/webhooks/paypal', PayPalWebhookController::class)
+    ->middleware('throttle:120,1')
+    ->name('webhooks.paypal');
 
 Route::middleware('guest')->group(function () {
     Route::get('/login', [LoginController::class, 'show'])->name('login');
@@ -188,6 +193,11 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
         Route::get('/interface', [InterfaceAdminController::class, 'index'])->name('interface.index');
         Route::post('/interface/save', [InterfaceAdminController::class, 'save'])->name('interface.save');
+
+        Route::get('/custom-css', [CustomCssAdminController::class, 'index'])->name('custom-css.index');
+        Route::put('/custom-css/{viewport}', [CustomCssAdminController::class, 'update'])
+            ->whereIn('viewport', array_keys(\App\Support\CustomThemeStylesheet::VIEWPORTS))
+            ->name('custom-css.update');
 
         Route::get('/about', [AboutAdminController::class, 'index'])->name('about.index');
         Route::post('/about/save', [AboutAdminController::class, 'save'])->name('about.save');

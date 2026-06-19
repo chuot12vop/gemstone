@@ -36,8 +36,8 @@
         <legend class="sr-only">Payment method</legend>
 
         @if($cardMethod)
-            <div class="payment-method-item payment-method-item--stripe-card {{ $cardSelected ? 'is-selected' : '' }}" data-payment-method-item>
-                <label class="payment-card payment-card--stripe-card">
+            <div class="payment-method-item payment-method-item--paypal-card {{ $cardSelected ? 'is-selected' : '' }}" data-payment-method-item>
+                <label class="payment-card payment-card--paypal-card">
                     <input type="radio"
                            name="payment_method"
                            value="{{ $cardMethod->code() }}"

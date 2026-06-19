@@ -30,7 +30,7 @@
         Password
         <input type="password" name="password" required autocomplete="current-password">
     </label>
-    <p class="auth-form__switch"><a href="{{ route('password.request') }}">Forgot your password?</a></p>
+    <p class="auth-form__switch"><a class="btn btn--ghost btn--small" href="{{ route('password.request') }}">Forgot your password?</a></p>
     <label class="auth-form__remember">
         <input type="checkbox" name="remember" value="1" @checked(old('remember'))>
         Remember me
@@ -38,7 +38,7 @@
     <button type="submit" class="btn btn--primary">Sign in</button>
 </form>
 
-<p class="auth-form__switch">No account yet? <a href="{{ route('register') }}">Create one</a></p>
+<p class="auth-form__switch">No account yet? <a class="btn btn--ghost btn--small" href="{{ route('register') }}">Create one</a></p>
 
 <p class="auth-form__divider" role="presentation"><span>or</span></p>
 

@@ -27,7 +27,7 @@
     <form class="stack-form" method="post" action="{{ route('admin.payments.settings') }}" enctype="multipart/form-data">
         @csrf
         <fieldset class="form-fieldset">
-            <legend>Credit or Debit Card (Stripe)</legend>
+            <legend>Credit or Debit Card (PayPal)</legend>
             <label class="switch-field">
                 <span class="switch-field__label">Enable method</span>
                 <span class="switch">
@@ -35,7 +35,7 @@
                     <span class="switch__slider" aria-hidden="true"></span>
                 </span>
             </label>
-            <p class="muted" style="margin:0;">Accept Visa, Mastercard, American Express, and other card brands through Stripe Elements. Uses the Stripe keys in the Apple Pay section below.</p>
+            <p class="muted" style="margin:0;">Accept supported card brands through PayPal Advanced Card Payments. Card details stay inside PayPal-hosted fields.</p>
         </fieldset>
 
         <fieldset class="form-fieldset">
@@ -59,6 +59,10 @@
                 REST API Client Secret
                 <input type="password" name="paypal_client_secret" value="" autocomplete="new-password" placeholder="{{ ($hasPaypalSecret ?? false) ? 'Saved — leave blank to keep' : 'Required for live checkout' }}">
             </label>
+            <label>
+                Webhook ID
+                <input type="text" name="paypal_webhook_id" value="{{ old('paypal_webhook_id', $settings['payment_paypal_webhook_id'] ?? '') }}" autocomplete="off" placeholder="From PayPal Developer Dashboard - Webhooks">
+            </label>
             <label class="switch-field">
                 <span class="switch-field__label">Sandbox (test mode)</span>
                 <span class="switch">
@@ -66,11 +70,11 @@
                     <span class="switch__slider" aria-hidden="true"></span>
                 </span>
             </label>
-            <p class="muted" style="margin:0;">Create an app at <a href="https://developer.paypal.com/dashboard/applications/live" target="_blank" rel="noopener">developer.paypal.com</a>. Use Sandbox credentials while testing; turn off Sandbox and switch to Live credentials before accepting real payments.</p>
+            <p class="muted" style="margin:0;">These credentials are shared by PayPal, card, and Apple Pay. Configure <code>{{ route('webhooks.paypal') }}</code> for capture completed and denied events. Use Sandbox credentials while testing.</p>
         </fieldset>
 
         <fieldset class="form-fieldset">
-            <legend>Apple Pay (Stripe)</legend>
+            <legend>Apple Pay (PayPal)</legend>
             <label class="switch-field">
                 <span class="switch-field__label">Enable method</span>
                 <span class="switch">
@@ -78,22 +82,7 @@
                     <span class="switch__slider" aria-hidden="true"></span>
                 </span>
             </label>
-            <label>
-                Stripe Publishable Key
-                <input type="text" name="apple_pay_stripe_publishable_key" value="{{ old('apple_pay_stripe_publishable_key', $settings['payment_apple_pay_stripe_publishable_key'] ?? '') }}" autocomplete="off" placeholder="pk_test_... or pk_live_...">
-            </label>
-            <label>
-                Stripe Secret Key
-                <input type="password" name="apple_pay_stripe_secret_key" value="" autocomplete="new-password" placeholder="{{ ($hasApplePayStripeSecret ?? false) ? 'Saved — leave blank to keep' : 'sk_test_... or sk_live_...' }}">
-            </label>
-            <label class="switch-field">
-                <span class="switch-field__label">Test mode</span>
-                <span class="switch">
-                    <input type="checkbox" name="apple_pay_stripe_test_mode" value="1" @checked(old('apple_pay_stripe_test_mode', ($settings['payment_apple_pay_stripe_test_mode'] ?? '1') === '1'))>
-                    <span class="switch__slider" aria-hidden="true"></span>
-                </span>
-            </label>
-            <p class="muted" style="margin:0;">Powered by <a href="https://stripe.com/docs/apple-pay" target="_blank" rel="noopener">Stripe Apple Pay</a>. Add your domain under Stripe Dashboard → Settings → Payment methods → Apple Pay. Apple Pay works in Safari on Mac, iPhone, and iPad over HTTPS.</p>
+            <p class="muted" style="margin:0;">Requires Apple Pay approval for your PayPal merchant account, HTTPS, and domain registration in PayPal. It uses the PayPal credentials and Sandbox mode above.</p>
         </fieldset>
 
         <fieldset class="form-fieldset">

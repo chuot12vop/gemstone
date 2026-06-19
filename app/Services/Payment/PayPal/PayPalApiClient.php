@@ -54,11 +54,67 @@ class PayPalApiClient
             'components' => $components,
         ];
 
-        if (str_contains($components, 'googlepay')) {
-            $query['enable-funding'] = 'googlepay';
+        return $host.'/sdk/js?'.http_build_query($query);
+    }
+
+    public function generateClientToken(): ?string
+    {
+        $token = $this->accessToken();
+        if ($token === null) {
+            return null;
         }
 
-        return $host.'/sdk/js?'.http_build_query($query);
+        $response = Http::baseUrl($this->apiBaseUrl())
+            ->acceptJson()
+            ->withToken($token)
+            ->withBody('{}', 'application/json')
+            ->post('/v1/identity/generate-token');
+
+        if (! $response->successful()) {
+            Log::warning('PayPal client token generation failed', [
+                'status' => $response->status(),
+                'body' => $response->json(),
+            ]);
+
+            return null;
+        }
+
+        $clientToken = trim((string) $response->json('client_token'));
+
+        return $clientToken !== '' ? $clientToken : null;
+    }
+
+    /**
+     * @param  array<string, string|null>  $headers
+     * @param  array<string, mixed>  $event
+     */
+    public function verifyWebhookSignature(array $headers, array $event, string $webhookId): bool
+    {
+        $api = $this->api();
+        if ($api === null || trim($webhookId) === '') {
+            return false;
+        }
+
+        $response = $api->post('/v1/notifications/verify-webhook-signature', [
+            'auth_algo' => (string) ($headers['auth_algo'] ?? ''),
+            'cert_url' => (string) ($headers['cert_url'] ?? ''),
+            'transmission_id' => (string) ($headers['transmission_id'] ?? ''),
+            'transmission_sig' => (string) ($headers['transmission_sig'] ?? ''),
+            'transmission_time' => (string) ($headers['transmission_time'] ?? ''),
+            'webhook_id' => trim($webhookId),
+            'webhook_event' => $event,
+        ]);
+
+        if (! $response->successful()) {
+            Log::warning('PayPal webhook signature verification failed', [
+                'status' => $response->status(),
+                'body' => $response->json(),
+            ]);
+
+            return false;
+        }
+
+        return strtoupper((string) $response->json('verification_status')) === 'SUCCESS';
     }
 
     /**

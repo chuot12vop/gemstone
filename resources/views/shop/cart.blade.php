@@ -36,7 +36,7 @@
                 <div data-cart-page-lines-wrap>
                     @include('shop.cart._line-items', ['lines' => $lines, 'currency' => $currency])
                 </div>
-                <a class="cart-page__continue" href="{{ route('shop.products.index') }}">Continue shopping</a>
+                <a class="btn btn--ghost cart-page__continue" href="{{ route('shop.products.index') }}">Continue shopping</a>
             </div>
             <div data-cart-page-summary-wrap>
                 @include('shop.cart._summary', [

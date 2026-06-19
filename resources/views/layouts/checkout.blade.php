@@ -15,6 +15,14 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Source+Sans+3:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ asset('assets/css/shop.css') }}">
+    @foreach(\App\Support\CustomThemeStylesheet::LOAD_ORDER as $customThemeViewport)
+        @php($customThemeConfig = \App\Support\CustomThemeStylesheet::VIEWPORTS[$customThemeViewport])
+        @if($customThemeUrl = \App\Support\CustomThemeStylesheet::versionedUrl($customThemeViewport))
+            <link rel="stylesheet" href="{{ $customThemeUrl }}"
+                  @if($customThemeConfig['media']) media="{{ $customThemeConfig['media'] }}" @endif
+                  data-custom-theme-stylesheet="{{ $customThemeViewport }}">
+        @endif
+    @endforeach
     <link rel="stylesheet" href="{{ asset('assets/css/file-upload.css') }}">
     @stack('head')
 </head>
@@ -68,6 +76,15 @@
         </div>
         <p class="checkout-footer__copy">&copy; {{ date('Y') }} {{ $siteSettings['site_name'] ?? config('app.name') }}</p>
     </footer>
+
+    <div class="checkout-loading" data-checkout-loading role="status" aria-live="polite" aria-atomic="true" aria-hidden="true" hidden>
+        <div class="checkout-loading__panel">
+            <span class="checkout-loading__spinner" aria-hidden="true"></span>
+            <p class="checkout-loading__message" data-checkout-loading-message>Processing your payment...</p>
+            <p class="checkout-loading__hint">Please do not close or refresh this page.</p>
+        </div>
+    </div>
+
     <script src="{{ asset('assets/js/file-upload.js') }}" defer></script>
     <script src="{{ asset('assets/js/shop.js') }}" defer></script>
     @stack('scripts')

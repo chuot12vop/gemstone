@@ -70,9 +70,19 @@
                     return paypalOrderId;
                 },
                 onApprove: function (data) {
-                    return postConfirm({ paypal_order_id: data.orderID });
+                    document.dispatchEvent(new CustomEvent('checkout:loading', {
+                        detail: { message: 'Confirming your PayPal payment...' }
+                    }));
+                    return postConfirm({ paypal_order_id: data.orderID }).catch(function (err) {
+                        document.dispatchEvent(new CustomEvent('checkout:loading-end'));
+                        throw err;
+                    });
+                },
+                onCancel: function () {
+                    document.dispatchEvent(new CustomEvent('checkout:loading-end'));
                 },
                 onError: function (err) {
+                    document.dispatchEvent(new CustomEvent('checkout:loading-end'));
                     console.error('PayPal error', err);
                     alert('PayPal reported an error. Please try again or choose another payment method.');
                 },

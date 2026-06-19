@@ -1,6 +1,7 @@
 let pcDrawerOpenEl = null;
 
 (function () {
+  initCheckoutLoading();
   initMobileNavDrawer();
   initHeaderSearchDropdown();
   initCurrencyPickers();
@@ -54,6 +55,88 @@ let pcDrawerOpenEl = null;
   initContactForm();
   initFlashToasts();
 })();
+
+function startCheckoutLoading(message) {
+  document.dispatchEvent(new CustomEvent('checkout:loading', {
+    detail: { message: message || 'Processing your payment...' },
+  }));
+}
+
+function stopCheckoutLoading() {
+  document.dispatchEvent(new CustomEvent('checkout:loading-end'));
+}
+
+function initCheckoutLoading() {
+  const overlay = document.querySelector('[data-checkout-loading]');
+  if (!overlay) {
+    return;
+  }
+
+  const message = overlay.querySelector('[data-checkout-loading-message]');
+  const main = document.getElementById('main');
+  const paymentForms = document.querySelectorAll('[data-checkout-delivery], .gateway-pane__proof-form');
+
+  function show(event) {
+    const nextMessage = event && event.detail && event.detail.message;
+    if (message) {
+      message.textContent = nextMessage || 'Processing your payment...';
+    }
+    overlay.hidden = false;
+    overlay.setAttribute('aria-hidden', 'false');
+    if (main) {
+      main.setAttribute('aria-busy', 'true');
+    }
+    document.body.classList.add('checkout-loading-open');
+  }
+
+  function hide() {
+    overlay.hidden = true;
+    overlay.setAttribute('aria-hidden', 'true');
+    if (main) {
+      main.setAttribute('aria-busy', 'false');
+    }
+    document.body.classList.remove('checkout-loading-open');
+  }
+
+  function resetForms() {
+    paymentForms.forEach(function (form) {
+      delete form.dataset.checkoutSubmitting;
+      form.querySelectorAll('[data-checkout-disabled-by-loading]').forEach(function (button) {
+        button.disabled = false;
+        button.removeAttribute('data-checkout-disabled-by-loading');
+      });
+    });
+  }
+
+  document.addEventListener('checkout:loading', show);
+  document.addEventListener('checkout:loading-end', hide);
+
+  paymentForms.forEach(function (form) {
+    form.addEventListener('submit', function (event) {
+      if (form.dataset.checkoutSubmitting === '1') {
+        event.preventDefault();
+        return;
+      }
+
+      form.dataset.checkoutSubmitting = '1';
+      const submitButton = form.querySelector('button[type="submit"], input[type="submit"]');
+      if (submitButton) {
+        submitButton.disabled = true;
+        submitButton.setAttribute('data-checkout-disabled-by-loading', '');
+      }
+      startCheckoutLoading(
+        form.matches('.gateway-pane__proof-form')
+          ? 'Submitting your payment proof...'
+          : 'Preparing your payment...'
+      );
+    });
+  });
+
+  window.addEventListener('pageshow', function () {
+    hide();
+    resetForms();
+  });
+}
 
 function initCurrencyPickers() {
   const pickers = Array.from(document.querySelectorAll('[data-currency-picker] details'));
@@ -647,6 +730,10 @@ function initCheckoutVoucher() {
   }
 
   function updateTotals(data) {
+    const express = document.querySelector('[data-checkout-express]');
+    if (express && data.total_display !== undefined) {
+      express.dataset.applePayAmount = Number(data.total_display).toFixed(2);
+    }
     if (discountRow && discountEl) {
       const discount = parseFloat(data.discount_usd || '0', 10) || 0;
       if (discount > 0) {
@@ -767,7 +854,11 @@ function initCheckoutVoucher() {
             input.readOnly = false;
           }
           setMsg('', null);
-          updateTotals({ discount_usd: 0, total_formatted: data.total_formatted });
+          updateTotals({
+            discount_usd: 0,
+            total_formatted: data.total_formatted,
+            total_display: data.total_display,
+          });
           swapApplyRemove(false);
         })
         .catch(function () {
@@ -1088,6 +1179,27 @@ function initCheckoutExpress() {
     mount.innerHTML = '<p class="checkout-express__mount-error">' + message + '</p>';
   }
 
+  function setExpressSlotVisibility(mountSelector, visible) {
+    const mount = document.querySelector(mountSelector);
+    const slot = mount && mount.closest('.checkout-express__slot');
+    const buttons = root.querySelector('[data-express-buttons]');
+    if (!slot || !buttons) {
+      return;
+    }
+
+    slot.hidden = !visible;
+    const visibleCount = buttons.querySelectorAll('.checkout-express__slot:not([hidden])').length;
+    buttons.classList.remove(
+      'checkout-express__buttons--1',
+      'checkout-express__buttons--2',
+      'checkout-express__buttons--3'
+    );
+    if (visibleCount > 0) {
+      buttons.classList.add('checkout-express__buttons--' + visibleCount);
+    }
+    root.hidden = visibleCount === 0;
+  }
+
   function collectPayload() {
     const payload = { customer_email: '' };
     if (!form) {
@@ -1119,8 +1231,9 @@ function initCheckoutExpress() {
     return payload;
   }
 
-  function postInit() {
+  function postInit(paymentMethod) {
     const payload = collectPayload();
+    payload.payment_method = paymentMethod || 'paypal';
 
     return fetch(initUrl, {
       method: 'POST',
@@ -1178,12 +1291,15 @@ function initCheckoutExpress() {
       const buttonOptions = Object.assign({}, options, {
         style: style,
         createOrder: function () {
-          return postInit()
+          startCheckoutLoading('Starting secure checkout...');
+          return postInit('paypal')
             .then(function (data) {
               lastInit = data;
+              stopCheckoutLoading();
               return data.paypal_order_id;
             })
             .catch(function (err) {
+              stopCheckoutLoading();
               showToast(err && err.message ? err.message : 'Could not start express checkout.');
               throw err;
             });
@@ -1194,12 +1310,18 @@ function initCheckoutExpress() {
             showToast(expiredMsg);
             return Promise.reject(new Error(expiredMsg));
           }
+          startCheckoutLoading('Confirming your payment...');
           return postConfirm(lastInit.confirm_url, { paypal_order_id: data.orderID }).catch(function (err) {
+            stopCheckoutLoading();
             showToast(err && err.message ? err.message : 'Payment could not be confirmed.');
             throw err;
           });
         },
+        onCancel: function () {
+          stopCheckoutLoading();
+        },
         onError: function (err) {
+          stopCheckoutLoading();
           console.error('PayPal express error', err);
         },
       });
@@ -1208,7 +1330,11 @@ function initCheckoutExpress() {
         .render(mount)
         .catch(function (err) {
           console.error('PayPal express render failed', mountSelector, err);
-          showPayPalMountError(mountSelector, 'PayPal is unavailable in this browser.');
+          if (mountSelector === '#express-googlepay-button') {
+            setExpressSlotVisibility(mountSelector, false);
+          } else {
+            showPayPalMountError(mountSelector, 'PayPal is unavailable in this browser.');
+          }
         });
     }
 
@@ -1223,6 +1349,7 @@ function initCheckoutExpress() {
 
     const gpayFunding = paypal.FUNDING && paypal.FUNDING.GOOGLEPAY;
     if (gpayFunding) {
+      setExpressSlotVisibility('#express-googlepay-button', true);
       bindExpressButton('#express-googlepay-button', { fundingSource: gpayFunding }, {
         layout: 'vertical',
         color: 'black',
@@ -1230,7 +1357,107 @@ function initCheckoutExpress() {
         height: 48,
         tagline: false,
       });
+    } else {
+      setExpressSlotVisibility('#express-googlepay-button', false);
     }
+
+    mountApplePay();
+  }
+
+  function mountApplePay() {
+    const mount = document.querySelector('#express-applepay-button');
+    if (!mount) {
+      return;
+    }
+    if (typeof paypal === 'undefined' || typeof paypal.Applepay !== 'function' || typeof ApplePaySession === 'undefined') {
+      setExpressSlotVisibility('#express-applepay-button', false);
+      return;
+    }
+
+    const applepay = paypal.Applepay();
+    applepay.config().then(function (config) {
+      if (!config.isEligible) {
+        setExpressSlotVisibility('#express-applepay-button', false);
+        return;
+      }
+
+      setExpressSlotVisibility('#express-applepay-button', true);
+      const button = document.createElement('apple-pay-button');
+      button.setAttribute('buttonstyle', 'black');
+      button.setAttribute('type', 'buy');
+      button.setAttribute('locale', 'en-US');
+      mount.appendChild(button);
+
+      button.addEventListener('click', function () {
+        const displayName = document.title || 'Store';
+        let expressOrder = null;
+        const session = new ApplePaySession(4, {
+          countryCode: root.getAttribute('data-apple-pay-country'),
+          currencyCode: root.getAttribute('data-apple-pay-currency'),
+          merchantCapabilities: config.merchantCapabilities,
+          supportedNetworks: config.supportedNetworks,
+          requiredBillingContactFields: ['name', 'postalAddress'],
+          total: {
+            label: displayName,
+            amount: root.getAttribute('data-apple-pay-amount'),
+            type: 'final',
+          },
+        });
+
+        const initPromise = postInit('apple_pay')
+          .then(function (data) {
+            expressOrder = data;
+            return data;
+          })
+          .catch(function (err) {
+            session.abort();
+            showToast(err && err.message ? err.message : 'Could not start Apple Pay.');
+            return null;
+          });
+
+        session.onvalidatemerchant = function (event) {
+          applepay.validateMerchant({ validationUrl: event.validationURL, displayName: displayName })
+            .then(function (merchantSession) {
+              session.completeMerchantValidation(merchantSession.merchantSession);
+            })
+            .catch(function () {
+              session.abort();
+              showToast('Apple Pay merchant validation failed.');
+            });
+        };
+
+        session.onpaymentauthorized = function (event) {
+          startCheckoutLoading('Confirming your Apple Pay payment...');
+          initPromise
+            .then(function (data) {
+              if (!data) {
+                throw new Error('Could not start Apple Pay.');
+              }
+              return applepay.confirmOrder({
+                orderId: data.paypal_order_id,
+                token: event.payment.token,
+                billingContact: event.payment.billingContact,
+              });
+            })
+            .then(function () {
+              session.completePayment(ApplePaySession.STATUS_SUCCESS);
+              return postConfirm(expressOrder.confirm_url, { paypal_order_id: expressOrder.paypal_order_id });
+            })
+            .catch(function (err) {
+              stopCheckoutLoading();
+              session.completePayment(ApplePaySession.STATUS_FAILURE);
+              showToast(err && err.message ? err.message : 'Apple Pay could not be completed.');
+            });
+        };
+
+        session.oncancel = function () {
+          stopCheckoutLoading();
+        };
+        session.begin();
+      });
+    }).catch(function () {
+      setExpressSlotVisibility('#express-applepay-button', false);
+    });
   }
 
   loadPayPalSdk(sdkUrl)
@@ -1240,6 +1467,8 @@ function initCheckoutExpress() {
     .catch(function (err) {
       console.error(err);
       showPayPalMountError('#express-paypal-button', 'PayPal could not be loaded. Refresh the page or use Pay now below.');
+      setExpressSlotVisibility('#express-googlepay-button', false);
+      setExpressSlotVisibility('#express-applepay-button', false);
     });
 }
 

@@ -1,0 +1,296 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Models\Category;
+use App\Models\Order;
+use App\Models\PaymentTransaction;
+use App\Models\Product;
+use App\Models\ProductVariant;
+use App\Models\Setting;
+use App\Services\CartService;
+use App\Services\Payment\Gateways\ApplePayGateway;
+use App\Services\Payment\Gateways\CardGateway;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
+use Tests\TestCase;
+
+class CardPaymentGatewayTest extends TestCase
+{
+    use RefreshDatabase;
+
+    public function test_checkout_renders_all_paypal_backed_online_methods(): void
+    {
+        $this->enablePayments();
+        $this->addProductToCart();
+
+        $this->get(route('shop.checkout'))
+            ->assertOk()
+            ->assertSee('data-checkout-loading', false)
+            ->assertSee('aria-live="polite"', false)
+            ->assertSee('Processing your payment...')
+            ->assertSee('Credit or Debit Card')
+            ->assertSee('PayPal')
+            ->assertSee('Apple Pay')
+            ->assertSee('id="express-applepay-button"', false)
+            ->assertSee('components=buttons%2Cgooglepay%2Capplepay', false)
+            ->assertDontSee('enable-funding', false)
+            ->assertSee('assets/img/payments/raster/visa.png')
+            ->assertDontSee('Stripe');
+    }
+
+    public function test_checkout_hides_express_apple_pay_when_it_is_disabled(): void
+    {
+        $this->enablePayments();
+        Setting::query()->where('key', 'payment_apple_pay_enabled')->update(['value' => '0']);
+        $this->addProductToCart();
+
+        $this->get(route('shop.checkout'))
+            ->assertOk()
+            ->assertDontSee('id="express-applepay-button"', false)
+            ->assertSee('components=buttons%2Cgooglepay', false)
+            ->assertDontSee('enable-funding', false)
+            ->assertDontSee('%2Capplepay', false);
+    }
+
+    public function test_express_apple_pay_creates_an_apple_pay_transaction(): void
+    {
+        $this->enablePayments();
+        $this->addProductToCart();
+        $this->fakeInitiation('PAYPAL-APPLE-EXPRESS-1');
+
+        $this->postJson(route('shop.checkout.express.paypal'), array_merge(
+            $this->checkoutPayload('apple_pay'),
+            ['payment_method' => 'apple_pay'],
+        ))
+            ->assertOk()
+            ->assertJsonPath('paypal_order_id', 'PAYPAL-APPLE-EXPRESS-1')
+            ->assertJsonStructure(['confirm_url', 'amount', 'currency', 'country']);
+
+        $this->assertSame('apple_pay', PaymentTransaction::query()->firstOrFail()->payment_method);
+        $this->assertSame('apple_pay', session('checkout.method'));
+    }
+
+    public function test_express_apple_pay_rejects_requests_when_it_is_disabled(): void
+    {
+        $this->enablePayments();
+        Setting::query()->where('key', 'payment_apple_pay_enabled')->update(['value' => '0']);
+
+        $this->postJson(route('shop.checkout.express.paypal'), ['payment_method' => 'apple_pay'])
+            ->assertUnprocessable();
+    }
+
+    public function test_card_checkout_creates_paypal_order_and_client_token(): void
+    {
+        $this->enablePayments();
+        $this->addProductToCart();
+        $this->fakeInitiation('PAYPAL-CARD-1');
+
+        $this->post(route('shop.checkout.place'), $this->checkoutPayload('card'))->assertRedirect();
+
+        $order = Order::query()->firstOrFail();
+        $transaction = PaymentTransaction::query()->firstOrFail();
+        $this->assertSame('pending', $order->status);
+        $this->assertSame('card', $transaction->payment_method);
+        $this->assertSame('PAYPAL-CARD-1', $transaction->gateway_transaction_id);
+
+        $this->get(route('shop.checkout.processing', $order->order_number))
+            ->assertOk()
+            ->assertSee('card-fields', false)
+            ->assertSee('data-client-token="client-token-test"', false)
+            ->assertSee('checkout:loading', false)
+            ->assertSee('Processing your card payment...')
+            ->assertDontSee('js.stripe.com', false);
+    }
+
+    public function test_card_confirm_captures_matching_paypal_order(): void
+    {
+        $this->enablePayments();
+        $order = $this->orderWithTransaction('card', 'PAYPAL-CARD-1');
+        $this->fakeConfirmation('PAYPAL-CARD-1', 'APPROVED', 'CAPTURE-CARD-1');
+
+        $request = Request::create('/', 'POST', ['paypal_order_id' => 'PAYPAL-CARD-1']);
+        $this->assertTrue(app(CardGateway::class)->confirm($order, $request));
+        $this->assertSame('CAPTURE-CARD-1', $request->input('gateway_transaction_id'));
+    }
+
+    public function test_card_confirm_accepts_already_completed_order(): void
+    {
+        $this->enablePayments();
+        $order = $this->orderWithTransaction('card', 'PAYPAL-CARD-1');
+        $this->fakeOrderSummary('PAYPAL-CARD-1', 'COMPLETED', '120.50', 'USD', 'CAPTURE-CARD-1');
+
+        $request = Request::create('/', 'POST', ['paypal_order_id' => 'PAYPAL-CARD-1']);
+        $this->assertTrue(app(CardGateway::class)->confirm($order, $request));
+        $this->assertSame('CAPTURE-CARD-1', $request->input('gateway_transaction_id'));
+    }
+
+    public function test_card_confirm_rejects_amount_mismatch(): void
+    {
+        $this->enablePayments();
+        $order = $this->orderWithTransaction('card', 'PAYPAL-CARD-1');
+        $this->fakeOrderSummary('PAYPAL-CARD-1', 'COMPLETED', '999.00', 'USD', 'CAPTURE-CARD-1');
+        $request = Request::create('/', 'POST', ['paypal_order_id' => 'PAYPAL-CARD-1']);
+
+        $this->assertFalse(app(CardGateway::class)->confirm($order, $request));
+    }
+
+    public function test_apple_pay_uses_paypal_sdk_and_capture_flow(): void
+    {
+        $this->enablePayments();
+        $order = $this->orderWithTransaction('apple_pay', 'PAYPAL-APPLE-1');
+        $this->fakeOrderSummary('PAYPAL-APPLE-1', 'CREATED');
+
+        $result = app(ApplePayGateway::class)->initiate($order, Request::create('/', 'GET'));
+        $this->assertStringContainsString('components=applepay', $result->viewData['sdkUrl']);
+        $this->assertSame('PAYPAL-APPLE-1', $result->viewData['paypalOrderId']);
+
+        $this->fakeConfirmation('PAYPAL-APPLE-1', 'APPROVED', 'CAPTURE-APPLE-1');
+        $request = Request::create('/', 'POST', ['paypal_order_id' => 'PAYPAL-APPLE-1']);
+        $this->assertTrue(app(ApplePayGateway::class)->confirm($order, $request));
+        $this->assertSame('CAPTURE-APPLE-1', $request->input('gateway_transaction_id'));
+    }
+
+    private function enablePayments(): void
+    {
+        foreach ([
+            'payment_card_enabled' => '1',
+            'payment_paypal_enabled' => '1',
+            'payment_apple_pay_enabled' => '1',
+            'payment_paypal_client_id' => 'paypal-client-id',
+            'payment_paypal_client_secret' => 'paypal-client-secret',
+            'payment_paypal_sandbox' => '1',
+        ] as $key => $value) {
+            Setting::query()->updateOrCreate(['key' => $key], ['value' => $value]);
+        }
+    }
+
+    private function fakeInitiation(string $paypalOrderId): void
+    {
+        Http::fake([
+            'https://api-m.sandbox.paypal.com/v1/oauth2/token' => Http::response(['access_token' => 'access-token'], 200),
+            'https://api-m.sandbox.paypal.com/v2/checkout/orders' => Http::response(['id' => $paypalOrderId, 'status' => 'CREATED'], 201),
+            'https://api-m.sandbox.paypal.com/v1/identity/generate-token' => Http::response(['client_token' => 'client-token-test'], 200),
+        ]);
+    }
+
+    private function fakeOrderSummary(
+        string $paypalOrderId,
+        string $status,
+        string $amount = '120.50',
+        string $currency = 'USD',
+        ?string $captureId = null,
+    ): void {
+        $unit = ['amount' => ['value' => $amount, 'currency_code' => $currency]];
+        if ($captureId !== null) {
+            $unit['payments'] = ['captures' => [['id' => $captureId, 'status' => 'COMPLETED']]];
+        }
+
+        Http::fake([
+            'https://api-m.sandbox.paypal.com/v1/oauth2/token' => Http::response(['access_token' => 'access-token'], 200),
+            'https://api-m.sandbox.paypal.com/v2/checkout/orders/'.$paypalOrderId => Http::response([
+                'id' => $paypalOrderId,
+                'status' => $status,
+                'purchase_units' => [$unit],
+            ], 200),
+        ]);
+    }
+
+    private function fakeConfirmation(string $paypalOrderId, string $status, string $captureId): void
+    {
+        Http::fake(function ($request) use ($paypalOrderId, $status, $captureId) {
+            if (str_ends_with($request->url(), '/v1/oauth2/token')) {
+                return Http::response(['access_token' => 'access-token'], 200);
+            }
+            if (str_ends_with($request->url(), '/v2/checkout/orders/'.$paypalOrderId)) {
+                return Http::response([
+                    'id' => $paypalOrderId,
+                    'status' => $status,
+                    'purchase_units' => [[
+                        'amount' => ['value' => '120.50', 'currency_code' => 'USD'],
+                    ]],
+                ], 200);
+            }
+            if (str_ends_with($request->url(), '/v2/checkout/orders/'.$paypalOrderId.'/capture')) {
+                return Http::response([
+                    'id' => $paypalOrderId,
+                    'status' => 'COMPLETED',
+                    'purchase_units' => [[
+                        'payments' => ['captures' => [['id' => $captureId, 'status' => 'COMPLETED']]],
+                    ]],
+                ], 201);
+            }
+
+            return Http::response([], 404);
+        });
+    }
+
+    private function addProductToCart(): void
+    {
+        $category = Category::query()->create(['name' => 'Bracelets', 'slug' => 'bracelets']);
+        $product = Product::query()->create([
+            'category_id' => $category->id,
+            'name' => 'Card Test Bracelet',
+            'slug' => 'card-test-bracelet',
+            'price_usd' => 120.50,
+            'stock' => 5,
+            'is_active' => true,
+        ]);
+        $variant = ProductVariant::query()->create([
+            'product_id' => $product->id,
+            'price_usd' => 120.50,
+            'stock' => 5,
+            'is_default' => true,
+            'is_active' => true,
+        ]);
+        app(CartService::class)->add($variant->id, 1);
+    }
+
+    /** @return array<string, string> */
+    private function checkoutPayload(string $method): array
+    {
+        return [
+            'payment_method' => $method,
+            'customer_email' => 'customer@example.com',
+            'shipping_country' => 'US',
+            'shipping_first_name' => 'Jane',
+            'shipping_last_name' => 'Customer',
+            'shipping_address_line1' => '123 Test St',
+            'shipping_address_line2' => '',
+            'shipping_city' => 'Austin',
+            'shipping_postcode' => '78701',
+            'shipping_phone' => '5551234567',
+            'shipping_method' => 'standard',
+            'card_billing_same_as_shipping' => '1',
+        ];
+    }
+
+    private function orderWithTransaction(string $method, string $paypalOrderId): Order
+    {
+        $order = Order::query()->create([
+            'order_number' => 'ORD-'.strtoupper($method),
+            'customer_email' => 'customer@example.com',
+            'customer_name' => 'Jane Customer',
+            'shipping_address' => 'Jane Customer',
+            'currency_code' => 'USD',
+            'subtotal_usd' => 120.50,
+            'discount_usd' => 0,
+            'shipping_usd' => 0,
+            'tax_usd' => 0,
+            'total_display' => 120.50,
+            'status' => 'pending',
+        ]);
+
+        PaymentTransaction::query()->create([
+            'order_id' => $order->id,
+            'payment_method' => $method,
+            'gateway_transaction_id' => $paypalOrderId,
+            'amount' => 120.50,
+            'currency_code' => 'USD',
+            'status' => 'pending',
+        ]);
+
+        return $order;
+    }
+}

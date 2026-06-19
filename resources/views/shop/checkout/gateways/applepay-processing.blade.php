@@ -1,136 +1,136 @@
 @php
     $configured = ($data['configured'] ?? false) === true;
-    $publishableKey = $data['publishableKey'] ?? '';
-    $clientSecret = $data['clientSecret'] ?? '';
-    $paymentIntentId = $data['paymentIntentId'] ?? '';
-    $amount = (int) ($data['amount'] ?? 0);
-    $currency = $data['currency'] ?? 'usd';
+    $paypalOrderId = $data['paypalOrderId'] ?? '';
+    $sdkUrl = $data['sdkUrl'] ?? '';
+    $amount = $data['amount'] ?? '';
+    $currency = $data['currency'] ?? 'USD';
     $country = $data['country'] ?? 'US';
-    $testMode = ($data['testMode'] ?? false) === true;
+    $sandbox = ($data['sandbox'] ?? false) === true;
     $error = $data['error'] ?? null;
 @endphp
 
 <div class="gateway-pane gateway-pane--applepay">
     <h2 class="gateway-pane__title">Pay with Apple Pay</h2>
-    <p>Authorize payment for order <strong>{{ $order->order_number }}</strong> — <strong>{{ strtoupper($order->currency_code) }} {{ number_format((float) $order->total_display, 2) }}</strong>.</p>
+    <p>Authorize payment for order <strong>{{ $order->order_number }}</strong> - <strong>{{ strtoupper($order->currency_code) }} {{ number_format((float) $order->total_display, 2) }}</strong>.</p>
 
     @if(! $configured)
-        <p class="gateway-pane__hint gateway-pane__hint--warn">Apple Pay is not fully configured. Add your <strong>Stripe Publishable Key</strong> and <strong>Secret Key</strong> in Admin → Payments → Payment settings, then save.</p>
+        <p class="gateway-pane__hint gateway-pane__hint--warn">Apple Pay is not fully configured. Add your PayPal REST API credentials in Admin - Payments - Payment settings.</p>
     @elseif($error)
         <p class="gateway-pane__hint gateway-pane__hint--warn">{{ $error }}</p>
-    @elseif($publishableKey === '' || $clientSecret === '' || $paymentIntentId === '' || $amount <= 0)
+    @elseif($paypalOrderId === '' || $sdkUrl === '' || $amount === '')
         <p class="gateway-pane__hint gateway-pane__hint--warn">Unable to load Apple Pay checkout. Refresh this page or contact support.</p>
     @else
         <ul class="gateway-pane__steps">
-            <li>Use the Apple Pay button below on a supported device (Safari on Mac, iPhone, or iPad).</li>
-            <li>Authenticate with Touch&nbsp;ID, Face&nbsp;ID, or your device passcode.</li>
+            <li>Use the Apple Pay button below on a supported Apple device and browser.</li>
+            <li>Authenticate with Touch ID, Face ID, or your device passcode.</li>
             <li>Stay on this page until we confirm your payment.</li>
         </ul>
-
         <div id="apple-pay-button-container" class="gateway-pane__apple-pay"></div>
-        <p id="apple-pay-unavailable" class="gateway-pane__hint gateway-pane__hint--warn" hidden>Apple Pay is not available on this browser or device. Try Safari on an Apple device, or choose another payment method.</p>
+        <p id="apple-pay-error" class="gateway-pane__hint gateway-pane__hint--warn" hidden></p>
 
-        @if($testMode)
-            <p class="gateway-pane__hint">Test mode — use <a href="https://dashboard.stripe.com/test/dashboard" target="_blank" rel="noopener">Stripe test keys</a> and register your domain under Stripe → Settings → Payment methods → Apple Pay.</p>
+        @if($sandbox)
+            <p class="gateway-pane__hint">Sandbox mode - use a PayPal sandbox buyer and an Apple Pay sandbox wallet.</p>
         @endif
 
         @push('scripts')
-        <script src="https://js.stripe.com/v3/"></script>
+        <script src="{{ $sdkUrl }}"></script>
         <script>
         (function () {
-            var publishableKey = @json($publishableKey);
-            var clientSecret = @json($clientSecret);
-            var paymentIntentId = @json($paymentIntentId);
+            var paypalOrderId = @json($paypalOrderId);
             var amount = @json($amount);
             var currency = @json($currency);
             var country = @json($country);
             var confirmUrl = @json(route('shop.checkout.confirm', ['order_number' => $order->order_number]));
             var csrf = @json(csrf_token());
-            var orderLabel = @json('Order '.$order->order_number);
+            var displayName = @json((string) config('app.name', 'Store'));
+            var container = document.getElementById('apple-pay-button-container');
+            var errorEl = document.getElementById('apple-pay-error');
 
-            var buttonContainer = document.getElementById('apple-pay-button-container');
-            var unavailableEl = document.getElementById('apple-pay-unavailable');
+            function showError(message) {
+                errorEl.textContent = message;
+                errorEl.hidden = false;
+            }
 
-            function postConfirm(body) {
+            function postConfirm() {
                 return fetch(confirmUrl, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'Accept': 'application/json',
                         'X-CSRF-TOKEN': csrf,
-                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-Requested-With': 'XMLHttpRequest'
                     },
-                    body: JSON.stringify(body),
-                }).then(function (res) {
-                    return res.json().then(function (data) {
-                        if (res.ok && data.redirect) {
+                    body: JSON.stringify({ paypal_order_id: paypalOrderId })
+                }).then(function (response) {
+                    return response.json().then(function (data) {
+                        if (response.ok && data.redirect) {
                             window.location.href = data.redirect;
                             return;
                         }
-                        var msg = (data && data.message) ? data.message : 'Payment could not be confirmed.';
-                        throw new Error(msg);
+                        throw new Error(data.message || 'Payment could not be confirmed.');
                     });
                 });
             }
 
-            if (typeof Stripe === 'undefined') {
-                buttonContainer.innerHTML = '<p class="gateway-pane__hint gateway-pane__hint--warn">Stripe could not be loaded. Check your connection or ad blocker.</p>';
+            if (typeof paypal === 'undefined' || typeof paypal.Applepay !== 'function' || typeof ApplePaySession === 'undefined') {
+                showError('Apple Pay is not available on this browser or device. Please choose another payment method.');
                 return;
             }
 
-            var stripe = Stripe(publishableKey);
-            var paymentRequest = stripe.paymentRequest({
-                country: country,
-                currency: currency,
-                total: {
-                    label: orderLabel,
-                    amount: amount,
-                },
-                requestPayerEmail: true,
-            });
-
-            var elements = stripe.elements();
-            var prButton = elements.create('paymentRequestButton', {
-                paymentRequest: paymentRequest,
-                style: {
-                    paymentRequestButton: {
-                        type: 'buy',
-                        theme: 'black',
-                        height: '48px',
-                    },
-                },
-            });
-
-            paymentRequest.canMakePayment().then(function (result) {
-                if (result && result.applePay) {
-                    prButton.mount('#apple-pay-button-container');
-                } else {
-                    buttonContainer.hidden = true;
-                    unavailableEl.hidden = false;
+            var applepay = paypal.Applepay();
+            applepay.config().then(function (config) {
+                if (!config.isEligible) {
+                    showError('Apple Pay is not available for this PayPal account, browser, or device.');
+                    return;
                 }
-            });
 
-            paymentRequest.on('paymentmethod', function (ev) {
-                stripe.confirmCardPayment(clientSecret, {
-                    payment_method: ev.paymentMethod.id,
-                }, {
-                    handleActions: true,
-                }).then(function (result) {
-                    if (result.error) {
-                        ev.complete('fail');
-                        alert(result.error.message || 'Apple Pay could not be completed.');
-                        return;
-                    }
+                var button = document.createElement('apple-pay-button');
+                button.setAttribute('buttonstyle', 'black');
+                button.setAttribute('type', 'buy');
+                button.setAttribute('locale', 'en-US');
+                container.appendChild(button);
 
-                    ev.complete('success');
+                button.addEventListener('click', function () {
+                    var session = new ApplePaySession(4, {
+                        countryCode: country,
+                        currencyCode: currency,
+                        merchantCapabilities: config.merchantCapabilities,
+                        supportedNetworks: config.supportedNetworks,
+                        requiredBillingContactFields: ['name', 'postalAddress'],
+                        total: { label: displayName, amount: amount, type: 'final' }
+                    });
 
-                    var intent = result.paymentIntent;
-                    if (intent && intent.status === 'succeeded') {
-                        postConfirm({ payment_intent_id: intent.id || paymentIntentId }).catch(function (err) {
-                            alert(err.message || 'Payment could not be confirmed.');
+                    session.onvalidatemerchant = function (event) {
+                        applepay.validateMerchant({ validationUrl: event.validationURL, displayName: displayName })
+                            .then(function (merchantSession) { session.completeMerchantValidation(merchantSession.merchantSession); })
+                            .catch(function () {
+                                session.abort();
+                                showError('Apple Pay merchant validation failed. Please try another payment method.');
+                            });
+                    };
+
+                    session.onpaymentauthorized = function (event) {
+                        document.dispatchEvent(new CustomEvent('checkout:loading', {
+                            detail: { message: 'Confirming your Apple Pay payment...' }
+                        }));
+                        applepay.confirmOrder({
+                            orderId: paypalOrderId,
+                            token: event.payment.token,
+                            billingContact: event.payment.billingContact
+                        }).then(function () {
+                            session.completePayment(ApplePaySession.STATUS_SUCCESS);
+                            return postConfirm();
+                        }).catch(function (error) {
+                            document.dispatchEvent(new CustomEvent('checkout:loading-end'));
+                            session.completePayment(ApplePaySession.STATUS_FAILURE);
+                            showError((error && error.message) || 'Apple Pay could not be completed.');
                         });
-                    }
+                    };
+
+                    session.begin();
                 });
+            }).catch(function () {
+                showError('PayPal Apple Pay configuration could not be loaded. Please choose another payment method.');
             });
         })();
         </script>
