@@ -235,10 +235,6 @@ class CheckoutController extends Controller
                 'status' => 'pending',
             ]);
 
-            if ($voucher instanceof Voucher) {
-                $this->vouchers->markUsed($voucher, $order);
-            }
-
             foreach ($lines as $row) {
                 /** @var Product $p */
                 $p = $row['product'];
@@ -430,10 +426,6 @@ class CheckoutController extends Controller
                 'total_display' => $totalDisplay,
                 'status' => 'pending',
             ]);
-
-            if ($voucher instanceof Voucher) {
-                $this->vouchers->markUsed($voucher, $order);
-            }
 
             foreach ($lines as $row) {
                 /** @var Product $p */

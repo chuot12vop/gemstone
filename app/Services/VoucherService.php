@@ -60,6 +60,25 @@ class VoucherService
         $voucher->save();
     }
 
+    public function markOrderVoucherUsed(Order $order): void
+    {
+        $code = trim((string) $order->voucher_code);
+        if ($code === '') {
+            return;
+        }
+
+        $voucher = Voucher::query()->where('code', strtoupper($code))->first();
+        if ($voucher === null) {
+            return;
+        }
+
+        if ($voucher->isUsed() && (int) $voucher->order_id !== (int) $order->id) {
+            return;
+        }
+
+        $this->markUsed($voucher, $order);
+    }
+
     public function release(Voucher $voucher): void
     {
         $voucher->used_at = null;

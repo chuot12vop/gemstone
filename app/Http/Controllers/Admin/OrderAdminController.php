@@ -5,13 +5,17 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Services\OrderMailService;
+use App\Services\VoucherService;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 
 class OrderAdminController extends Controller
 {
-    public function __construct(private OrderMailService $orderMail) {}
+    public function __construct(
+        private OrderMailService $orderMail,
+        private VoucherService $vouchers,
+    ) {}
 
     /** @var list<string> */
     private const PAYMENT_METHODS = [
@@ -82,6 +86,7 @@ class OrderAdminController extends Controller
         $order->save();
 
         if ($previousStatus !== 'paid' && $order->status === 'paid') {
+            $this->vouchers->markOrderVoucherUsed($order);
             $this->orderMail->sendPaid($order->fresh(['items']));
         }
 

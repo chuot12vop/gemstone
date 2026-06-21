@@ -7,11 +7,6 @@
         'currency' => $currency,
     ])
 
-    <button type="button" class="checkout-mobile-summary" data-checkout-summary-toggle aria-expanded="false">
-        <span class="checkout-mobile-summary__label" data-checkout-summary-toggle-label>Show order summary</span>
-        <span class="checkout-mobile-summary__total" data-checkout-total>{{ $currency->formatUsd((float) ($totalUsd ?? $subtotalUsd)) }}</span>
-    </button>
-
     <div class="checkout-layout">
         <div class="checkout-layout__main">
             @if($errors->any())

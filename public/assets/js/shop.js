@@ -706,7 +706,8 @@ function initCheckoutVoucher() {
   const shippingRow = document.querySelector('[data-checkout-shipping-row]');
   const taxRow = document.querySelector('[data-checkout-tax-row]');
   const taxEl = document.querySelector('[data-checkout-tax]');
-  const totalEl = document.querySelector('[data-checkout-total]');
+  const totalEls = document.querySelectorAll('[data-checkout-total]');
+  let voucherRequestPending = false;
 
   function csrfToken() {
     const tokenInput = form && form.querySelector('input[name="_token"]');
@@ -744,8 +745,10 @@ function initCheckoutVoucher() {
         discountRow.hidden = true;
       }
     }
-    if (totalEl && data.total_formatted) {
-      totalEl.textContent = data.total_formatted;
+    if (data.total_formatted) {
+      totalEls.forEach(function (totalEl) {
+        totalEl.textContent = data.total_formatted;
+      });
     }
     if (shippingEl) {
       const shipping = parseFloat(data.shipping_usd || '0', 10) || 0;
@@ -763,10 +766,6 @@ function initCheckoutVoucher() {
         taxRow.hidden = true;
       }
     }
-    const mobileTotal = document.querySelector('[data-checkout-summary-toggle] [data-checkout-total]');
-    if (mobileTotal && data.total_formatted) {
-      mobileTotal.textContent = data.total_formatted;
-    }
     updateFreeShippingBar(data);
   }
 
@@ -783,7 +782,12 @@ function initCheckoutVoucher() {
   }
 
   if (applyBtn && input) {
-    applyBtn.addEventListener('click', function () {
+    applyBtn.addEventListener('click', function (event) {
+      event.preventDefault();
+      event.stopPropagation();
+      if (voucherRequestPending) {
+        return;
+      }
       const code = String(input.value || '').trim();
       const email = customerEmail();
       if (!code) {
@@ -794,6 +798,7 @@ function initCheckoutVoucher() {
         setMsg('Enter your email above first so we can match your voucher.', 'err');
         return;
       }
+      voucherRequestPending = true;
       applyBtn.disabled = true;
       const body = new FormData();
       body.append('_token', csrfToken());
@@ -820,18 +825,28 @@ function initCheckoutVoucher() {
           setMsg((data.percent || 10) + '% off applied — you save ' + (data.discount_formatted || '') + '.', 'ok');
           updateTotals(data);
           swapApplyRemove(true);
+          globalThis.location.reload();
         })
         .catch(function (err) {
+          voucherRequestPending = false;
           setMsg(err.message || 'Invalid voucher.', 'err');
         })
         .finally(function () {
-          applyBtn.disabled = false;
+          if (!voucherRequestPending) {
+            applyBtn.disabled = false;
+          }
         });
     });
   }
 
   if (removeBtn) {
-    removeBtn.addEventListener('click', function () {
+    removeBtn.addEventListener('click', function (event) {
+      event.preventDefault();
+      event.stopPropagation();
+      if (voucherRequestPending) {
+        return;
+      }
+      voucherRequestPending = true;
       removeBtn.disabled = true;
       fetch(section.getAttribute('data-voucher-remove-url'), {
         method: 'DELETE',
@@ -855,18 +870,20 @@ function initCheckoutVoucher() {
             input.readOnly = false;
           }
           setMsg('', null);
-          updateTotals({
+          updateTotals(Object.assign({}, data, {
             discount_usd: 0,
-            total_formatted: data.total_formatted,
-            total_display: data.total_display,
-          });
+          }));
           swapApplyRemove(false);
+          globalThis.location.reload();
         })
         .catch(function () {
+          voucherRequestPending = false;
           setMsg('Could not remove voucher. Try again.', 'err');
         })
         .finally(function () {
-          removeBtn.disabled = false;
+          if (!voucherRequestPending) {
+            removeBtn.disabled = false;
+          }
         });
     });
   }
@@ -1088,32 +1105,44 @@ function updateFreeShippingBar(data) {
 
 function initCheckoutMobileSummary() {
   const toggle = document.querySelector('[data-checkout-summary-toggle]');
-  const panel = document.querySelector('[data-checkout-aside-panel]');
   const label = document.querySelector('[data-checkout-summary-toggle-label]');
+  const content = document.querySelector('[data-checkout-summary-content]');
+  const panel = document.querySelector('[data-checkout-aside-panel]') || (toggle ? toggle.closest('.checkout-layout__aside') : null);
   if (!toggle || !panel) {
     return;
   }
   const mq = window.matchMedia('(min-width: 768px)');
 
+  function setOpen(open) {
+    panel.classList.add('is-open');
+    panel.classList.toggle('is-summary-collapsed', !open);
+    toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (content) {
+      content.hidden = !open;
+    }
+    if (label) {
+      label.textContent = open ? 'Hide' : 'Show';
+    }
+  }
+
   function syncLayout() {
     if (mq.matches) {
-      panel.classList.add('is-open');
-      toggle.setAttribute('aria-expanded', 'false');
+      setOpen(true);
       if (label) {
         label.textContent = 'Order summary';
       }
+      return;
     }
+
+    setOpen(true);
   }
 
   toggle.addEventListener('click', function () {
     if (mq.matches) {
       return;
     }
-    const open = panel.classList.toggle('is-open');
-    toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
-    if (label) {
-      label.textContent = open ? 'Hide order summary' : 'Show order summary';
-    }
+    const open = content ? content.hidden : toggle.getAttribute('aria-expanded') !== 'true';
+    setOpen(open);
   });
 
   if (typeof mq.addEventListener === 'function') {
@@ -2119,6 +2148,20 @@ function initHomeSlider() {
       slides = realSlides.slice();
     }
 
+    function prepareLoopClone(slide, position) {
+      const clone = slide.cloneNode(true);
+      clone.setAttribute('data-slide-clone', position);
+      clone.setAttribute('aria-hidden', 'true');
+      clone.classList.remove('is-active');
+      clone.querySelectorAll('[data-product-card-bound]').forEach(function (card) {
+        card.removeAttribute('data-product-card-bound');
+      });
+      clone.querySelectorAll('[data-pc-drawer-open-bound]').forEach(function (button) {
+        button.removeAttribute('data-pc-drawer-open-bound');
+      });
+      return clone;
+    }
+
     function setupLoopClones() {
       clearLoopClones();
       if (!loopRequested || !canAdvance()) {
@@ -2126,17 +2169,11 @@ function initHomeSlider() {
       }
       const per = Math.min(slidesPerView(), realSlides.length);
       for (let i = realSlides.length - per; i < realSlides.length; i++) {
-        const clone = realSlides[i].cloneNode(true);
-        clone.setAttribute('data-slide-clone', 'lead');
-        clone.setAttribute('aria-hidden', 'true');
-        clone.classList.remove('is-active');
+        const clone = prepareLoopClone(realSlides[i], 'lead');
         track.insertBefore(clone, realSlides[0]);
       }
       for (let i = 0; i < per; i++) {
-        const clone = realSlides[i].cloneNode(true);
-        clone.setAttribute('data-slide-clone', 'tail');
-        clone.setAttribute('aria-hidden', 'true');
-        clone.classList.remove('is-active');
+        const clone = prepareLoopClone(realSlides[i], 'tail');
         track.appendChild(clone);
       }
       cloneLead = per;

@@ -5,11 +5,15 @@ namespace App\Services\Payment;
 use App\Models\Order;
 use App\Models\PaymentTransaction;
 use App\Services\OrderMailService;
+use App\Services\VoucherService;
 use Illuminate\Support\Facades\DB;
 
 class PaymentCompletionService
 {
-    public function __construct(private OrderMailService $orderMail)
+    public function __construct(
+        private OrderMailService $orderMail,
+        private VoucherService $vouchers,
+    )
     {
     }
 
@@ -35,6 +39,8 @@ class PaymentCompletionService
             $transaction->gateway_transaction_id = $captureId;
             $transaction->notes = 'Payment captured';
             $transaction->save();
+
+            $this->vouchers->markOrderVoucherUsed($lockedOrder);
 
             return true;
         });
