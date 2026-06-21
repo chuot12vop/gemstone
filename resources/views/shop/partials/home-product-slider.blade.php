@@ -2,7 +2,7 @@
     $count = $products->count();
     $sliderLabel = $sliderLabel ?? 'Products';
     $isProductPageSlider = ($sliderVariant ?? '') === 'product-page';
-    $desktopSlides = $isProductPageSlider ? min(4, $count) : $count;
+    $desktopSlides = $isProductPageSlider ? 4 : $count;
 @endphp
 @if($count > 0)
     <div class="home-product-slider{{ $isProductPageSlider ? ' home-product-slider--product-page' : '' }}"
