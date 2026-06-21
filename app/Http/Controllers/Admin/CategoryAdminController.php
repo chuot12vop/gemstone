@@ -47,6 +47,10 @@ class CategoryAdminController extends Controller
         if ($imageUrl !== null) {
             $data['image'] = $imageUrl;
         }
+        $catalogBannerUrl = $this->images->store($request->file('catalog_banner'), 'categories/catalog-banners', asWebp: true);
+        if ($catalogBannerUrl !== null) {
+            $data['catalog_banner'] = $catalogBannerUrl;
+        }
 
         Category::query()->create($data);
 
@@ -73,6 +77,11 @@ class CategoryAdminController extends Controller
             $this->images->delete($category->image);
             $data['image'] = $imageUrl;
         }
+        $catalogBannerUrl = $this->images->store($request->file('catalog_banner'), 'categories/catalog-banners', asWebp: true);
+        if ($catalogBannerUrl !== null) {
+            $this->images->delete($category->catalog_banner);
+            $data['catalog_banner'] = $catalogBannerUrl;
+        }
 
         $category->update($data);
 
@@ -86,6 +95,7 @@ class CategoryAdminController extends Controller
         }
 
         $this->images->delete($category->image);
+        $this->images->delete($category->catalog_banner);
         $category->delete();
 
         return redirect()->route('admin.categories.index')->with('success', 'Category deleted.');
@@ -98,6 +108,7 @@ class CategoryAdminController extends Controller
     {
         $validated = $request->validate([
             'image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:4096',
+            'catalog_banner' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:8192',
             'name' => 'required|string|max:160',
             'slug' => 'nullable|string|max:160',
             'description' => 'nullable|string',

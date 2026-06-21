@@ -26,10 +26,19 @@
     </div>
 
     <fieldset class="form-fieldset">
-        <legend>Image upload</legend>
+        <legend>Category image</legend>
         @include('partials.file-upload', [
             'name' => 'image',
             'previewUrl' => !empty($category?->image) ? \App\Support\PublicAssetUrl::to($category->image) : null,
+        ])
+    </fieldset>
+
+    <fieldset class="form-fieldset">
+        <legend>Catalog banner</legend>
+        <p class="form-help">Wide banner displayed on this category's catalog page. When empty, the category image is used.</p>
+        @include('partials.file-upload', [
+            'name' => 'catalog_banner',
+            'previewUrl' => !empty($category?->catalog_banner) ? \App\Support\PublicAssetUrl::to($category->catalog_banner) : null,
         ])
     </fieldset>
 

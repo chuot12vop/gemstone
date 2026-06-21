@@ -14,6 +14,11 @@
             ? 'Pieces from '.$currentBrand->name.'. Browse healing gemstones, lucky motifs, and limited designs.'
             : 'Browse healing gemstones, lucky motifs, and limited designs.');
 
+    $categoryHeroSource = $currentCategory?->catalog_banner ?: $currentCategory?->image;
+    $categoryHeroImage = $categoryHeroSource
+        ? \App\Support\PublicAssetUrl::to($categoryHeroSource)
+        : null;
+
     $activeFilterCount = 0;
     if (!empty($filters['brand_slug'])) {
         $activeFilterCount++;
@@ -43,7 +48,7 @@
 
     <header class="catalog-page-head">
         <h1 class="catalog-page-head__title">{{ $pageTitle }}</h1>
-        @if($pageSummary)
+        @if($pageSummary && ! $categoryHeroImage)
             <div class="catalog-page-head__desc">
                 <p class="catalog-page-head__summary is-collapsed" data-catalog-desc>{{ $pageSummary }}</p>
                 <button type="button" class="catalog-page-head__toggle" data-catalog-desc-toggle hidden>Show more</button>
@@ -168,20 +173,23 @@
         </aside>
     </div>
 
-    @if($currentCategory && ! empty($currentCategory->image))
-        @php($categoryHeroImage = \App\Support\PublicAssetUrl::to($currentCategory->image))
-        @if($categoryHeroImage)
-            <div class="catalog-category-hero" aria-label="{{ $currentCategory->name }}">
-                <div class="catalog-category-hero__media">
-                    <img class="catalog-category-hero__img"
-                         src="{{ $categoryHeroImage }}"
-                         alt="{{ $currentCategory->name }}"
-                         width="1400"
-                         height="280"
-                         loading="lazy">
-                </div>
+    @if($categoryHeroImage)
+        <div class="catalog-category-hero" aria-label="{{ $currentCategory->name }}">
+            <div class="catalog-category-hero__media">
+                <img class="catalog-category-hero__img"
+                     src="{{ $categoryHeroImage }}"
+                     alt="{{ $currentCategory->name }}"
+                     width="1400"
+                     height="280"
+                     loading="lazy">
+                @if($pageSummary)
+                    <div class="catalog-category-hero__content">
+                        <h2 class="catalog-category-hero__title">{{ $currentCategory->name }}</h2>
+                        <p class="catalog-category-hero__description">{{ $pageSummary }}</p>
+                    </div>
+                @endif
             </div>
-        @endif
+        </div>
     @endif
 
     <div class="shop-product-grid shop-product-grid--catalog" data-catalog-grid>

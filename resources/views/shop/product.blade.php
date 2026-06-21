@@ -214,6 +214,7 @@
                 'products' => $bestSellerProducts,
                 'currency' => $currency,
                 'sliderLabel' => 'Best sellers',
+                'sliderVariant' => 'product-page',
             ])
         </section>
     @endif
@@ -225,6 +226,7 @@
                 'products' => $relatedProducts,
                 'currency' => $currency,
                 'sliderLabel' => 'You may also like',
+                'sliderVariant' => 'product-page',
             ])
         </section>
     @endif

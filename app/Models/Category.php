@@ -13,7 +13,7 @@ class Category extends Model
     }
 
     protected $fillable = [
-        'name', 'slug', 'description', 'meta_title', 'meta_description', 'sort_order', 'image',
+        'name', 'slug', 'description', 'meta_title', 'meta_description', 'sort_order', 'image', 'catalog_banner',
     ];
 
     /** @return HasMany<Product> */

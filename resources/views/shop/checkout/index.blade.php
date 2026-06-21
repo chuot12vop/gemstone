@@ -50,12 +50,6 @@
                     'selected' => $selected,
                 ])
 
-                @include('shop.checkout._voucher-fields', [
-                    'appliedVoucher' => $appliedVoucher ?? null,
-                    'discountUsd' => $discountUsd ?? 0,
-                    'currency' => $currency,
-                ])
-
                 <div class="checkout-actions">
                     <button class="btn btn--primary btn--checkout-pay" type="submit">Pay now</button>
                 </div>
@@ -63,15 +57,23 @@
         </div>
 
         <div class="checkout-layout__aside" data-checkout-aside-panel>
-            @include('shop.checkout._cart-aside', [
-                'lines' => $lines,
-                'subtotalUsd' => $subtotalUsd,
-                'discountUsd' => $discountUsd ?? 0,
-                'shippingUsd' => $shippingUsd ?? 0,
-                'taxUsd' => $taxUsd ?? 0,
-                'totalUsd' => $totalUsd ?? $subtotalUsd,
-                'currency' => $currency,
-            ])
+            <div class="checkout-order-column">
+                @include('shop.checkout._cart-aside', [
+                    'lines' => $lines,
+                    'subtotalUsd' => $subtotalUsd,
+                    'discountUsd' => $discountUsd ?? 0,
+                    'shippingUsd' => $shippingUsd ?? 0,
+                    'taxUsd' => $taxUsd ?? 0,
+                    'totalUsd' => $totalUsd ?? $subtotalUsd,
+                    'currency' => $currency,
+                ])
+
+                @include('shop.checkout._voucher-fields', [
+                    'appliedVoucher' => $appliedVoucher ?? null,
+                    'discountUsd' => $discountUsd ?? 0,
+                    'currency' => $currency,
+                ])
+            </div>
         </div>
     </div>
 </div>

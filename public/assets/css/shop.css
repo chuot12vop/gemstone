@@ -3191,7 +3191,28 @@ body.pd-lightbox-open { overflow: hidden; }
 .checkout-voucher__msg { margin: 0.5rem 0 0; font-size: 0.88rem; }
 .checkout-voucher__msg--ok { color: #2d6a4f; }
 .checkout-voucher__msg--err { color: #9b2c2c; }
+.checkout-order-column {
+  display: grid;
+  gap: 1rem;
+}
+.checkout-order-column > .checkout-voucher {
+  padding: 1.1rem 1.15rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: #fff;
+  box-shadow: 0 8px 28px rgba(28, 24, 18, 0.06);
+}
+@media (min-width: 768px) {
+  .checkout-page .checkout-order-column {
+    position: sticky;
+    top: calc(var(--checkout-header-height, 3.5rem) + 0.75rem);
+  }
+  .checkout-page .checkout-order-column > .checkout-aside {
+    position: static;
+  }
+}
 .checkout-aside__discount { display: flex; justify-content: space-between; margin: 0.35rem 0 0; font-size: 0.92rem; color: #2d6a4f; }
+.checkout-aside__discount[hidden] { display: none !important; }
 .checkout-aside__discount strong { font-weight: 600; }
 .checkout-aside__shipping,
 .cart-page__shipping {
@@ -4236,6 +4257,7 @@ body.pd-lightbox-open { overflow: hidden; }
   padding-bottom: 2%;
 }
 .catalog-category-hero__media {
+  position: relative;
   width: 100%;
   height: 180px;
   overflow: hidden;
@@ -4247,6 +4269,43 @@ body.pd-lightbox-open { overflow: hidden; }
   height: 100%;
   object-fit: cover;
   object-position: center;
+}
+.catalog-category-hero__media::after {
+  content: "";
+  position: absolute;
+  inset: 30% 0 0;
+  background: linear-gradient(to bottom, transparent, rgba(20, 17, 13, 0.68));
+  pointer-events: none;
+}
+.catalog-category-hero__content {
+  position: absolute;
+  z-index: 1;
+  left: clamp(1rem, 3vw, 2rem);
+  right: clamp(1rem, 3vw, 2rem);
+  bottom: clamp(0.85rem, 2.5vw, 1.5rem);
+  max-width: 42rem;
+  color: #fff;
+}
+.catalog-category-hero__title {
+  margin: 0 0 0.35rem;
+  color: inherit;
+  font-family: "Source Sans 3", system-ui, sans-serif;
+  font-size: clamp(1.1rem, 2.5vw, 1.5rem);
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
+}
+.catalog-category-hero__description {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+  overflow: hidden;
+  margin: 0;
+  font-size: clamp(0.9rem, 1.5vw, 1.05rem);
+  line-height: 1.5;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
 }
 .site-main--catalog .shop-product-grid--catalog {
   margin-top: 1.15rem;
@@ -6459,6 +6518,13 @@ body.pc-drawer-open {
   overflow: hidden;
   touch-action: pan-y;
 }
+.home-product-slider--product-page .home-product-slider__viewport {
+  cursor: grab;
+}
+.home-product-slider--product-page .home-product-slider__viewport.is-dragging {
+  cursor: grabbing;
+  user-select: none;
+}
 .home-product-slider__track {
   display: flex;
   width: 100%;
@@ -6556,6 +6622,31 @@ body.pc-drawer-open {
   .home-product-slider__dots {
     display: none;
   }
+
+  .home-product-slider--product-page .home-product-slider__viewport {
+    overflow: hidden;
+  }
+  .home-product-slider--product-page .home-product-slider__track {
+    display: flex;
+    gap: 0;
+    transform: translate3d(0, 0, 0);
+    transition: transform 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  }
+  .home-product-slider--product-page .home-product-slider__slide {
+    flex: 0 0 calc(100% / var(--product-slides-desktop, 4));
+    width: calc(100% / var(--product-slides-desktop, 4));
+    padding: 0 0.45rem;
+  }
+  .home-product-slider--product-page .home-product-slider__nav {
+    display: block;
+  }
+  .home-product-slider--product-page .home-product-slider__dots {
+    display: flex;
+  }
+  .home-product-slider--product-page.is-static .home-product-slider__nav,
+  .home-product-slider--product-page.is-static .home-product-slider__dots {
+    display: none;
+  }
 }
 
 .section__title-link {
@@ -6629,7 +6720,7 @@ body.pc-drawer-open {
 .home-category-feature__desc {
   display: -webkit-box;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 1;
+  -webkit-line-clamp: 4;
   overflow: hidden;
   max-width: 100%;
   font-size: 0.94rem;

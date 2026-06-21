@@ -1,17 +1,21 @@
 @php
     $count = $products->count();
     $sliderLabel = $sliderLabel ?? 'Products';
+    $isProductPageSlider = ($sliderVariant ?? '') === 'product-page';
+    $desktopSlides = $isProductPageSlider ? min(4, $count) : $count;
 @endphp
 @if($count > 0)
-    <div class="home-product-slider"
+    <div class="home-product-slider{{ $isProductPageSlider ? ' home-product-slider--product-page' : '' }}"
          data-home-slider
          data-slider-loop="true"
+         @if($isProductPageSlider) data-autoplay="false" @endif
          data-slide-interval="4000"
          data-slides-mobile="2"
          data-slides-tablet="2"
-         data-slides-desktop="{{ $count }}"
+         data-slides-desktop="{{ $desktopSlides }}"
          data-slide-breakpoint-tablet="700"
          data-slide-breakpoint="960"
+         @if($isProductPageSlider) style="--product-slides-desktop: {{ max(1, $desktopSlides) }};" @endif
          aria-roledescription="carousel"
          aria-label="{{ $sliderLabel }}">
         <div class="home-product-slider__viewport" data-slider-viewport>

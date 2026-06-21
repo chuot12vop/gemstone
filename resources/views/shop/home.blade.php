@@ -93,19 +93,6 @@
         <h2 id="home-bestsellers-title" class="section__title section__title--center">
             <a class="section__title-link" href="{{ $bestSellersUrl }}">Best sellers</a>
         </h2>
-        @if(isset($homeBestSellersCategory) && $homeBestSellersCategory && !empty($homeBestSellersCategory->image))
-            <a class="home-category-feature" href="{{ route('shop.catalog.category', $homeBestSellersCategory) }}" aria-label="Shop {{ $homeBestSellersCategory->name }}">
-                <span class="home-category-feature__media">
-                    <img src="{{ \App\Support\PublicAssetUrl::to($homeBestSellersCategory->image) }}" alt="{{ $homeBestSellersCategory->name }}" loading="lazy">
-                </span>
-                <span class="home-category-feature__body">
-                    <span class="home-category-feature__title">{{ $homeBestSellersCategory->name }}</span>
-                    @if(trim((string) $homeBestSellersCategory->description) !== '')
-                        <span class="home-category-feature__desc">{{ $homeBestSellersCategory->description }}</span>
-                    @endif
-                </span>
-            </a>
-        @endif
         @if($homeBestSellers->isEmpty())
             <p class="home-section__empty home-section__empty--center">No best sellers yet — check back soon or <a href="{{ route('shop.products.index') }}">browse the shop</a>.</p>
         @else

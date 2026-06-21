@@ -29,6 +29,7 @@ class CardPaymentGatewayTest extends TestCase
             ->assertOk()
             ->assertSee('data-checkout-loading', false)
             ->assertSee('aria-live="polite"', false)
+            ->assertSeeInOrder(['data-checkout-discount-row', 'hidden'], false)
             ->assertSee('Processing your payment...')
             ->assertSee('Credit or Debit Card')
             ->assertSee('PayPal')

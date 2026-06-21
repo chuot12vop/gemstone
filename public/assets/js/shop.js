@@ -2162,6 +2162,74 @@ function initHomeSlider() {
     viewport.addEventListener('touchend', finishTouchDrag, { passive: true });
     viewport.addEventListener('touchcancel', finishTouchDrag, { passive: true });
 
+    if (root.classList.contains('home-product-slider--product-page')) {
+      let pointerId = null;
+      let suppressClick = false;
+
+      viewport.addEventListener('pointerdown', function (e) {
+        if (e.pointerType !== 'mouse' || e.button !== 0 || !canAdvance()) {
+          return;
+        }
+        stop();
+        refreshSlideWidth();
+        pointerId = e.pointerId;
+        dragging = true;
+        lockAxis = null;
+        touchStartX = e.clientX;
+        touchStartY = e.clientY;
+        dragOffset = 0;
+        suppressClick = false;
+        viewport.classList.add('is-dragging');
+        viewport.setPointerCapture(e.pointerId);
+        track.style.transition = 'none';
+      });
+
+      viewport.addEventListener('pointermove', function (e) {
+        if (!dragging || pointerId !== e.pointerId || e.pointerType !== 'mouse') {
+          return;
+        }
+        const dx = e.clientX - touchStartX;
+        const dy = e.clientY - touchStartY;
+        if (lockAxis === null) {
+          if (Math.abs(dx) < 6 && Math.abs(dy) < 6) {
+            return;
+          }
+          lockAxis = Math.abs(dx) >= Math.abs(dy);
+        }
+        if (!lockAxis) {
+          return;
+        }
+        e.preventDefault();
+        suppressClick = Math.abs(dx) > 8;
+        dragOffset = dx;
+        queueApplyPosition();
+      });
+
+      const finishPointerDrag = function (e) {
+        if (pointerId !== e.pointerId) {
+          return;
+        }
+        if (viewport.hasPointerCapture(e.pointerId)) {
+          viewport.releasePointerCapture(e.pointerId);
+        }
+        pointerId = null;
+        viewport.classList.remove('is-dragging');
+        finishTouchDrag();
+        window.setTimeout(function () {
+          suppressClick = false;
+        }, 0);
+      };
+
+      viewport.addEventListener('pointerup', finishPointerDrag);
+      viewport.addEventListener('pointercancel', finishPointerDrag);
+      viewport.addEventListener('click', function (e) {
+        if (suppressClick) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+      }, true);
+    }
+
     if (autoplayEnabled) {
       root.addEventListener('pointerenter', function (e) {
         if (e.pointerType === 'mouse') {
