@@ -213,23 +213,23 @@
         <legend>Policies</legend>
         <label>
             Security policy
-            <textarea name="security_policy" rows="8">{{ old('security_policy', $settings['security_policy'] ?? '') }}</textarea>
+            <textarea id="security-policy" class="js-rich-text" name="security_policy" rows="8" data-rich-height="360">{{ old('security_policy', $settings['security_policy'] ?? '') }}</textarea>
         </label>
         <label>
             Privacy policy
-            <textarea name="privacy_policy" rows="8">{{ old('privacy_policy', $settings['privacy_policy'] ?? '') }}</textarea>
+            <textarea id="privacy-policy" class="js-rich-text" name="privacy_policy" rows="8" data-rich-height="360">{{ old('privacy_policy', $settings['privacy_policy'] ?? '') }}</textarea>
         </label>
         <label>
             Return policy
-            <textarea name="return_policy" rows="8">{{ old('return_policy', $settings['return_policy'] ?? '') }}</textarea>
+            <textarea id="return-policy" class="js-rich-text" name="return_policy" rows="8" data-rich-height="360">{{ old('return_policy', $settings['return_policy'] ?? '') }}</textarea>
         </label>
         <label>
             Terms of service
-            <textarea name="terms_of_service" rows="8">{{ old('terms_of_service', $settings['terms_of_service'] ?? '') }}</textarea>
+            <textarea id="terms-of-service" class="js-rich-text" name="terms_of_service" rows="8" data-rich-height="360">{{ old('terms_of_service', $settings['terms_of_service'] ?? '') }}</textarea>
         </label>
         <label>
             Story of us
-            <textarea name="story_of_us" rows="8">{{ old('story_of_us', $settings['story_of_us'] ?? '') }}</textarea>
+            <textarea id="story-of-us" class="js-rich-text" name="story_of_us" rows="8" data-rich-height="360">{{ old('story_of_us', $settings['story_of_us'] ?? '') }}</textarea>
         </label>
     </fieldset>
 

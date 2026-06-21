@@ -38,6 +38,7 @@ class SettingAdminController extends Controller
             'privacy_policy' => 'nullable|string',
             'return_policy' => 'nullable|string',
             'terms_of_service' => 'nullable|string',
+            'story_of_us' => 'nullable|string',
             'site_logo' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:4096',
             'footer_background' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:6144',
             'contact_whatsapp_phone' => 'nullable|string|max:60',
@@ -97,6 +98,7 @@ class SettingAdminController extends Controller
         $settings['privacy_policy'] = trim((string) ($validated['privacy_policy'] ?? ''));
         $settings['return_policy'] = trim((string) ($validated['return_policy'] ?? ''));
         $settings['terms_of_service'] = trim((string) ($validated['terms_of_service'] ?? ''));
+        $settings['story_of_us'] = trim((string) ($validated['story_of_us'] ?? ''));
 
         $welcome = WelcomePopupSettings::resolve();
         $welcomeImagePath = $this->storeImage($request->file('welcome_popup_image'), 'settings/welcome-popup');
@@ -177,6 +179,7 @@ class SettingAdminController extends Controller
             'return_policy' => '',
             'terms_of_service' => '',
             'retail_policy' => '',
+            'story_of_us' => '',
         ];
 
         $stored = Setting::query()
