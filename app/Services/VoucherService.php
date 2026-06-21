@@ -9,14 +9,25 @@ use Illuminate\Support\Str;
 class VoucherService
 {
     public const FOOTER_PERCENT = 10;
+    public const WELCOME_PERCENT = 15;
 
     public function issueFooterVoucher(string $email): Voucher
+    {
+        return $this->issueVoucher($email, self::FOOTER_PERCENT);
+    }
+
+    public function issueWelcomeVoucher(string $email): Voucher
+    {
+        return $this->issueVoucher($email, self::WELCOME_PERCENT);
+    }
+
+    private function issueVoucher(string $email, int $percent): Voucher
     {
         $email = strtolower(trim($email));
 
         $existing = Voucher::query()
             ->where('email', $email)
-            ->where('percent', self::FOOTER_PERCENT)
+            ->where('percent', $percent)
             ->whereNull('used_at')
             ->orderByDesc('id')
             ->first();
@@ -26,9 +37,9 @@ class VoucherService
         }
 
         return Voucher::query()->create([
-            'code' => $this->generateUniqueCode(),
+            'code' => $this->generateUniqueCode($percent),
             'email' => $email,
-            'percent' => self::FOOTER_PERCENT,
+            'percent' => $percent,
         ]);
     }
 
@@ -86,10 +97,10 @@ class VoucherService
         $voucher->save();
     }
 
-    private function generateUniqueCode(): string
+    private function generateUniqueCode(int $percent = self::FOOTER_PERCENT): string
     {
         do {
-            $code = 'GEM10-'.strtoupper(Str::random(8));
+            $code = 'GEM'.max(1, min(99, $percent)).'-'.strtoupper(Str::random(8));
         } while (Voucher::query()->where('code', $code)->exists());
 
         return $code;

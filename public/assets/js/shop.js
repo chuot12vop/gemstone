@@ -1942,10 +1942,14 @@ function initWelcomePopup() {
         body: new FormData(form),
       })
         .then(function (res) {
-          if (!res.ok) {
-            throw new Error('Request failed');
-          }
-          return res.json();
+          return res.json().catch(function () {
+            return {};
+          }).then(function (data) {
+            if (!res.ok || data.ok === false) {
+              throw new Error(data.message || 'Request failed');
+            }
+            return data;
+          });
         })
         .then(function () {
           form.hidden = true;
@@ -1954,11 +1958,11 @@ function initWelcomePopup() {
           }
           setTimeout(closePopup, 2200);
         })
-        .catch(function () {
+        .catch(function (err) {
           if (submitBtn) {
             submitBtn.disabled = false;
           }
-          window.alert('Please enter a valid email and try again.');
+          window.alert(err.message || 'Please enter a valid email and try again.');
         });
     });
   }

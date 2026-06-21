@@ -3757,6 +3757,10 @@ body.pd-lightbox-open { overflow: hidden; }
   margin: 0.45rem 0 0;
   font-size: 1rem;
   line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
   min-height: 2.6rem;
   max-height: 2.6rem;
   overflow: hidden;
@@ -3962,8 +3966,8 @@ body.pd-lightbox-open { overflow: hidden; }
   margin: 0;
   font-size: 0.92rem;
   line-height: 1.35;
-  min-height: auto;
-  max-height: none;
+  min-height: 2.5rem;
+  max-height: 2.5rem;
   font-weight: 600;
   font-family: inherit;
 }
@@ -3980,8 +3984,11 @@ body.pd-lightbox-open { overflow: hidden; }
   margin: 0;
   font-size: 16px;
   font-weight: 600;
-  color: red;
+  color: var(--ink);
   min-height: auto;
+}
+.shop-product-card--missoma .shop-product-card__prices--sale .shop-product-card__price {
+  color: red;
 }
 .shop-product-card--missoma .shop-product-card__compare {
   margin: 0;
@@ -6645,7 +6652,7 @@ body.pc-drawer-open {
   .home-product-slider__viewport {
     overflow: visible;
   }
-  .home-product-slider__track {
+  .home-product-slider:not(.home-product-slider--product-page) .home-product-slider__track {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 0.9rem;
@@ -8224,6 +8231,7 @@ body.checkout-loading-open {
 }
 .payment-card__brand-icons img,
 .payment-card__more-popover img,
+.payment-more-toggle__logo,
 .payment-more-option__logo {
   display: block;
   object-fit: contain;
@@ -8297,6 +8305,19 @@ body.checkout-loading-open {
   color: #0070ba;
   font-weight: 700;
   line-height: 1;
+}
+.payment-more-toggle__logos {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.35rem;
+  max-width: min(16rem, 48vw);
+  overflow: hidden;
+}
+.payment-more-toggle__logo {
+  width: 2.35rem;
+  height: 1.5rem;
+  flex: 0 0 auto;
 }
 .payment-more-panel[hidden] {
   display: none !important;
@@ -8423,6 +8444,7 @@ body.checkout-loading-open {
   min-width: 0;
 }
 .payment-card__brand-icons,
+.payment-more-toggle__logos,
 .payment-more-toggle__dots,
 .payment-more-option__logo,
 .payment-more-option__text-logo {

@@ -10,6 +10,9 @@
     $cardSelected = $cardMethod && $selectedCode === 'card';
     $moreSelected = $moreMethods->contains(fn ($method) => $method->code() === $selectedCode);
     $moreExpanded = $moreSelected;
+    $morePaymentLogos = collect($paymentLogos ?? [])
+        ->filter(fn ($logo) => !empty($logo['src']))
+        ->values();
     $rasterBase = 'assets/img/payments/raster/';
     $rasterLogos = [
         'visa' => ['file' => 'visa.png', 'label' => 'Visa'],
@@ -18,13 +21,6 @@
         'jcb' => ['file' => 'jcb.png', 'label' => 'JCB'],
         'diners' => ['file' => 'diners-club.png', 'label' => 'Diners Club'],
         'discover' => ['file' => 'discover.png', 'label' => 'Discover'],
-    ];
-    $gatewayRasterLogos = [
-        'paypal' => ['file' => 'paypal.png', 'label' => 'PayPal'],
-        'apple_pay' => ['file' => 'apple-pay.png', 'label' => 'Apple Pay'],
-        'venmo' => ['file' => 'venmo.png', 'label' => 'Venmo'],
-        'cashapp' => ['file' => 'cashapp.png', 'label' => 'Cash App'],
-        'zelle' => ['file' => 'zelle.png', 'label' => 'Zelle'],
     ];
 @endphp
 
@@ -106,12 +102,25 @@
                     <span class="payment-card__body">
                         <span class="payment-card__label">More Payment Options</span>
                     </span>
-                    <span class="payment-more-toggle__dots" aria-hidden="true">...</span>
+                    @if($morePaymentLogos->isNotEmpty())
+                        <span class="payment-more-toggle__logos" aria-label="Accepted payment methods">
+                            @foreach($morePaymentLogos as $logo)
+                                <img class="payment-more-toggle__logo"
+                                     src="{{ $logo['src'] }}"
+                                     alt="{{ $logo['label'] ?? 'Payment method' }}"
+                                     width="38"
+                                     height="24"
+                                     loading="lazy"
+                                     decoding="async">
+                            @endforeach
+                        </span>
+                    @else
+                        <span class="payment-more-toggle__dots" aria-hidden="true">...</span>
+                    @endif
                 </label>
                 <div id="payment-more-panel" class="payment-more-panel" data-payment-more-panel @if(! $moreExpanded) hidden @endif>
                     @foreach($moreMethods as $method)
                         @php($adminLogo = \App\Support\PaymentMethodLogos::forGateway($method->code(), $method->label()))
-                        @php($fallbackLogo = $gatewayRasterLogos[$method->code()] ?? null)
                         <label class="payment-more-option" data-payment-method-item>
                             <input type="radio"
                                    name="payment_method"
@@ -125,14 +134,6 @@
                                 <img class="payment-more-option__logo"
                                      src="{{ $adminLogo['src'] }}"
                                      alt="{{ $adminLogo['label'] }}"
-                                     width="70"
-                                     height="34"
-                                     loading="lazy"
-                                     decoding="async">
-                            @elseif($fallbackLogo)
-                                <img class="payment-more-option__logo"
-                                     src="{{ asset($rasterBase.$fallbackLogo['file']) }}"
-                                     alt="{{ $fallbackLogo['label'] }}"
                                      width="70"
                                      height="34"
                                      loading="lazy"
