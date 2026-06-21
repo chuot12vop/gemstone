@@ -2142,6 +2142,8 @@ function initHomeSlider() {
       cloneLead = per;
       loopActive = true;
       slides = Array.from(track.querySelectorAll('[data-slide]'));
+      initProductCards();
+      initProductCardDrawers();
     }
 
     function fixLoopPosition() {
@@ -2400,7 +2402,6 @@ function initHomeSlider() {
         dragOffset = 0;
         suppressClick = false;
         viewport.classList.add('is-dragging');
-        viewport.setPointerCapture(e.pointerId);
         track.style.transition = 'none';
       });
 
@@ -2418,6 +2419,9 @@ function initHomeSlider() {
         }
         if (!lockAxis) {
           return;
+        }
+        if (!viewport.hasPointerCapture(e.pointerId)) {
+          viewport.setPointerCapture(e.pointerId);
         }
         e.preventDefault();
         suppressClick = Math.abs(dx) > 8;
@@ -3240,7 +3244,8 @@ function initFlashToasts() {
 }
 
 function initProductCards() {
-  document.querySelectorAll('[data-product-card]').forEach(function (card) {
+  document.querySelectorAll('[data-product-card]:not([data-product-card-bound])').forEach(function (card) {
+    card.setAttribute('data-product-card-bound', '1');
     const front = card.querySelector('[data-product-card-front]');
     const back = card.querySelector('[data-product-card-back]');
     const priceEl = card.querySelector('[data-product-card-price]');
