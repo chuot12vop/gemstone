@@ -16,6 +16,7 @@ use App\Services\VoucherService;
 use App\Services\Payment\Contracts\PaymentGateway;
 use App\Services\Payment\Data\PaymentInitiationResult;
 use App\Services\Payment\Gateways\ApplePayGateway;
+use App\Services\Payment\Gateways\CardGateway;
 use App\Services\Payment\Gateways\PayPalGateway;
 use App\Services\Payment\PaymentMethodRegistry;
 use App\Services\Payment\PaymentCompletionService;
@@ -85,6 +86,12 @@ class CheckoutController extends Controller
         $defaultMethod = $methods[0]->code();
         $selected = (string) old('payment_method', session('checkout.method', $defaultMethod));
 
+        $cardCheckout = $this->cardCheckoutConfig($currency);
+        $expressCheckout = $this->expressCheckoutConfig($currency, $totals['totalUsd'], $cardCheckout !== null);
+        if ($cardCheckout !== null && isset($expressCheckout['paypal']['sdkUrl'])) {
+            $cardCheckout['sdkUrl'] = $expressCheckout['paypal']['sdkUrl'];
+        }
+
         return view('shop.checkout.index', [
             'title' => 'Checkout',
             'metaDescription' => 'Complete your order.',
@@ -113,7 +120,8 @@ class CheckoutController extends Controller
                 'postcode' => old('shipping_postcode', ''),
                 'phone' => old('shipping_phone', ''),
             ],
-            'expressCheckout' => $this->expressCheckoutConfig($currency, $totals['totalUsd']),
+            'expressCheckout' => $expressCheckout,
+            'cardCheckout' => $cardCheckout,
         ]);
     }
 
@@ -334,7 +342,7 @@ class CheckoutController extends Controller
     }
 
     /** Validate, create order + transaction, hand off to gateway. */
-    public function place(Request $request, CurrencyService $currency): RedirectResponse
+    public function place(Request $request, CurrencyService $currency): RedirectResponse|JsonResponse
     {
         $code = (string) $request->input('payment_method', '');
         $gateway = $this->registry->findEnabled($code);
@@ -506,6 +514,14 @@ class CheckoutController extends Controller
         session([self::SESSION_LAST_ORDER_KEY => $order->order_number]);
 
         $this->orderMail->sendPlaced($order->fresh(['items']));
+
+        if ($request->expectsJson() && $gateway instanceof CardGateway) {
+            return response()->json([
+                'paypal_order_id' => (string) ($result->viewData['paypalOrderId'] ?? ''),
+                'order_number' => $order->order_number,
+                'confirm_url' => route('shop.checkout.confirm', ['order_number' => $order->order_number]),
+            ]);
+        }
 
         return match ($result->type) {
             PaymentInitiationResult::TYPE_REDIRECT => redirect()->away((string) $result->redirectUrl),
@@ -872,7 +888,7 @@ class CheckoutController extends Controller
     /**
      * @return array{show: bool, slots: list<string>, paypal: ?array<string, mixed>}
      */
-    private function expressCheckoutConfig(CurrencyService $currency, float $totalUsd): array
+    private function expressCheckoutConfig(CurrencyService $currency, float $totalUsd, bool $includeCardFields = false): array
     {
         $paypalGateway = $this->registry->findEnabled('paypal');
         $applePayGateway = $this->registry->findEnabled('apple_pay');
@@ -902,6 +918,9 @@ class CheckoutController extends Controller
         if ($applePayEnabled) {
             $sdkComponents[] = 'applepay';
         }
+        if ($includeCardFields) {
+            $sdkComponents[] = 'card-fields';
+        }
         $paypal = [
             'clientId' => $client->clientId(),
             'sdkUrl' => $client->sdkUrl($code, implode(',', $sdkComponents)),
@@ -916,6 +935,39 @@ class CheckoutController extends Controller
             'show' => true,
             'slots' => $slots,
             'paypal' => $paypal,
+        ];
+    }
+
+    /** @return array{sdkUrl: string, clientToken: string, placeUrl: string, sandbox: bool}|null */
+    private function cardCheckoutConfig(CurrencyService $currency): ?array
+    {
+        $gateway = $this->registry->findEnabled('card');
+        if (! $gateway instanceof CardGateway) {
+            return null;
+        }
+
+        $client = $gateway->checkoutClient();
+        if ($client === null) {
+            return null;
+        }
+
+        try {
+            $clientToken = $client->generateClientToken();
+        } catch (\Throwable $e) {
+            Log::warning('Could not prepare card fields on checkout.', ['message' => $e->getMessage()]);
+
+            return null;
+        }
+
+        if ($clientToken === null) {
+            return null;
+        }
+
+        return [
+            'sdkUrl' => $client->sdkUrl($currency->currentCode(), 'card-fields'),
+            'clientToken' => $clientToken,
+            'placeUrl' => route('shop.checkout.place'),
+            'sandbox' => $client->isSandbox(),
         ];
     }
 

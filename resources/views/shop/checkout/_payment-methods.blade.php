@@ -37,7 +37,9 @@
 
         @if($cardMethod)
             <div class="payment-method-item payment-method-item--paypal-card {{ $cardSelected ? 'is-selected' : '' }}" data-payment-method-item>
-                <label class="payment-card payment-card--paypal-card">
+                <label class="payment-card payment-card--paypal-card"
+                       data-card-payment-toggle
+                       aria-expanded="{{ $cardSelected ? 'true' : 'false' }}">
                     <input type="radio"
                            name="payment_method"
                            value="{{ $cardMethod->code() }}"
@@ -62,22 +64,50 @@
                         </span>
                     </span>
                 </label>
+                <div class="payment-method-item__panel checkout-card-panel"
+                     data-payment-method-panel
+                     @if(! $cardSelected) hidden @endif>
+                    @if(!empty($cardCheckout))
+                        <div class="checkout-card-fields"
+                             data-checkout-card-fields
+                             data-card-place-url="{{ $cardCheckout['placeUrl'] }}">
+                            <div id="checkout-card-number" class="checkout-card-fields__field checkout-card-fields__field--number"></div>
+                            <div class="checkout-card-fields__row">
+                                <div id="checkout-card-expiry" class="checkout-card-fields__field"></div>
+                                <div id="checkout-card-cvv" class="checkout-card-fields__field"></div>
+                            </div>
+                            <div id="checkout-card-name" class="checkout-card-fields__field"></div>
+                            <p class="checkout-card-fields__message checkout-card-fields__message--error"
+                               data-checkout-card-error role="alert" hidden></p>
+                        </div>
+                    @else
+                        <p class="checkout-card-fields__message">
+                            Secure card fields will open after you continue.
+                        </p>
+                    @endif
+
+                    @if($cardMethod->customerFieldsView())
+                        @include($cardMethod->customerFieldsView(), ['gateway' => $cardMethod])
+                    @endif
+                </div>
             </div>
         @endif
 
         @if($moreMethods->isNotEmpty())
             <div class="payment-method-item payment-method-item--more {{ $moreSelected ? 'is-selected' : '' }} {{ $moreExpanded ? 'is-open' : '' }}" data-payment-more-item>
-                <button class="payment-more-toggle"
-                        type="button"
+                <label class="payment-more-toggle"
                         data-payment-more-toggle
                         aria-expanded="{{ $moreExpanded ? 'true' : 'false' }}"
                         aria-controls="payment-more-panel">
-                    <span class="payment-card__check" aria-hidden="true"></span>
+                    <input type="radio"
+                           data-payment-more-radio
+                           @checked($moreExpanded)
+                           aria-label="More Payment Options">
                     <span class="payment-card__body">
                         <span class="payment-card__label">More Payment Options</span>
                     </span>
                     <span class="payment-more-toggle__dots" aria-hidden="true">...</span>
-                </button>
+                </label>
                 <div id="payment-more-panel" class="payment-more-panel" data-payment-more-panel @if(! $moreExpanded) hidden @endif>
                     @foreach($moreMethods as $method)
                         @php($adminLogo = \App\Support\PaymentMethodLogos::forGateway($method->code(), $method->label()))
@@ -117,7 +147,11 @@
         @endif
     </fieldset>
 
-    @if($cardMethod && $cardMethod->customerFieldsView())
-        @include($cardMethod->customerFieldsView(), ['gateway' => $cardMethod])
+    @if(!empty($cardCheckout))
+        @push('scripts')
+            <script src="{{ $cardCheckout['sdkUrl'] }}"
+                    data-client-token="{{ $cardCheckout['clientToken'] }}"
+                    data-sdk-integration-source="checkout-card-fields"></script>
+        @endpush
     @endif
 </section>

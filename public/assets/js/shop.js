@@ -49,6 +49,7 @@ let pcDrawerOpenEl = null;
   initCheckoutGatewayFields();
   initPaymentLogoPopover();
   initCardBillingFields();
+  initCheckoutCardFields();
   initCheckoutExpress();
   initWelcomePopup();
   initFooterNewsletter();
@@ -1480,7 +1481,10 @@ function initCheckoutGatewayFields() {
   const radios = form.querySelectorAll('[data-payment-method-radio]');
   const moreItem = form.querySelector('[data-payment-more-item]');
   const moreToggle = form.querySelector('[data-payment-more-toggle]');
+  const moreRadio = form.querySelector('[data-payment-more-radio]');
   const morePanel = form.querySelector('[data-payment-more-panel]');
+  const cardToggle = form.querySelector('[data-card-payment-toggle]');
+  const cardPanel = form.querySelector('.payment-method-item--paypal-card [data-payment-method-panel]');
   if (!radios.length) {
     return;
   }
@@ -1492,13 +1496,22 @@ function initCheckoutGatewayFields() {
       const radio = item.querySelector('[data-payment-method-radio]');
       const selected = radio && radio.value === code;
       item.classList.toggle('is-selected', !!selected);
+      const panel = item.querySelector('[data-payment-method-panel]');
+      if (panel && !selected) {
+        panel.hidden = true;
+      }
     });
     if (moreItem && morePanel && moreToggle) {
       const selectedInMore = !!morePanel.querySelector('[data-payment-method-radio]:checked');
       moreItem.classList.toggle('is-selected', selectedInMore);
       if (selectedInMore) {
         setMoreOpen(true);
+      } else if (code === 'card') {
+        setMoreOpen(false);
       }
+    }
+    if (cardToggle && cardPanel) {
+      cardToggle.setAttribute('aria-expanded', cardPanel.hidden ? 'false' : 'true');
     }
   }
 
@@ -1509,14 +1522,48 @@ function initCheckoutGatewayFields() {
     moreItem.classList.toggle('is-open', open);
     morePanel.hidden = !open;
     moreToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (moreRadio) {
+      moreRadio.checked = open;
+    }
+    if (open && cardPanel && cardToggle) {
+      cardPanel.hidden = true;
+      cardToggle.setAttribute('aria-expanded', 'false');
+    }
   }
 
   radios.forEach(function (radio) {
     radio.addEventListener('change', sync);
   });
-  if (moreToggle) {
-    moreToggle.addEventListener('click', function () {
-      setMoreOpen(!moreItem.classList.contains('is-open'));
+  if (moreRadio) {
+    moreRadio.addEventListener('change', function () {
+      if (moreRadio.checked) {
+        setMoreOpen(true);
+        const paypalRadio = morePanel.querySelector('[data-payment-method-radio][value="paypal"]');
+        if (paypalRadio && !paypalRadio.checked) {
+          paypalRadio.checked = true;
+          paypalRadio.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+      }
+    });
+  }
+  if (cardToggle && cardPanel) {
+    cardToggle.addEventListener('click', function (event) {
+      if (event.target instanceof Element) {
+        if (event.target.closest('.payment-card__more-wrap') || event.target.matches('[data-payment-method-radio]')) {
+          return;
+        }
+      }
+      window.setTimeout(function () {
+        const cardRadio = cardToggle.querySelector('[data-payment-method-radio]');
+        if (!cardRadio || !cardRadio.checked) {
+          return;
+        }
+        if (cardPanel.hidden) {
+          setMoreOpen(false);
+        }
+        cardPanel.hidden = !cardPanel.hidden;
+        cardToggle.setAttribute('aria-expanded', cardPanel.hidden ? 'false' : 'true');
+      }, 0);
     });
   }
   sync();
@@ -1524,24 +1571,197 @@ function initCheckoutGatewayFields() {
 
 function initCardBillingFields() {
   document.querySelectorAll('[data-card-checkout-fields]').forEach(function (root) {
-    const radios = root.querySelectorAll('[data-card-billing-radio]');
+    const sameCheckbox = root.querySelector('[data-card-billing-same]');
     const valueInput = root.querySelector('[data-card-billing-value]');
     const fields = root.querySelector('[data-card-billing-fields]');
-    if (!radios.length || !valueInput || !fields) {
+    if (!sameCheckbox || !valueInput || !fields) {
       return;
     }
 
     function sync() {
-      const selected = root.querySelector('[data-card-billing-radio]:checked');
-      const same = !selected || selected.value === 'same';
+      const same = sameCheckbox.checked;
       valueInput.value = same ? '1' : '0';
       fields.hidden = same;
     }
 
-    radios.forEach(function (radio) {
-      radio.addEventListener('change', sync);
-    });
+    sameCheckbox.addEventListener('change', sync);
     sync();
+  });
+}
+
+function initCheckoutCardFields() {
+  const root = document.querySelector('[data-checkout-card-fields]');
+  const form = document.querySelector('[data-checkout-delivery]');
+  if (!root || !form) {
+    return;
+  }
+
+  const placeUrl = root.getAttribute('data-card-place-url');
+  const errorEl = root.querySelector('[data-checkout-card-error]');
+  const submitBtn = form.querySelector('.btn--checkout-pay');
+  let checkoutOrder = null;
+
+  function setError(message) {
+    if (!errorEl) return;
+    errorEl.textContent = message || '';
+    errorEl.hidden = !message;
+  }
+
+  function setBusy(busy) {
+    if (submitBtn) {
+      submitBtn.disabled = busy;
+      submitBtn.textContent = busy ? 'Processing...' : 'Pay now';
+      if (!busy) {
+        submitBtn.removeAttribute('data-checkout-disabled-by-loading');
+      }
+    }
+    if (busy) {
+      startCheckoutLoading('Processing your card payment...');
+    } else {
+      delete form.dataset.checkoutSubmitting;
+      stopCheckoutLoading();
+    }
+  }
+
+  function firstError(data, fallback) {
+    if (data && data.errors) {
+      const groups = Object.values(data.errors);
+      if (groups.length && groups[0] && groups[0][0]) {
+        return groups[0][0];
+      }
+    }
+    return (data && data.message) || fallback;
+  }
+
+  function createCheckoutOrder() {
+    checkoutOrder = null;
+    return fetch(placeUrl, {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+      },
+      body: new FormData(form),
+    }).then(function (response) {
+      return response.json().then(function (data) {
+        if (!response.ok || !data.paypal_order_id) {
+          throw new Error(firstError(data, 'Could not start card payment.'));
+        }
+        checkoutOrder = data;
+        return data.paypal_order_id;
+      });
+    });
+  }
+
+  function confirmCheckoutOrder() {
+    if (!checkoutOrder || !checkoutOrder.confirm_url) {
+      return Promise.reject(new Error('Card payment could not be confirmed.'));
+    }
+    return fetch(checkoutOrder.confirm_url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+        'X-Requested-With': 'XMLHttpRequest',
+      },
+      body: JSON.stringify({ paypal_order_id: checkoutOrder.paypal_order_id }),
+    }).then(function (response) {
+      return response.json().then(function (data) {
+        if (!response.ok || !data.redirect) {
+          throw new Error(firstError(data, 'Card payment could not be confirmed.'));
+        }
+        window.location.href = data.redirect;
+      });
+    });
+  }
+
+  function fieldValue(name) {
+    const input = form.querySelector('[name="' + name + '"]');
+    return input ? String(input.value || '').trim() : '';
+  }
+
+  function billingAddress() {
+    const same = form.querySelector('[data-card-billing-same]')?.checked !== false;
+    return {
+      addressLine1: fieldValue(same ? 'shipping_address_line1' : 'card_billing_address_line1'),
+      addressLine2: fieldValue(same ? 'shipping_address_line2' : 'card_billing_address_line2'),
+      adminArea2: fieldValue(same ? 'shipping_city' : 'card_billing_city'),
+      postalCode: fieldValue(same ? 'shipping_postcode' : 'card_billing_postcode'),
+      countryCode: fieldValue(same ? 'shipping_country' : 'card_billing_country'),
+    };
+  }
+
+  if (!placeUrl || typeof paypal === 'undefined' || typeof paypal.CardFields !== 'function') {
+    setError('Secure card fields could not be loaded. You can continue to the secure card step.');
+    return;
+  }
+
+  const fieldStyle = {
+    input: {
+      'font-family': 'Source Sans 3, Arial, sans-serif',
+      'font-size': '16px',
+      color: '#282522',
+      padding: '15px 12px',
+      border: '1px solid #c9c4bc',
+      'border-radius': '10px',
+      'background-color': '#ffffff',
+      height: '52px',
+      'box-sizing': 'border-box',
+      margin: '0',
+    },
+    ':focus': {
+      color: '#282522',
+      'border-color': '#a67c3d',
+      'box-shadow': '0 0 0 3px rgba(166, 124, 61, 0.15)',
+    },
+  };
+  const cardFields = paypal.CardFields({
+    createOrder: createCheckoutOrder,
+    onApprove: function () {
+      return confirmCheckoutOrder().catch(function (error) {
+        setError(error.message || 'Card payment could not be confirmed.');
+        setBusy(false);
+        throw error;
+      });
+    },
+    onError: function (error) {
+      setError((error && error.message) || 'Check your card details and try again.');
+      setBusy(false);
+    },
+  });
+
+  if (!cardFields.isEligible()) {
+    setError('Card fields are unavailable for this PayPal account or browser. You can continue to the secure card step.');
+    return;
+  }
+
+  cardFields.NumberField({ style: fieldStyle, placeholder: 'Card number' }).render('#checkout-card-number');
+  cardFields.ExpiryField({ style: fieldStyle, placeholder: 'Expiration date (MM / YY)' }).render('#checkout-card-expiry');
+  cardFields.CVVField({ style: fieldStyle, placeholder: 'Security code' }).render('#checkout-card-cvv');
+  cardFields.NameField({ style: fieldStyle, placeholder: 'Name on card' }).render('#checkout-card-name');
+
+  form.addEventListener('submit', function (event) {
+    const selected = form.querySelector('[data-payment-method-radio]:checked');
+    if (!selected || selected.value !== 'card') {
+      return;
+    }
+    event.preventDefault();
+    const panel = form.querySelector('.payment-method-item--paypal-card [data-payment-method-panel]');
+    const toggle = form.querySelector('[data-card-payment-toggle]');
+    if (panel && panel.hidden) {
+      panel.hidden = false;
+      toggle?.setAttribute('aria-expanded', 'true');
+      setError('Enter your card details before continuing.');
+      setBusy(false);
+      return;
+    }
+    setError('');
+    setBusy(true);
+    cardFields.submit({ billingAddress: billingAddress() }).catch(function (error) {
+      setError((error && error.message) || 'Check your card details and try again.');
+      setBusy(false);
+    });
   });
 }
 

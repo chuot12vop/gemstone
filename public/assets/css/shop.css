@@ -343,7 +343,6 @@ body.site-nav-open {
   display: inline-flex;
   align-items: center;
   justify-content: space-between;
-  height: 1.65rem;
   border: 0;
   border-radius: 999px;
   background: transparent;
@@ -8394,6 +8393,84 @@ body.checkout-loading-open {
 }
 .card-billing__choice span {
   flex: 0 1 auto;
+}
+
+/* Secure card fields embedded directly in checkout. */
+.payment-methods--missoma .payment-method-item--paypal-card.is-selected {
+  border-color: var(--gold-deep);
+  box-shadow: 0 0 0 1px var(--gold-deep);
+  background: #fff;
+}
+.payment-methods--missoma .payment-method-item--paypal-card.is-selected > .payment-card {
+  background: #fff;
+  border-bottom: 1px solid var(--border);
+}
+.checkout-card-panel {
+  display: grid;
+  gap: 0.65rem;
+  padding: 0.9rem 0.9rem 1rem;
+  background: #fff;
+}
+.checkout-card-fields {
+  display: grid;
+  gap: 0.65rem;
+}
+.checkout-card-fields__row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+.checkout-card-fields__field {
+  min-width: 0;
+  height: 4.25rem;
+  min-height: 4.25rem;
+  padding: 0;
+  overflow: visible;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  box-sizing: border-box;
+}
+.checkout-card-fields__field iframe {
+  width: 100% !important;
+  height: 4.25rem !important;
+}
+.checkout-card-fields__message {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+.checkout-card-fields__message--error {
+  color: #9b2c2c;
+}
+.checkout-card-fields__message[hidden] {
+  display: none !important;
+}
+.checkout-card-panel .card-billing {
+  gap: 0.7rem;
+  margin-top: 0;
+}
+.card-billing__same {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  color: var(--ink);
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+.card-billing__same input {
+  width: 1.15rem;
+  height: 1.15rem;
+  margin: 0;
+  accent-color: var(--gold-deep);
+}
+.checkout-card-panel .card-billing__fields {
+  padding-top: 0.25rem;
+}
+@media (max-width: 479px) {
+  .checkout-card-fields__row {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* Account navigation buttons */

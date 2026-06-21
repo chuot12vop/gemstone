@@ -4,26 +4,12 @@
 @endphp
 
 <section class="card-billing" data-card-checkout-fields aria-labelledby="card-billing-title">
-    <h3 id="card-billing-title" class="card-billing__title">Billing address</h3>
+    <h3 id="card-billing-title" class="sr-only">Billing address</h3>
 
-    <div class="card-billing__choices" role="radiogroup" aria-label="Billing address">
-        <label class="card-billing__choice">
-            <input type="radio"
-                   name="card_billing_choice"
-                   value="same"
-                   @checked($billingSame)
-                   data-card-billing-radio>
-            <span>Same as shipping address</span>
-        </label>
-        <label class="card-billing__choice">
-            <input type="radio"
-                   name="card_billing_choice"
-                   value="different"
-                   @checked(! $billingSame)
-                   data-card-billing-radio>
-            <span>Use a different billing address</span>
-        </label>
-    </div>
+    <label class="card-billing__same">
+        <input type="checkbox" value="1" @checked($billingSame) data-card-billing-same>
+        <span>Use shipping address as billing address</span>
+    </label>
 
     <input type="hidden"
            name="card_billing_same_as_shipping"

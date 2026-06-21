@@ -57,6 +57,11 @@ class CardGateway extends AbstractPaymentGateway
         return 'shop.checkout.gateways.card-processing';
     }
 
+    public function checkoutClient(): ?PayPalApiClient
+    {
+        return $this->apiClient();
+    }
+
     public function initiate(Order $order, Request $request): PaymentInitiationResult
     {
         $client = $this->apiClient();

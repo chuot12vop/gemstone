@@ -24,6 +24,7 @@ class CardPaymentGatewayTest extends TestCase
     {
         $this->enablePayments();
         $this->addProductToCart();
+        $this->fakeInitiation('PAYPAL-CHECKOUT-FIELDS');
 
         $this->get(route('shop.checkout'))
             ->assertOk()
@@ -35,7 +36,10 @@ class CardPaymentGatewayTest extends TestCase
             ->assertSee('PayPal')
             ->assertSee('Apple Pay')
             ->assertSee('id="express-applepay-button"', false)
-            ->assertSee('components=buttons%2Cgooglepay%2Capplepay', false)
+            ->assertSee('components=buttons%2Cgooglepay%2Capplepay%2Ccard-fields', false)
+            ->assertSee('data-checkout-card-fields', false)
+            ->assertSee('id="checkout-card-number"', false)
+            ->assertSee('data-client-token="client-token-test"', false)
             ->assertDontSee('enable-funding', false)
             ->assertSee('assets/img/payments/raster/visa.png')
             ->assertDontSee('Stripe');
@@ -46,6 +50,7 @@ class CardPaymentGatewayTest extends TestCase
         $this->enablePayments();
         Setting::query()->where('key', 'payment_apple_pay_enabled')->update(['value' => '0']);
         $this->addProductToCart();
+        $this->fakeInitiation('PAYPAL-CHECKOUT-FIELDS');
 
         $this->get(route('shop.checkout'))
             ->assertOk()
@@ -53,6 +58,20 @@ class CardPaymentGatewayTest extends TestCase
             ->assertSee('components=buttons%2Cgooglepay', false)
             ->assertDontSee('enable-funding', false)
             ->assertDontSee('%2Capplepay', false);
+    }
+
+    public function test_card_checkout_can_create_an_order_for_embedded_card_fields(): void
+    {
+        $this->enablePayments();
+        $this->addProductToCart();
+        $this->fakeInitiation('PAYPAL-EMBEDDED-CARD-1');
+
+        $this->postJson(route('shop.checkout.place'), $this->checkoutPayload('card'))
+            ->assertOk()
+            ->assertJsonPath('paypal_order_id', 'PAYPAL-EMBEDDED-CARD-1')
+            ->assertJsonStructure(['order_number', 'confirm_url']);
+
+        $this->assertSame('PAYPAL-EMBEDDED-CARD-1', PaymentTransaction::query()->firstOrFail()->gateway_transaction_id);
     }
 
     public function test_express_apple_pay_creates_an_apple_pay_transaction(): void
