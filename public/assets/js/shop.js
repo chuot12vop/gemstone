@@ -1910,28 +1910,69 @@ function initCheckoutWalletPanels() {
     return globalThis.isSecureContext === true || host === 'localhost' || host === '127.0.0.1';
   }
 
-  function applePayReadinessError() {
+  function paypalSdkComponents(panel) {
+    const sdkUrl = panel.getAttribute('data-paypal-sdk') || '';
+    try {
+      const url = new URL(sdkUrl, globalThis.location ? globalThis.location.href : undefined);
+      return url.searchParams.get('components') || 'unknown';
+    } catch (error) {
+      console.error('Could not parse PayPal SDK URL', error);
+      return sdkUrl ? 'unreadable' : 'missing';
+    }
+  }
+
+  function applePayDiagnosticDetails(panel, extra) {
+    const supportsVersion4 = typeof ApplePaySession !== 'undefined' && typeof ApplePaySession.supportsVersion === 'function'
+      ? (ApplePaySession.supportsVersion(4) ? 'yes' : 'no')
+      : 'unknown';
+    const details = [
+      'protocol=' + (globalThis.location ? globalThis.location.protocol : 'unknown'),
+      'secureContext=' + (globalThis.isSecureContext === true ? 'yes' : 'no'),
+      'ApplePaySession=' + (typeof ApplePaySession !== 'undefined' ? 'yes' : 'no'),
+      'supportsVersion4=' + supportsVersion4,
+      'paypalSdk=' + (typeof paypal !== 'undefined' ? 'yes' : 'no'),
+      'paypalApplepay=' + (typeof paypal !== 'undefined' && typeof paypal.Applepay === 'function' ? 'yes' : 'no'),
+      'sdkComponents=' + paypalSdkComponents(panel),
+    ];
+    if (extra) {
+      details.push(extra);
+    }
+
+    return ' Apple Pay SDK details: ' + details.join(', ') + '.';
+  }
+
+  function applePayReadinessError(panel) {
     if (!isSecureApplePayContext()) {
-      return 'Apple Pay requires HTTPS on iPhone. Open checkout on a secure HTTPS domain/tunnel, not an http:// LAN URL.';
+      return 'Apple Pay requires HTTPS on iPhone. Open checkout on a secure HTTPS domain/tunnel, not an http:// LAN URL.'
+        + applePayDiagnosticDetails(panel);
     }
     if (typeof ApplePaySession === 'undefined') {
-      return 'Apple Pay is only available in supported Safari/iOS browsers. Open checkout in Safari on an Apple Pay-capable device.';
+      return 'Apple Pay is only available in supported Safari/iOS browsers. Open checkout in Safari on an Apple Pay-capable device.'
+        + applePayDiagnosticDetails(panel);
     }
     if (typeof ApplePaySession.supportsVersion === 'function' && !ApplePaySession.supportsVersion(4)) {
-      return 'This iOS/Safari version is too old for this Apple Pay checkout. Update iOS/Safari or choose Card/PayPal.';
+      return 'This iOS/Safari version is too old for this Apple Pay checkout. Update iOS/Safari or choose Card/PayPal.'
+        + applePayDiagnosticDetails(panel);
     }
     if (typeof paypal === 'undefined') {
-      return 'PayPal SDK is not loaded. Check PayPal Client ID, SDK URL, network connection, or ad blocker.';
+      return 'PayPal SDK is not loaded. Check PayPal Client ID, SDK URL, network connection, or ad blocker.'
+        + applePayDiagnosticDetails(panel);
     }
     if (typeof paypal.Applepay !== 'function') {
-      return 'PayPal Apple Pay component is missing. Check that the PayPal SDK URL includes components=applepay.';
+      return 'PayPal Apple Pay component is missing. Check that the PayPal SDK URL includes components=applepay.'
+        + applePayDiagnosticDetails(panel);
     }
 
     return '';
   }
 
-  function applePayEligibilityMessage() {
-    return 'PayPal says Apple Pay is not eligible. Check PayPal Apple Pay setup, sandbox/live credentials, HTTPS domain, Safari, and that a supported card is added to Apple Wallet.';
+  function applePayEligibilityMessage(panel, config) {
+    const extra = config
+      ? 'isEligible=' + (config.isEligible ? 'yes' : 'no')
+        + ', supportedNetworks=' + (Array.isArray(config.supportedNetworks) ? config.supportedNetworks.join('|') : 'unknown')
+      : 'isEligible=no';
+    return 'PayPal says Apple Pay is not eligible. Check PayPal Apple Pay setup, sandbox/live credentials, HTTPS domain, Safari, and that a supported card is added to Apple Wallet.'
+      + applePayDiagnosticDetails(panel, extra);
   }
 
   function postPlace(method, panel) {
@@ -2065,7 +2106,7 @@ function initCheckoutWalletPanels() {
     setMessage(panel, 'Checking Apple Pay availability...');
     loadCheckoutPayPalSdk(sdkUrl)
       .then(function () {
-        const readinessError = applePayReadinessError();
+        const readinessError = applePayReadinessError(panel);
         if (readinessError) {
           throw new Error(readinessError);
         }
@@ -2073,7 +2114,7 @@ function initCheckoutWalletPanels() {
         const applepay = paypal.Applepay();
         return applepay.config().then(function (config) {
           if (!config.isEligible) {
-            throw new Error(applePayEligibilityMessage());
+            throw new Error(applePayEligibilityMessage(panel, config));
           }
 
           const button = document.createElement('apple-pay-button');
