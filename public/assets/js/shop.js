@@ -1901,12 +1901,33 @@ function initCheckoutWalletPanels() {
     panel.dataset.walletUnavailableMessage = message || '';
   }
 
-  function applePayUnavailableMessage(message) {
-    if (globalThis.location && globalThis.location.protocol !== 'https:' && globalThis.location.hostname !== 'localhost') {
-      return 'Apple Pay requires HTTPS on iPhone. Use a secure HTTPS URL, or choose Card/PayPal.';
+  function isSecureApplePayContext() {
+    const host = globalThis.location ? globalThis.location.hostname : '';
+    return globalThis.isSecureContext === true || host === 'localhost' || host === '127.0.0.1';
+  }
+
+  function applePayReadinessError() {
+    if (!isSecureApplePayContext()) {
+      return 'Apple Pay requires HTTPS on iPhone. Open checkout on a secure HTTPS domain/tunnel, not an http:// LAN URL.';
+    }
+    if (typeof ApplePaySession === 'undefined') {
+      return 'Apple Pay is only available in supported Safari/iOS browsers. Open checkout in Safari on an Apple Pay-capable device.';
+    }
+    if (typeof ApplePaySession.supportsVersion === 'function' && !ApplePaySession.supportsVersion(4)) {
+      return 'This iOS/Safari version is too old for this Apple Pay checkout. Update iOS/Safari or choose Card/PayPal.';
+    }
+    if (typeof paypal === 'undefined') {
+      return 'PayPal SDK is not loaded. Check PayPal Client ID, SDK URL, network connection, or ad blocker.';
+    }
+    if (typeof paypal.Applepay !== 'function') {
+      return 'PayPal Apple Pay component is missing. Check that the PayPal SDK URL includes components=applepay.';
     }
 
-    return message || 'Apple Pay is not available yet. Add a card to Apple Wallet, use Safari, or choose Card/PayPal.';
+    return '';
+  }
+
+  function applePayEligibilityMessage() {
+    return 'PayPal says Apple Pay is not eligible. Check PayPal Apple Pay setup, sandbox/live credentials, HTTPS domain, Safari, and that a supported card is added to Apple Wallet.';
   }
 
   function postPlace(method, panel) {
@@ -2035,18 +2056,15 @@ function initCheckoutWalletPanels() {
 
     loadCheckoutPayPalSdk(sdkUrl)
       .then(function () {
-        if (typeof paypal === 'undefined' || typeof paypal.Applepay !== 'function' || typeof ApplePaySession === 'undefined') {
-          throw new Error(applePayUnavailableMessage('Apple Pay is not available on this browser or device.'));
-        }
-
-        if (typeof ApplePaySession.supportsVersion === 'function' && !ApplePaySession.supportsVersion(4)) {
-          throw new Error('This Safari version is too old for this Apple Pay checkout. Please update iOS or choose Card/PayPal.');
+        const readinessError = applePayReadinessError();
+        if (readinessError) {
+          throw new Error(readinessError);
         }
 
         const applepay = paypal.Applepay();
         return applepay.config().then(function (config) {
           if (!config.isEligible) {
-            throw new Error(applePayUnavailableMessage('Apple Pay is not available for this PayPal account, browser, device, or Wallet setup.'));
+            throw new Error(applePayEligibilityMessage());
           }
 
           const button = document.createElement('apple-pay-button');
@@ -2130,7 +2148,7 @@ function initCheckoutWalletPanels() {
       })
       .catch(function (error) {
         console.error(error);
-        const message = applePayUnavailableMessage(error.message || 'Apple Pay could not be loaded. Please choose another payment method.');
+        const message = error.message || 'Apple Pay could not be loaded. Please choose Card/PayPal.';
         markWalletReady(panel, false, message);
         setMessage(panel, message);
       });
