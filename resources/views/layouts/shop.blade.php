@@ -71,9 +71,8 @@
             <div class="site-header__actions">
                 <a class="header-icon-link cart-link cart-link--icon" href="{{ route('shop.cart') }}" aria-label="Cart ({{ $cartCount }} items)">
                     <svg class="header-icon-link__svg cart-link__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                        <path d="M3 4h2l2.2 10.2a2 2 0 0 0 2 1.6h8.7a2 2 0 0 0 1.9-1.4l1.7-5.6a1 1 0 0 0-.9-1.3H8.2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-                        <circle cx="10" cy="19" r="1.6" fill="currentColor"/>
-                        <circle cx="18" cy="19" r="1.6" fill="currentColor"/>
+                        <path d="M7.25 8.75h9.5a2 2 0 0 1 1.99 1.82l.58 6.4a2.75 2.75 0 0 1-2.74 3H7.42a2.75 2.75 0 0 1-2.74-3l.58-6.4a2 2 0 0 1 1.99-1.82Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+                        <path d="M8.75 11.5V7.75a3.25 3.25 0 0 1 6.5 0v3.75" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
                     </svg>
                     <span class="cart-link__count" data-header-cart-count aria-hidden="true">{{ $cartCount }}</span>
                 </a>

@@ -50,6 +50,7 @@ let pcDrawerOpenEl = null;
   initPaymentLogoPopover();
   initCardBillingFields();
   initCheckoutCardFields();
+  initCheckoutWalletPanels();
   initCheckoutExpress();
   initWelcomePopup();
   initFooterNewsletter();
@@ -65,6 +66,54 @@ function startCheckoutLoading(message) {
 
 function stopCheckoutLoading() {
   document.dispatchEvent(new CustomEvent('checkout:loading-end'));
+}
+
+function checkoutCsrfToken() {
+  return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')
+    || document.querySelector('input[name="_token"]')?.value
+    || '';
+}
+
+function firstCheckoutJsonError(data, fallback) {
+  if (data && data.errors) {
+    const groups = Object.values(data.errors);
+    if (groups.length && groups[0] && groups[0][0]) {
+      return groups[0][0];
+    }
+  }
+  return (data && data.message) || fallback;
+}
+
+function loadCheckoutPayPalSdk(url) {
+  if (typeof paypal !== 'undefined') {
+    return Promise.resolve();
+  }
+  if (!url) {
+    return Promise.reject(new Error('PayPal SDK URL missing'));
+  }
+
+  const existing = document.querySelector('script[data-paypal-sdk-express], script[src*="paypal.com/sdk/js"]');
+  if (existing) {
+    return new Promise(function (resolve, reject) {
+      if (typeof paypal !== 'undefined') {
+        resolve();
+        return;
+      }
+      existing.addEventListener('load', function () { resolve(); }, { once: true });
+      existing.addEventListener('error', function () { reject(new Error('PayPal SDK failed to load')); }, { once: true });
+    });
+  }
+
+  return new Promise(function (resolve, reject) {
+    const script = document.createElement('script');
+    script.src = url;
+    script.async = true;
+    script.dataset.paypalSdkExpress = '1';
+    script.dataset.sdkIntegrationSource = 'checkout-inline-wallets';
+    script.onload = function () { resolve(); };
+    script.onerror = function () { reject(new Error('PayPal SDK failed to load')); };
+    document.head.appendChild(script);
+  });
 }
 
 function initCheckoutLoading() {
@@ -1526,8 +1575,8 @@ function initCheckoutGatewayFields() {
       const selected = radio && radio.value === code;
       item.classList.toggle('is-selected', !!selected);
       const panel = item.querySelector('[data-payment-method-panel]');
-      if (panel && !selected) {
-        panel.hidden = true;
+      if (panel) {
+        panel.hidden = !selected;
       }
     });
     if (moreItem && morePanel && moreToggle) {
@@ -1587,11 +1636,9 @@ function initCheckoutGatewayFields() {
         if (!cardRadio || !cardRadio.checked) {
           return;
         }
-        if (cardPanel.hidden) {
-          setMoreOpen(false);
-        }
-        cardPanel.hidden = !cardPanel.hidden;
-        cardToggle.setAttribute('aria-expanded', cardPanel.hidden ? 'false' : 'true');
+        setMoreOpen(false);
+        cardPanel.hidden = false;
+        cardToggle.setAttribute('aria-expanded', 'true');
       }, 0);
     });
   }
@@ -1791,6 +1838,305 @@ function initCheckoutCardFields() {
       setError((error && error.message) || 'Check your card details and try again.');
       setBusy(false);
     });
+  });
+}
+
+function initCheckoutWalletPanels() {
+  const form = document.querySelector('[data-checkout-delivery]');
+  const panels = document.querySelectorAll('[data-checkout-wallet-panel]');
+  if (!form || !panels.length) {
+    return;
+  }
+
+  const submitBtn = form.querySelector('.btn--checkout-pay');
+  const csrf = checkoutCsrfToken();
+
+  function selectedWalletMethod() {
+    const selected = form.querySelector('[data-payment-method-radio]:checked');
+    const code = selected ? selected.value : '';
+    return code === 'paypal' || code === 'apple_pay' ? code : '';
+  }
+
+  function panelFor(method) {
+    return form.querySelector('[data-checkout-wallet-panel="' + method + '"]');
+  }
+
+  function setBusy(busy, message) {
+    if (submitBtn) {
+      submitBtn.disabled = busy;
+      submitBtn.textContent = busy ? 'Processing...' : 'Pay now';
+      if (!busy) {
+        submitBtn.removeAttribute('data-checkout-disabled-by-loading');
+      }
+    }
+    if (busy) {
+      startCheckoutLoading(message || 'Starting secure checkout...');
+    } else {
+      delete form.dataset.checkoutSubmitting;
+      stopCheckoutLoading();
+    }
+  }
+
+  function messageEl(panel) {
+    let el = panel.querySelector('[data-checkout-wallet-error]');
+    if (!el) {
+      el = document.createElement('p');
+      el.className = 'checkout-wallet-panel__message checkout-wallet-panel__message--error';
+      el.dataset.checkoutWalletError = '1';
+      el.hidden = true;
+      panel.appendChild(el);
+    }
+    return el;
+  }
+
+  function setMessage(panel, message) {
+    if (!panel) return;
+    const el = messageEl(panel);
+    el.textContent = message || '';
+    el.hidden = !message;
+  }
+
+  function postPlace(method, panel) {
+    const placeUrl = panel.getAttribute('data-wallet-place-url');
+    const payload = new FormData(form);
+    payload.set('payment_method', method);
+
+    return fetch(placeUrl, {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+      },
+      body: payload,
+    }).then(function (response) {
+      return response.json().then(function (data) {
+        if (!response.ok || !data.paypal_order_id || !data.confirm_url) {
+          throw new Error(firstCheckoutJsonError(data, 'Could not start secure checkout.'));
+        }
+        return data;
+      });
+    });
+  }
+
+  function postConfirm(confirmUrl, paypalOrderId, fallback) {
+    return fetch(confirmUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+        'X-CSRF-TOKEN': csrf,
+        'X-Requested-With': 'XMLHttpRequest',
+      },
+      body: JSON.stringify({ paypal_order_id: paypalOrderId }),
+    }).then(function (response) {
+      return response.json().then(function (data) {
+        if (response.ok && data.redirect) {
+          window.location.href = data.redirect;
+          return;
+        }
+        throw new Error(firstCheckoutJsonError(data, fallback || 'Payment could not be confirmed.'));
+      });
+    });
+  }
+
+  function mountPayPalPanel(panel) {
+    const mount = panel.querySelector('#checkout-paypal-button');
+    const sdkUrl = panel.getAttribute('data-paypal-sdk');
+    if (!mount || mount.dataset.walletMounted === '1') {
+      return;
+    }
+
+    loadCheckoutPayPalSdk(sdkUrl)
+      .then(function () {
+        if (typeof paypal === 'undefined' || typeof paypal.Buttons !== 'function') {
+          throw new Error('PayPal is unavailable in this browser.');
+        }
+
+        let checkoutOrder = null;
+        return paypal.Buttons({
+          fundingSource: paypal.FUNDING && paypal.FUNDING.PAYPAL,
+          style: {
+            layout: 'vertical',
+            color: 'gold',
+            shape: 'rect',
+            label: 'paypal',
+            height: 48,
+            tagline: false,
+          },
+          createOrder: function () {
+            setMessage(panel, '');
+            setBusy(true, 'Starting PayPal checkout...');
+            return postPlace('paypal', panel)
+              .then(function (data) {
+                checkoutOrder = data;
+                setBusy(false);
+                return data.paypal_order_id;
+              })
+              .catch(function (error) {
+                setBusy(false);
+                setMessage(panel, error.message || 'Could not start PayPal checkout.');
+                throw error;
+              });
+          },
+          onApprove: function (data) {
+            if (!checkoutOrder || !checkoutOrder.confirm_url) {
+              const expired = 'Checkout session expired. Please try PayPal again.';
+              setMessage(panel, expired);
+              return Promise.reject(new Error(expired));
+            }
+            setBusy(true, 'Confirming your PayPal payment...');
+            return postConfirm(checkoutOrder.confirm_url, data.orderID, 'PayPal payment could not be confirmed.')
+              .catch(function (error) {
+                setBusy(false);
+                setMessage(panel, error.message || 'PayPal payment could not be confirmed.');
+                throw error;
+              });
+          },
+          onCancel: function () {
+            setBusy(false);
+          },
+          onError: function (error) {
+            console.error('PayPal inline checkout error', error);
+            setBusy(false);
+            setMessage(panel, 'PayPal reported an error. Please try again or choose another payment method.');
+          },
+        }).render(mount).then(function () {
+          mount.dataset.walletMounted = '1';
+        });
+      })
+      .catch(function (error) {
+        console.error(error);
+        setMessage(panel, error.message || 'PayPal could not be loaded. Check your connection or ad blocker.');
+      });
+  }
+
+  function mountApplePayPanel(panel) {
+    const mount = panel.querySelector('#checkout-applepay-button');
+    const sdkUrl = panel.getAttribute('data-paypal-sdk');
+    if (!mount || mount.dataset.walletMounted === '1') {
+      return;
+    }
+
+    loadCheckoutPayPalSdk(sdkUrl)
+      .then(function () {
+        if (typeof paypal === 'undefined' || typeof paypal.Applepay !== 'function' || typeof ApplePaySession === 'undefined') {
+          throw new Error('Apple Pay is not available on this browser or device.');
+        }
+
+        const applepay = paypal.Applepay();
+        return applepay.config().then(function (config) {
+          if (!config.isEligible) {
+            throw new Error('Apple Pay is not available for this PayPal account, browser, or device.');
+          }
+
+          const button = document.createElement('apple-pay-button');
+          button.setAttribute('buttonstyle', 'black');
+          button.setAttribute('type', 'buy');
+          button.setAttribute('locale', 'en-US');
+          mount.appendChild(button);
+          mount.dataset.walletMounted = '1';
+
+          button.addEventListener('click', function () {
+            setMessage(panel, '');
+            const displayName = document.title || 'Store';
+            let checkoutOrder = null;
+            const session = new ApplePaySession(4, {
+              countryCode: panel.getAttribute('data-apple-pay-country'),
+              currencyCode: panel.getAttribute('data-apple-pay-currency'),
+              merchantCapabilities: config.merchantCapabilities,
+              supportedNetworks: config.supportedNetworks,
+              requiredBillingContactFields: ['name', 'postalAddress'],
+              total: {
+                label: displayName,
+                amount: panel.getAttribute('data-apple-pay-amount'),
+                type: 'final',
+              },
+            });
+
+            const initPromise = postPlace('apple_pay', panel)
+              .then(function (data) {
+                checkoutOrder = data;
+                return data;
+              })
+              .catch(function (error) {
+                session.abort();
+                setBusy(false);
+                setMessage(panel, error.message || 'Could not start Apple Pay.');
+                return null;
+              });
+
+            session.onvalidatemerchant = function (event) {
+              applepay.validateMerchant({ validationUrl: event.validationURL, displayName: displayName })
+                .then(function (merchantSession) {
+                  session.completeMerchantValidation(merchantSession.merchantSession);
+                })
+                .catch(function () {
+                  session.abort();
+                  setMessage(panel, 'Apple Pay merchant validation failed. Please try another payment method.');
+                });
+            };
+
+            session.onpaymentauthorized = function (event) {
+              setBusy(true, 'Confirming your Apple Pay payment...');
+              initPromise
+                .then(function (data) {
+                  if (!data) {
+                    throw new Error('Could not start Apple Pay.');
+                  }
+                  return applepay.confirmOrder({
+                    orderId: data.paypal_order_id,
+                    token: event.payment.token,
+                    billingContact: event.payment.billingContact,
+                  });
+                })
+                .then(function () {
+                  session.completePayment(ApplePaySession.STATUS_SUCCESS);
+                  return postConfirm(checkoutOrder.confirm_url, checkoutOrder.paypal_order_id, 'Apple Pay could not be confirmed.');
+                })
+                .catch(function (error) {
+                  setBusy(false);
+                  session.completePayment(ApplePaySession.STATUS_FAILURE);
+                  setMessage(panel, error.message || 'Apple Pay could not be completed.');
+                });
+            };
+
+            session.oncancel = function () {
+              setBusy(false);
+            };
+            session.begin();
+          });
+        });
+      })
+      .catch(function (error) {
+        console.error(error);
+        setMessage(panel, error.message || 'Apple Pay could not be loaded. Please choose another payment method.');
+      });
+  }
+
+  panels.forEach(function (panel) {
+    const method = panel.getAttribute('data-checkout-wallet-panel');
+    if (method === 'paypal') {
+      mountPayPalPanel(panel);
+    } else if (method === 'apple_pay') {
+      mountApplePayPanel(panel);
+    }
+  });
+
+  form.addEventListener('submit', function (event) {
+    const method = selectedWalletMethod();
+    if (!method) {
+      return;
+    }
+
+    event.preventDefault();
+    const panel = panelFor(method);
+    if (panel) {
+      panel.hidden = false;
+      setMessage(panel, method === 'paypal'
+        ? 'Use the PayPal button above to complete payment securely.'
+        : 'Use the Apple Pay button above to complete payment securely.');
+    }
+    setBusy(false);
   });
 }
 

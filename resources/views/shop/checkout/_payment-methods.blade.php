@@ -13,6 +13,7 @@
     $morePaymentLogos = collect($paymentLogos ?? [])
         ->filter(fn ($logo) => !empty($logo['src']))
         ->values();
+    $inlineWalletCheckout = $expressCheckout['paypal'] ?? null;
     $rasterBase = 'assets/img/payments/raster/';
     $rasterLogos = [
         'visa' => ['file' => 'visa.png', 'label' => 'Visa'],
@@ -121,27 +122,50 @@
                 <div id="payment-more-panel" class="payment-more-panel" data-payment-more-panel @if(! $moreExpanded) hidden @endif>
                     @foreach($moreMethods as $method)
                         @php($adminLogo = \App\Support\PaymentMethodLogos::forGateway($method->code(), $method->label()))
-                        <label class="payment-more-option" data-payment-method-item>
-                            <input type="radio"
-                                   name="payment_method"
-                                   value="{{ $method->code() }}"
-                                   @checked($selectedCode === $method->code())
-                                   required
-                                   data-payment-method-radio>
-                            <span class="payment-card__check" aria-hidden="true"></span>
-                            <span class="payment-more-option__label">{{ $method->label() }}</span>
-                            @if($adminLogo)
-                                <img class="payment-more-option__logo"
-                                     src="{{ $adminLogo['src'] }}"
-                                     alt="{{ $adminLogo['label'] }}"
-                                     width="70"
-                                     height="34"
-                                     loading="lazy"
-                                     decoding="async">
-                            @else
-                                <span class="payment-more-option__text-logo">{{ $method->label() }}</span>
+                        @php($inlineWallet = in_array($method->code(), ['paypal', 'apple_pay'], true) && !empty($inlineWalletCheckout))
+                        <div class="payment-more-option-wrap" data-payment-method-item>
+                            <label class="payment-more-option">
+                                <input type="radio"
+                                       name="payment_method"
+                                       value="{{ $method->code() }}"
+                                       @checked($selectedCode === $method->code())
+                                       required
+                                       data-payment-method-radio>
+                                <span class="payment-card__check" aria-hidden="true"></span>
+                                <span class="payment-more-option__label">{{ $method->label() }}</span>
+                                @if($adminLogo)
+                                    <img class="payment-more-option__logo"
+                                         src="{{ $adminLogo['src'] }}"
+                                         alt="{{ $adminLogo['label'] }}"
+                                         width="70"
+                                         height="34"
+                                         loading="lazy"
+                                         decoding="async">
+                                @else
+                                    <span class="payment-more-option__text-logo">{{ $method->label() }}</span>
+                                @endif
+                            </label>
+                            @if($inlineWallet)
+                                <div class="payment-method-item__panel checkout-wallet-panel"
+                                     data-payment-method-panel
+                                     data-checkout-wallet-panel="{{ $method->code() }}"
+                                     data-wallet-place-url="{{ route('shop.checkout.place') }}"
+                                     data-paypal-sdk="{{ $inlineWalletCheckout['sdkUrl'] }}"
+                                     data-apple-pay-amount="{{ $inlineWalletCheckout['amount'] }}"
+                                     data-apple-pay-currency="{{ $inlineWalletCheckout['currency'] }}"
+                                     data-apple-pay-country="{{ $inlineWalletCheckout['country'] }}"
+                                     @if($selectedCode !== $method->code()) hidden @endif>
+                                    @if($method->code() === 'paypal')
+                                        <p class="checkout-wallet-panel__hint">Continue securely with PayPal. You can use your PayPal balance or eligible saved cards.</p>
+                                        <div id="checkout-paypal-button" class="checkout-wallet-panel__mount checkout-wallet-panel__mount--paypal" aria-label="PayPal"></div>
+                                    @elseif($method->code() === 'apple_pay')
+                                        <p class="checkout-wallet-panel__hint">Use Apple Pay on supported Apple devices and browsers.</p>
+                                        <div id="checkout-applepay-button" class="checkout-wallet-panel__mount checkout-wallet-panel__mount--applepay" aria-label="Apple Pay"></div>
+                                        <p class="checkout-wallet-panel__message checkout-wallet-panel__message--error" data-checkout-wallet-error hidden></p>
+                                    @endif
+                                </div>
                             @endif
-                        </label>
+                        </div>
                     @endforeach
                 </div>
             </div>

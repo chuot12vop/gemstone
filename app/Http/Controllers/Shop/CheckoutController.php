@@ -343,6 +343,10 @@ class CheckoutController extends Controller
         $code = (string) $request->input('payment_method', '');
         $gateway = $this->registry->findEnabled($code);
         if ($gateway === null) {
+            if ($request->expectsJson()) {
+                return response()->json(['message' => 'Please choose a valid payment method.'], 422);
+            }
+
             return redirect()->route('shop.checkout')
                 ->withInput()
                 ->withErrors(['payment_method' => 'Please choose a valid payment method.']);
@@ -382,6 +386,10 @@ class CheckoutController extends Controller
 
         $lines = $this->buildLines();
         if ($lines === []) {
+            if ($request->expectsJson()) {
+                return response()->json(['message' => self::ERR_EMPTY_CART], 422);
+            }
+
             return redirect()->route('shop.cart')->with('error', self::ERR_EMPTY_CART);
         }
 
@@ -393,6 +401,13 @@ class CheckoutController extends Controller
             (string) $validated['customer_email'],
         );
         if ($voucher === false) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => 'This voucher code is invalid, already used, or does not match your email.',
+                    'errors' => ['voucher_code' => ['This voucher code is invalid, already used, or does not match your email.']],
+                ], 422);
+            }
+
             return redirect()->route('shop.checkout')
                 ->withInput()
                 ->withErrors(['voucher_code' => 'This voucher code is invalid, already used, or does not match your email.']);
@@ -479,6 +494,10 @@ class CheckoutController extends Controller
             ]);
             $this->rollbackFailedCheckout($order, $voucher instanceof Voucher ? $voucher : null);
 
+            if ($request->expectsJson()) {
+                return response()->json(['message' => self::ERR_GATEWAY_UNAVAILABLE], 422);
+            }
+
             return redirect()->route('shop.checkout')
                 ->withInput()
                 ->with('error', self::ERR_GATEWAY_UNAVAILABLE);
@@ -487,6 +506,10 @@ class CheckoutController extends Controller
         if (! $this->isInitiationSuccessful($result)) {
             $message = (string) ($result->viewData['error'] ?? self::ERR_GATEWAY_UNAVAILABLE);
             $this->rollbackFailedCheckout($order, $voucher instanceof Voucher ? $voucher : null);
+
+            if ($request->expectsJson()) {
+                return response()->json(['message' => $message], 422);
+            }
 
             return redirect()->route('shop.checkout')
                 ->withInput()
@@ -507,11 +530,25 @@ class CheckoutController extends Controller
 
         $this->orderMail->sendPlaced($order->fresh(['items']));
 
-        if ($request->expectsJson() && $gateway instanceof CardGateway) {
+        if ($request->expectsJson() && (
+            $gateway instanceof CardGateway
+            || $gateway instanceof PayPalGateway
+            || $gateway instanceof ApplePayGateway
+        )) {
+            $paypalOrderId = (string) ($result->viewData['paypalOrderId'] ?? '');
+            if ($paypalOrderId === '') {
+                return response()->json([
+                    'message' => $result->viewData['error'] ?? self::ERR_GATEWAY_UNAVAILABLE,
+                ], 422);
+            }
+
             return response()->json([
-                'paypal_order_id' => (string) ($result->viewData['paypalOrderId'] ?? ''),
+                'paypal_order_id' => $paypalOrderId,
                 'order_number' => $order->order_number,
                 'confirm_url' => route('shop.checkout.confirm', ['order_number' => $order->order_number]),
+                'amount' => $result->viewData['amount'] ?? number_format((float) $order->total_display, 2, '.', ''),
+                'currency' => $result->viewData['currency'] ?? strtoupper((string) $order->currency_code),
+                'country' => $result->viewData['country'] ?? CheckoutCountries::defaultCode(),
             ]);
         }
 

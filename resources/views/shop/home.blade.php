@@ -91,7 +91,7 @@
     <section class="home-section home-section--bestsellers reveal-on-scroll{{ !empty($homeSectionStyles['bestsellers']['background_image_url']) ? ' home-section--has-bg-image' : '' }}" aria-labelledby="home-bestsellers-title" style="{{ \App\Support\HomeSectionSettings::inlineStyle($homeSectionStyles['bestsellers'] ?? []) }}">
         @php($bestSellersUrl = isset($homeBestSellersCategory) && $homeBestSellersCategory ? route('shop.catalog.category', $homeBestSellersCategory) : route('shop.products.index'))
         <h2 id="home-bestsellers-title" class="section__title section__title--center">
-            <a class="section__title-link" href="{{ $bestSellersUrl }}">Best sellers</a>
+            <a class="section__title-link" href="{{ $bestSellersUrl }}">Best Sellers</a>
         </h2>
         @if($homeBestSellers->isEmpty())
             <p class="home-section__empty home-section__empty--center">No best sellers yet — check back soon or <a href="{{ route('shop.products.index') }}">browse the shop</a>.</p>
@@ -127,7 +127,7 @@
 
 <section class="home-section home-section--new reveal-on-scroll{{ !empty($homeSectionStyles['new']['background_image_url']) ? ' home-section--has-bg-image' : '' }}" aria-labelledby="home-new-title" style="{{ \App\Support\HomeSectionSettings::inlineStyle($homeSectionStyles['new'] ?? []) }}">
     <h2 id="home-new-title" class="section__title section__title--center">
-        <a class="section__title-link" href="{{ route('shop.products.index', ['sort' => 'newest']) }}">New arrivals</a>
+        <a class="section__title-link" href="{{ route('shop.products.index', ['sort' => 'newest']) }}">New Arrivals</a>
     </h2>
     @if(isset($homeNewCategory) && $homeNewCategory && !empty($homeNewCategory->image))
         <a class="home-category-feature" href="{{ route('shop.catalog.category', $homeNewCategory) }}" aria-label="Shop {{ $homeNewCategory->name }}">

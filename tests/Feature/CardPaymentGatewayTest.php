@@ -74,6 +74,38 @@ class CardPaymentGatewayTest extends TestCase
         $this->assertSame('PAYPAL-EMBEDDED-CARD-1', PaymentTransaction::query()->firstOrFail()->gateway_transaction_id);
     }
 
+    public function test_paypal_checkout_can_create_an_inline_order(): void
+    {
+        $this->enablePayments();
+        $this->addProductToCart();
+        $this->fakeInitiation('PAYPAL-INLINE-1');
+
+        $this->postJson(route('shop.checkout.place'), $this->checkoutPayload('paypal'))
+            ->assertOk()
+            ->assertJsonPath('paypal_order_id', 'PAYPAL-INLINE-1')
+            ->assertJsonStructure(['order_number', 'confirm_url', 'amount', 'currency', 'country']);
+
+        $transaction = PaymentTransaction::query()->firstOrFail();
+        $this->assertSame('paypal', $transaction->payment_method);
+        $this->assertSame('PAYPAL-INLINE-1', $transaction->gateway_transaction_id);
+    }
+
+    public function test_apple_pay_checkout_can_create_an_inline_order(): void
+    {
+        $this->enablePayments();
+        $this->addProductToCart();
+        $this->fakeInitiation('PAYPAL-APPLE-INLINE-1');
+
+        $this->postJson(route('shop.checkout.place'), $this->checkoutPayload('apple_pay'))
+            ->assertOk()
+            ->assertJsonPath('paypal_order_id', 'PAYPAL-APPLE-INLINE-1')
+            ->assertJsonStructure(['order_number', 'confirm_url', 'amount', 'currency', 'country']);
+
+        $transaction = PaymentTransaction::query()->firstOrFail();
+        $this->assertSame('apple_pay', $transaction->payment_method);
+        $this->assertSame('PAYPAL-APPLE-INLINE-1', $transaction->gateway_transaction_id);
+    }
+
     public function test_express_apple_pay_creates_an_apple_pay_transaction(): void
     {
         $this->enablePayments();

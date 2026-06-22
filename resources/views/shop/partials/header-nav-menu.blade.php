@@ -165,12 +165,19 @@
         @endauth
     </div>
 </div>
-<div class="site-nav__account site-nav__account--mobile">
+<div class="site-nav__account site-nav__account--mobile @auth site-nav__account--signed-in @endauth">
     @auth
-        <a class="cart-link" href="{{ route('shop.account.index') }}" title="My account">{{ Auth::user()->name }}</a>
-        <form method="post" action="{{ route('shop.logout') }}" class="site-logout-form">
+        <a class="cart-link site-nav__account-name" href="{{ route('shop.account.index') }}" title="My account">{{ Auth::user()->name }}</a>
+        <form method="post" action="{{ route('shop.logout') }}" class="site-logout-form site-logout-form--icon">
             @csrf
-            <button type="submit" class="site-signout">Sign out</button>
+            <button type="submit" class="site-signout site-signout--icon" aria-label="Sign out" title="Sign out">
+                <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false">
+                    <path d="M10.5 4.75H6.75A1.75 1.75 0 0 0 5 6.5v11a1.75 1.75 0 0 0 1.75 1.75h3.75" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M13.5 8.25 17.25 12l-3.75 3.75" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M17 12H9.25" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                </svg>
+                <span class="sr-only">Sign out</span>
+            </button>
         </form>
     @else
         <span class="site-nav__account-icon" aria-hidden="true">
