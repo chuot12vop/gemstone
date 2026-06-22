@@ -1896,6 +1896,19 @@ function initCheckoutWalletPanels() {
     el.hidden = !message;
   }
 
+  function markWalletReady(panel, ready, message) {
+    panel.dataset.walletReady = ready ? '1' : '0';
+    panel.dataset.walletUnavailableMessage = message || '';
+  }
+
+  function applePayUnavailableMessage(message) {
+    if (globalThis.location && globalThis.location.protocol !== 'https:' && globalThis.location.hostname !== 'localhost') {
+      return 'Apple Pay requires HTTPS on iPhone. Use a secure HTTPS URL, or choose Card/PayPal.';
+    }
+
+    return message || 'Apple Pay is not available yet. Add a card to Apple Wallet, use Safari, or choose Card/PayPal.';
+  }
+
   function postPlace(method, panel) {
     const placeUrl = panel.getAttribute('data-wallet-place-url');
     const payload = new FormData(form);
@@ -2002,11 +2015,14 @@ function initCheckoutWalletPanels() {
           },
         }).render(mount).then(function () {
           mount.dataset.walletMounted = '1';
+          markWalletReady(panel, true, '');
         });
       })
       .catch(function (error) {
         console.error(error);
-        setMessage(panel, error.message || 'PayPal could not be loaded. Check your connection or ad blocker.');
+        const message = error.message || 'PayPal could not be loaded. Check your connection or ad blocker.';
+        markWalletReady(panel, false, message);
+        setMessage(panel, message);
       });
   }
 
@@ -2020,13 +2036,17 @@ function initCheckoutWalletPanels() {
     loadCheckoutPayPalSdk(sdkUrl)
       .then(function () {
         if (typeof paypal === 'undefined' || typeof paypal.Applepay !== 'function' || typeof ApplePaySession === 'undefined') {
-          throw new Error('Apple Pay is not available on this browser or device.');
+          throw new Error(applePayUnavailableMessage('Apple Pay is not available on this browser or device.'));
+        }
+
+        if (typeof ApplePaySession.supportsVersion === 'function' && !ApplePaySession.supportsVersion(4)) {
+          throw new Error('This Safari version is too old for this Apple Pay checkout. Please update iOS or choose Card/PayPal.');
         }
 
         const applepay = paypal.Applepay();
         return applepay.config().then(function (config) {
           if (!config.isEligible) {
-            throw new Error('Apple Pay is not available for this PayPal account, browser, or device.');
+            throw new Error(applePayUnavailableMessage('Apple Pay is not available for this PayPal account, browser, device, or Wallet setup.'));
           }
 
           const button = document.createElement('apple-pay-button');
@@ -2035,6 +2055,7 @@ function initCheckoutWalletPanels() {
           button.setAttribute('locale', 'en-US');
           mount.appendChild(button);
           mount.dataset.walletMounted = '1';
+          markWalletReady(panel, true, '');
 
           button.addEventListener('click', function () {
             setMessage(panel, '');
@@ -2109,7 +2130,9 @@ function initCheckoutWalletPanels() {
       })
       .catch(function (error) {
         console.error(error);
-        setMessage(panel, error.message || 'Apple Pay could not be loaded. Please choose another payment method.');
+        const message = applePayUnavailableMessage(error.message || 'Apple Pay could not be loaded. Please choose another payment method.');
+        markWalletReady(panel, false, message);
+        setMessage(panel, message);
       });
   }
 
@@ -2132,9 +2155,19 @@ function initCheckoutWalletPanels() {
     const panel = panelFor(method);
     if (panel) {
       panel.hidden = false;
-      setMessage(panel, method === 'paypal'
-        ? 'Use the PayPal button above to complete payment securely.'
-        : 'Use the Apple Pay button above to complete payment securely.');
+      const ready = panel.dataset.walletReady === '1';
+      const unavailable = panel.dataset.walletUnavailableMessage || '';
+      if (ready) {
+        setMessage(panel, method === 'paypal'
+          ? 'Use the PayPal button above to complete payment securely.'
+          : 'Use the Apple Pay button above to complete payment securely.');
+      } else if (unavailable) {
+        setMessage(panel, unavailable);
+      } else {
+        setMessage(panel, method === 'paypal'
+          ? 'PayPal is still loading. Please wait a moment, or choose Card.'
+          : 'Apple Pay is still checking your device. Please wait a moment, or choose Card/PayPal.');
+      }
     }
     setBusy(false);
   });

@@ -81,10 +81,8 @@
                 {{ ! $inStock ? 'disabled' : '' }}
                 data-pc-drawer-open>
             <svg class="shop-product-card__cart-icon" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                <path d="M6 6h15l-1.5 9h-12z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
-                <circle cx="9" cy="20" r="1.25" fill="currentColor"/>
-                <circle cx="18" cy="20" r="1.25" fill="currentColor"/>
-                <path d="M6 6L5 3H2" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                <path d="M7.25 8.75h9.5a2 2 0 0 1 1.99 1.82l.58 6.4a2.75 2.75 0 0 1-2.74 3H7.42a2.75 2.75 0 0 1-2.74-3l.58-6.4a2 2 0 0 1 1.99-1.82Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+                <path d="M8.75 11.5V7.75a3.25 3.25 0 0 1 6.5 0v3.75" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
             </svg>
         </button>
     </div>
