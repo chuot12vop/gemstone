@@ -1861,6 +1861,10 @@ function initCheckoutWalletPanels() {
     return form.querySelector('[data-checkout-wallet-panel="' + method + '"]');
   }
 
+  function methodForPanel(panel) {
+    return panel.getAttribute('data-checkout-wallet-panel') || '';
+  }
+
   function setBusy(busy, message) {
     if (submitBtn) {
       submitBtn.disabled = busy;
@@ -1976,10 +1980,11 @@ function initCheckoutWalletPanels() {
   function mountPayPalPanel(panel) {
     const mount = panel.querySelector('#checkout-paypal-button');
     const sdkUrl = panel.getAttribute('data-paypal-sdk');
-    if (!mount || mount.dataset.walletMounted === '1') {
+    if (!mount || mount.dataset.walletMounted === '1' || mount.dataset.walletMounting === '1') {
       return;
     }
 
+    mount.dataset.walletMounting = '1';
     loadCheckoutPayPalSdk(sdkUrl)
       .then(function () {
         if (typeof paypal === 'undefined' || typeof paypal.Buttons !== 'function') {
@@ -2035,12 +2040,14 @@ function initCheckoutWalletPanels() {
             setMessage(panel, 'PayPal reported an error. Please try again or choose another payment method.');
           },
         }).render(mount).then(function () {
+          delete mount.dataset.walletMounting;
           mount.dataset.walletMounted = '1';
           markWalletReady(panel, true, '');
         });
       })
       .catch(function (error) {
         console.error(error);
+        delete mount.dataset.walletMounting;
         const message = error.message || 'PayPal could not be loaded. Check your connection or ad blocker.';
         markWalletReady(panel, false, message);
         setMessage(panel, message);
@@ -2050,10 +2057,12 @@ function initCheckoutWalletPanels() {
   function mountApplePayPanel(panel) {
     const mount = panel.querySelector('#checkout-applepay-button');
     const sdkUrl = panel.getAttribute('data-paypal-sdk');
-    if (!mount || mount.dataset.walletMounted === '1') {
+    if (!mount || mount.dataset.walletMounted === '1' || mount.dataset.walletMounting === '1') {
       return;
     }
 
+    mount.dataset.walletMounting = '1';
+    setMessage(panel, 'Checking Apple Pay availability...');
     loadCheckoutPayPalSdk(sdkUrl)
       .then(function () {
         const readinessError = applePayReadinessError();
@@ -2072,8 +2081,10 @@ function initCheckoutWalletPanels() {
           button.setAttribute('type', 'buy');
           button.setAttribute('locale', 'en-US');
           mount.appendChild(button);
+          delete mount.dataset.walletMounting;
           mount.dataset.walletMounted = '1';
           markWalletReady(panel, true, '');
+          setMessage(panel, '');
 
           button.addEventListener('click', function () {
             setMessage(panel, '');
@@ -2148,19 +2159,42 @@ function initCheckoutWalletPanels() {
       })
       .catch(function (error) {
         console.error(error);
+        delete mount.dataset.walletMounting;
         const message = error.message || 'Apple Pay could not be loaded. Please choose Card/PayPal.';
         markWalletReady(panel, false, message);
         setMessage(panel, message);
       });
   }
 
-  panels.forEach(function (panel) {
-    const method = panel.getAttribute('data-checkout-wallet-panel');
+  function mountWalletPanel(panel) {
+    const method = methodForPanel(panel);
     if (method === 'paypal') {
       mountPayPalPanel(panel);
     } else if (method === 'apple_pay') {
       mountApplePayPanel(panel);
     }
+  }
+
+  panels.forEach(function (panel) {
+    if (!panel.hidden) {
+      mountWalletPanel(panel);
+    }
+  });
+
+  form.querySelectorAll('[data-payment-method-radio]').forEach(function (radio) {
+    radio.addEventListener('change', function () {
+      if (!radio.checked || (radio.value !== 'paypal' && radio.value !== 'apple_pay')) {
+        return;
+      }
+
+      window.setTimeout(function () {
+        const panel = panelFor(radio.value);
+        if (panel) {
+          panel.hidden = false;
+          mountWalletPanel(panel);
+        }
+      }, 0);
+    });
   });
 
   form.addEventListener('submit', function (event) {
