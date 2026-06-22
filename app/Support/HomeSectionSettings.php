@@ -21,10 +21,10 @@ final class HomeSectionSettings
 
     /** @var array<string, string> */
     public const SECTION_LABELS = [
-        'certificates' => 'As seen in (Certificates)',
+        'certificates' => 'As Seen In (Certificates)',
         'collections' => 'Collections',
-        'bestsellers' => 'Best sellers',
-        'new' => 'New arrivals',
+        'bestsellers' => 'Best Sellers',
+        'new' => 'New Arrivals',
         'journal' => 'Journal',
         'stories' => 'Stories',
         'reviews' => 'Feedback',

@@ -64,7 +64,7 @@
 
 @if($homeCertificates->isNotEmpty())
 <section class="home-section home-section--certificates reveal-on-scroll{{ !empty($homeSectionStyles['certificates']['background_image_url']) ? ' home-section--has-bg-image' : '' }}" aria-labelledby="home-certificates-title" style="{{ \App\Support\HomeSectionSettings::inlineStyle($homeSectionStyles['certificates'] ?? []) }}">
-    <h2 id="home-certificates-title" class="section__title section__title--center">As seen in</h2>
+    <h2 id="home-certificates-title" class="section__title section__title--center">As Seen In</h2>
     <div class="home-certificates-marquee" role="region" aria-label="Certificate logos">
         <div class="home-certificates-marquee__track">
             @foreach([false, true] as $duplicate)
