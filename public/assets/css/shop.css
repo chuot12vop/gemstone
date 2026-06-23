@@ -2822,7 +2822,10 @@ body.pd-lightbox-open { overflow: hidden; }
 }
 .checkout-express__paypal-mount > div,
 .checkout-express__gpay-mount > div,
+.checkout-express__paypal-mount paypal-button,
+.checkout-express__gpay-mount button,
 .checkout-express__applepay-mount apple-pay-button {
+  display: block;
   flex: 1;
   width: 100% !important;
   max-width: none !important;
@@ -8540,6 +8543,17 @@ body.checkout-loading-open {
   width: 100% !important;
   height: 4.25rem !important;
 }
+.checkout-card-fields__input {
+  width: 100%;
+  font: inherit;
+  color: var(--text);
+  background: #fff;
+  outline: none;
+}
+.checkout-card-fields__input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(166, 124, 61, 0.15);
+}
 .checkout-card-fields__message {
   margin: 0;
   color: var(--muted);
@@ -8594,15 +8608,15 @@ body.checkout-loading-open {
   min-height: 3rem;
   width: 100%;
 }
-.checkout-wallet-panel__mount--applepay {
-  max-width: 320px;
-}
 .checkout-wallet-panel__mount iframe,
+.checkout-wallet-panel__mount paypal-button,
 .checkout-wallet-panel__mount apple-pay-button {
   max-width: 100%;
 }
 .checkout-wallet-panel__mount > div,
+.checkout-wallet-panel__mount paypal-button,
 .checkout-wallet-panel__mount apple-pay-button {
+  display: block;
   width: 100% !important;
   max-width: none !important;
 }

@@ -102,8 +102,8 @@ class PayPalApiClient
             'response_type' => 'client_token',
         ];
 
-        $domain = trim((string) ($domain ?? url('/')));
-        if ($domain !== '') {
+        $domain = $this->browserTokenDomain($domain);
+        if ($domain !== null) {
             $payload['domains[]'] = $domain;
         }
 
@@ -124,6 +124,26 @@ class PayPalApiClient
         $clientToken = trim((string) $response->json('access_token'));
 
         return $clientToken !== '' ? $clientToken : null;
+    }
+
+    private function browserTokenDomain(?string $domain): ?string
+    {
+        $domain = trim((string) ($domain ?? url('/')));
+        if ($domain === '') {
+            return null;
+        }
+
+        $host = parse_url($domain, PHP_URL_HOST);
+        if (! is_string($host) || $host === '') {
+            $host = preg_replace('/:\d+$/', '', $domain) ?: '';
+        }
+
+        $host = strtolower(trim($host));
+        if ($host === '' || $host === 'localhost' || $host === '127.0.0.1' || $host === '::1') {
+            return null;
+        }
+
+        return $host;
     }
 
     /**

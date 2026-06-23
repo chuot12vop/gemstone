@@ -9,7 +9,7 @@
     $selectedCode = (string) ($selected ?? ($cardMethod ? 'card' : optional($moreMethods->first())->code()));
     $cardSelected = $cardMethod && $selectedCode === 'card';
     $moreSelected = $moreMethods->contains(fn ($method) => $method->code() === $selectedCode);
-    $moreExpanded = $moreSelected;
+    $moreExpanded = $moreMethods->isNotEmpty();
     $morePaymentLogos = collect($paymentLogos ?? [])
         ->filter(fn ($logo) => !empty($logo['src']))
         ->values();
@@ -78,7 +78,12 @@
                                 <div id="checkout-card-expiry" class="checkout-card-fields__field"></div>
                                 <div id="checkout-card-cvv" class="checkout-card-fields__field"></div>
                             </div>
-                            <div id="checkout-card-name" class="checkout-card-fields__field"></div>
+                            <input id="checkout-card-name"
+                                   class="checkout-card-fields__field checkout-card-fields__input"
+                                   type="text"
+                                   name="cardholder_name"
+                                   autocomplete="cc-name"
+                                   placeholder="Name on card">
                             <p class="checkout-card-fields__message checkout-card-fields__message--error"
                                data-checkout-card-error role="alert" hidden></p>
                         </div>
@@ -162,12 +167,10 @@
                                      data-apple-pay-currency="{{ $inlineWalletCheckout['currency'] }}"
                                      data-apple-pay-country="{{ $inlineWalletCheckout['country'] }}"
                                      data-paypal-sandbox="{{ ($inlineWalletCheckout['sandbox'] ?? false) ? '1' : '0' }}"
-                                     @if($selectedCode !== $method->code()) hidden @endif>
+                                    data-wallet-preload="1">
                                     @if($method->code() === 'paypal')
-                                        <p class="checkout-wallet-panel__hint">Continue securely with PayPal. You can use your PayPal balance or eligible saved cards.</p>
                                         <div id="checkout-paypal-button" class="checkout-wallet-panel__mount checkout-wallet-panel__mount--paypal" aria-label="PayPal"></div>
                                     @elseif($method->code() === 'apple_pay')
-                                        <p class="checkout-wallet-panel__hint">Use Apple Pay on supported Apple devices and browsers.</p>
                                         <div id="checkout-applepay-button" class="checkout-wallet-panel__mount checkout-wallet-panel__mount--applepay" aria-label="Apple Pay"></div>
                                         <p class="checkout-wallet-panel__message checkout-wallet-panel__message--error" data-checkout-wallet-error hidden></p>
                                     @endif

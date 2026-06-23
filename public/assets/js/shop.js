@@ -1392,17 +1392,9 @@ function initCheckoutExpress() {
     });
   }
 
-  function eligibility(sdk) {
-    return sdk.findEligibleMethods({ currencyCode: currency, amount: amount });
-  }
-
-  function mountPayPal(paymentMethods, sdk) {
+  function mountPayPal(sdk) {
     const mount = document.querySelector('#express-paypal-button');
     if (!mount) {
-      return;
-    }
-    if (!paymentMethods.isEligible('paypal')) {
-      showPayPalMountError('#express-paypal-button', 'PayPal is unavailable in this browser.');
       return;
     }
 
@@ -1631,10 +1623,14 @@ function initCheckoutExpress() {
 
   sdkInstance(['paypal-payments', 'googlepay-payments', 'applepay-payments'])
     .then(function (sdk) {
-      return eligibility(sdk).then(function (paymentMethods) {
-        mountPayPal(paymentMethods, sdk);
+      mountPayPal(sdk);
+      return sdk.findEligibleMethods({ currencyCode: currency, amount: amount }).then(function (paymentMethods) {
         mountGooglePay(paymentMethods, sdk);
         mountApplePay(paymentMethods, sdk);
+      }).catch(function (err) {
+        console.warn('Express wallet eligibility check failed.', err);
+        setExpressSlotVisibility('#express-googlepay-button', false);
+        setExpressSlotVisibility('#express-applepay-button', false);
       });
     })
     .catch(function (err) {
@@ -1670,7 +1666,7 @@ function initCheckoutGatewayFields() {
       item.classList.toggle('is-selected', !!selected);
       const panel = item.querySelector('[data-payment-method-panel]');
       if (panel) {
-        panel.hidden = !selected;
+        panel.hidden = !selected && panel.getAttribute('data-wallet-preload') !== '1';
       }
     });
     if (moreItem && morePanel && moreToggle) {
@@ -1678,8 +1674,6 @@ function initCheckoutGatewayFields() {
       moreItem.classList.toggle('is-selected', selectedInMore);
       if (selectedInMore) {
         setMoreOpen(true);
-      } else if (code === 'card') {
-        setMoreOpen(false);
       }
     }
     if (cardToggle && cardPanel) {
@@ -1697,10 +1691,6 @@ function initCheckoutGatewayFields() {
     if (moreRadio) {
       moreRadio.checked = open;
     }
-    if (open && cardPanel && cardToggle) {
-      cardPanel.hidden = true;
-      cardToggle.setAttribute('aria-expanded', 'false');
-    }
   }
 
   radios.forEach(function (radio) {
@@ -1710,11 +1700,6 @@ function initCheckoutGatewayFields() {
     moreRadio.addEventListener('change', function () {
       if (moreRadio.checked) {
         setMoreOpen(true);
-        const paypalRadio = morePanel.querySelector('[data-payment-method-radio][value="paypal"]');
-        if (paypalRadio && !paypalRadio.checked) {
-          paypalRadio.checked = true;
-          paypalRadio.dispatchEvent(new Event('change', { bubbles: true }));
-        }
       }
     });
   }
@@ -1730,7 +1715,6 @@ function initCheckoutGatewayFields() {
         if (!cardRadio || !cardRadio.checked) {
           return;
         }
-        setMoreOpen(false);
         cardPanel.hidden = false;
         cardToggle.setAttribute('aria-expanded', 'true');
       }, 0);
@@ -1873,25 +1857,24 @@ function initCheckoutCardFields() {
 
   const fieldStyle = {
     input: {
-      'font-family': 'Source Sans 3, Arial, sans-serif',
-      'font-size': '16px',
       color: '#282522',
       padding: '15px 12px',
       border: '1px solid #c9c4bc',
-      'border-radius': '10px',
-      'background-color': '#ffffff',
       height: '52px',
-      'box-sizing': 'border-box',
-      margin: '0',
-    },
-    ':focus': {
-      color: '#282522',
-      'border-color': '#a67c3d',
-      'box-shadow': '0 0 0 3px rgba(166, 124, 61, 0.15)',
     },
   };
   let cardSession = null;
   let cardReady = false;
+
+  function renderCardFields(sdk) {
+    cardSession = sdk.createCardFieldsOneTimePaymentSession();
+    document.getElementById('checkout-card-number')?.appendChild(cardSession.createCardFieldsComponent({ type: 'number', placeholder: 'Card number', style: fieldStyle }));
+    document.getElementById('checkout-card-expiry')?.appendChild(cardSession.createCardFieldsComponent({ type: 'expiry', placeholder: 'Expiry', style: fieldStyle }));
+    document.getElementById('checkout-card-cvv')?.appendChild(cardSession.createCardFieldsComponent({ type: 'cvv', placeholder: 'Security code', style: fieldStyle }));
+    cardReady = true;
+    setError('');
+  }
+
   paypalV6Instance({
     webSdkUrl: webSdkUrl,
     clientId: clientId,
@@ -1904,12 +1887,10 @@ function initCheckoutCardFields() {
           throw new Error('Card fields are unavailable for this PayPal account or browser. You can continue to the secure card step.');
         }
 
-        cardSession = sdk.createCardFieldsOneTimePaymentSession();
-        document.getElementById('checkout-card-number')?.appendChild(cardSession.createCardFieldsComponent({ type: 'number', placeholder: 'Card number', style: fieldStyle }));
-        document.getElementById('checkout-card-expiry')?.appendChild(cardSession.createCardFieldsComponent({ type: 'expiry', placeholder: 'Expiration date (MM / YY)', style: fieldStyle }));
-        document.getElementById('checkout-card-cvv')?.appendChild(cardSession.createCardFieldsComponent({ type: 'cvv', placeholder: 'Security code', style: fieldStyle }));
-        document.getElementById('checkout-card-name')?.appendChild(cardSession.createCardFieldsComponent({ type: 'name', placeholder: 'Name on card', style: fieldStyle }));
-        cardReady = true;
+        renderCardFields(sdk);
+      }).catch(function (error) {
+        console.warn('PayPal card fields eligibility check failed; trying to render fields.', error);
+        renderCardFields(sdk);
       });
     })
     .catch(function (error) {
@@ -2023,10 +2004,6 @@ function initCheckoutWalletPanels() {
     panel.dataset.walletUnavailableMessage = message || '';
   }
 
-  function publicApplePayUnavailableMessage() {
-    return 'Apple Pay is not available for this checkout right now. Please choose Card or PayPal.';
-  }
-
   function postPlace(method, panel) {
     const placeUrl = panel.getAttribute('data-wallet-place-url');
     const payload = new FormData(form);
@@ -2089,57 +2066,51 @@ function initCheckoutWalletPanels() {
       components: ['paypal-payments'],
     })
       .then(function (sdk) {
-        return sdk.findEligibleMethods({ currencyCode: currency, amount: amount }).then(function (paymentMethods) {
-          if (!paymentMethods.isEligible('paypal')) {
-            throw new Error('PayPal is unavailable in this browser.');
-          }
-
-          let checkoutOrder = null;
-          const session = sdk.createPayPalOneTimePaymentSession({
-            onApprove: function (data) {
-              if (!checkoutOrder || !checkoutOrder.confirm_url) {
-                const expired = 'Checkout session expired. Please try PayPal again.';
-                setMessage(panel, expired);
-                return Promise.reject(new Error(expired));
-              }
-              setBusy(true, 'Confirming your PayPal payment...');
-              return postConfirm(checkoutOrder.confirm_url, data.orderId || checkoutOrder.paypal_order_id, 'PayPal payment could not be confirmed.')
-                .catch(function (error) {
-                  setBusy(false);
-                  setMessage(panel, error.message || 'PayPal payment could not be confirmed.');
-                  throw error;
-                });
-            },
-            onCancel: function () {
-              setBusy(false);
-            },
-            onError: function (error) {
-              console.error('PayPal inline checkout error', error);
-              setBusy(false);
-              setMessage(panel, 'PayPal reported an error. Please try again or choose another payment method.');
-            },
-          });
-
-          const button = document.createElement('paypal-button');
-          mount.replaceChildren(button);
-          button.addEventListener('click', function () {
-            setMessage(panel, '');
-            setBusy(true, 'Starting PayPal checkout...');
-            postPlace('paypal', panel)
-              .then(function (data) {
-                checkoutOrder = data;
-                return session.start({ presentationMode: 'auto' }, Promise.resolve({ orderId: data.paypal_order_id }));
-              })
+        let checkoutOrder = null;
+        const session = sdk.createPayPalOneTimePaymentSession({
+          onApprove: function (data) {
+            if (!checkoutOrder || !checkoutOrder.confirm_url) {
+              const expired = 'Checkout session expired. Please try PayPal again.';
+              setMessage(panel, expired);
+              return Promise.reject(new Error(expired));
+            }
+            setBusy(true, 'Confirming your PayPal payment...');
+            return postConfirm(checkoutOrder.confirm_url, data.orderId || checkoutOrder.paypal_order_id, 'PayPal payment could not be confirmed.')
               .catch(function (error) {
                 setBusy(false);
-                setMessage(panel, error.message || 'Could not start PayPal checkout.');
+                setMessage(panel, error.message || 'PayPal payment could not be confirmed.');
+                throw error;
               });
-          });
-
-          delete mount.dataset.walletMounting;
-          mount.dataset.walletMounted = '1';
-          markWalletReady(panel, true, '');
+          },
+          onCancel: function () {
+            setBusy(false);
+          },
+          onError: function (error) {
+            console.error('PayPal inline checkout error', error);
+            setBusy(false);
+            setMessage(panel, 'PayPal reported an error. Please try again or choose another payment method.');
+          },
         });
+
+        const button = document.createElement('paypal-button');
+        mount.replaceChildren(button);
+        button.addEventListener('click', function () {
+          setMessage(panel, '');
+          setBusy(true, 'Starting PayPal checkout...');
+          postPlace('paypal', panel)
+            .then(function (data) {
+              checkoutOrder = data;
+              return session.start({ presentationMode: 'auto' }, Promise.resolve({ orderId: data.paypal_order_id }));
+            })
+            .catch(function (error) {
+              setBusy(false);
+              setMessage(panel, error.message || 'Could not start PayPal checkout.');
+            });
+        });
+
+        delete mount.dataset.walletMounting;
+        mount.dataset.walletMounted = '1';
+        markWalletReady(panel, true, '');
       })
       .catch(function (error) {
         console.error(error);
@@ -2272,9 +2243,8 @@ function initCheckoutWalletPanels() {
       .catch(function (error) {
         console.error(error);
         delete mount.dataset.walletMounting;
-        const message = publicApplePayUnavailableMessage();
-        markWalletReady(panel, false, error.message || message);
-        setMessage(panel, message);
+        markWalletReady(panel, false, error.message || 'Apple Pay is unavailable.');
+        setMessage(panel, '');
       });
   }
 
