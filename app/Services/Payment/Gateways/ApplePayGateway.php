@@ -112,11 +112,24 @@ SVG;
 
     private function viewResult(PayPalApiClient $client, Order $order, string $paypalOrderId, ?string $notes = null): PaymentInitiationResult
     {
+        $clientToken = $client->generateBrowserSafeClientToken();
+        if ($clientToken === null) {
+            return PaymentInitiationResult::view(
+                viewData: [
+                    'configured' => true,
+                    'error' => 'Could not load Apple Pay checkout. Please refresh and try again.',
+                ],
+                gatewayTransactionId: $paypalOrderId,
+                notes: 'PayPal browser-safe client token generation failed',
+            );
+        }
+
         return PaymentInitiationResult::view(
             viewData: [
                 'configured' => true,
                 'paypalOrderId' => $paypalOrderId,
                 'clientId' => $client->clientId(),
+                'clientToken' => $clientToken,
                 'webSdkUrl' => $client->webSdkUrl(),
                 'amount' => number_format((float) $order->total_display, 2, '.', ''),
                 'currency' => strtoupper((string) $order->currency_code),

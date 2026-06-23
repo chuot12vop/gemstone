@@ -70,6 +70,7 @@
                              data-card-place-url="{{ $cardCheckout['placeUrl'] }}"
                              data-paypal-web-sdk="{{ $cardCheckout['webSdkUrl'] }}"
                              data-paypal-client-id="{{ $cardCheckout['clientId'] }}"
+                             data-paypal-client-token="{{ $cardCheckout['clientToken'] }}"
                              data-paypal-currency="{{ $cardCheckout['currency'] }}"
                              data-paypal-sandbox="{{ ($cardCheckout['sandbox'] ?? false) ? '1' : '0' }}">
                             <div id="checkout-card-number" class="checkout-card-fields__field checkout-card-fields__field--number"></div>
@@ -156,6 +157,7 @@
                                      data-wallet-place-url="{{ route('shop.checkout.place') }}"
                                      data-paypal-web-sdk="{{ $inlineWalletCheckout['webSdkUrl'] }}"
                                      data-paypal-client-id="{{ $inlineWalletCheckout['clientId'] }}"
+                                     data-paypal-client-token="{{ $inlineWalletCheckout['clientToken'] }}"
                                      data-apple-pay-amount="{{ $inlineWalletCheckout['amount'] }}"
                                      data-apple-pay-currency="{{ $inlineWalletCheckout['currency'] }}"
                                      data-apple-pay-country="{{ $inlineWalletCheckout['country'] }}"

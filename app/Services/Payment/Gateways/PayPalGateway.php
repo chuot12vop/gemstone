@@ -242,10 +242,23 @@ SVG;
         ?string $gatewayTransactionId = null,
         ?string $notes = null,
     ): PaymentInitiationResult {
+        $clientToken = $client->generateBrowserSafeClientToken();
+        if ($clientToken === null) {
+            return PaymentInitiationResult::view(
+                viewData: [
+                    'configured' => true,
+                    'error' => 'Could not load PayPal checkout. Please refresh and try again.',
+                ],
+                gatewayTransactionId: $gatewayTransactionId ?? $paypalOrderId,
+                notes: 'PayPal browser-safe client token generation failed',
+            );
+        }
+
         return PaymentInitiationResult::view(
             viewData: [
                 'configured' => true,
                 'clientId' => $client->clientId(),
+                'clientToken' => $clientToken,
                 'paypalOrderId' => $paypalOrderId,
                 'webSdkUrl' => $client->webSdkUrl(),
                 'currency' => strtoupper((string) $order->currency_code),

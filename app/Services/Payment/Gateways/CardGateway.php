@@ -151,11 +151,24 @@ class CardGateway extends AbstractPaymentGateway
         string $paypalOrderId,
         ?string $notes = null,
     ): PaymentInitiationResult {
+        $clientToken = $client->generateBrowserSafeClientToken();
+        if ($clientToken === null) {
+            return PaymentInitiationResult::view(
+                viewData: [
+                    'configured' => true,
+                    'error' => 'Could not load secure card fields. Please refresh and try again.',
+                ],
+                gatewayTransactionId: $paypalOrderId,
+                notes: 'PayPal browser-safe client token generation failed',
+            );
+        }
+
         return PaymentInitiationResult::view(
             viewData: [
                 'configured' => true,
                 'paypalOrderId' => $paypalOrderId,
                 'clientId' => $client->clientId(),
+                'clientToken' => $clientToken,
                 'webSdkUrl' => $client->webSdkUrl(),
                 'currency' => strtoupper((string) $order->currency_code),
                 'billingDetails' => session(self::BILLING_SESSION_PREFIX.$order->order_number, [

@@ -2,6 +2,7 @@
     $configured = ($data['configured'] ?? false) === true;
     $paypalOrderId = $data['paypalOrderId'] ?? '';
     $clientId = $data['clientId'] ?? '';
+    $clientToken = $data['clientToken'] ?? '';
     $webSdkUrl = $data['webSdkUrl'] ?? '';
     $currency = $data['currency'] ?? strtoupper((string) $order->currency_code);
     $billingDetails = $data['billingDetails'] ?? [];
@@ -17,7 +18,7 @@
         <p class="gateway-pane__hint gateway-pane__hint--warn">Card payments are not fully configured. Add your PayPal REST API credentials in Admin - Payments - Payment settings.</p>
     @elseif($error)
         <p class="gateway-pane__hint gateway-pane__hint--warn">{{ $error }}</p>
-    @elseif($paypalOrderId === '' || $clientId === '' || $webSdkUrl === '')
+    @elseif($paypalOrderId === '' || $clientId === '' || $clientToken === '' || $webSdkUrl === '')
         <p class="gateway-pane__hint gateway-pane__hint--warn">Unable to load secure card checkout. Refresh this page or contact support.</p>
     @else
         <form id="paypal-card-payment-form" class="paypal-card-form" data-paypal-card-form>
@@ -45,6 +46,7 @@
         (async function () {
             var paypalOrderId = @json($paypalOrderId);
             var clientId = @json($clientId);
+            var clientToken = @json($clientToken);
             var currency = @json($currency);
             var billingDetails = @json($billingDetails);
             var confirmUrl = @json(route('shop.checkout.confirm', ['order_number' => $order->order_number]));
@@ -96,7 +98,7 @@
             var cardSession;
             try {
                 var sdk = await paypal.createInstance({
-                    clientId: clientId,
+                    clientToken: clientToken,
                     components: ['card-fields'],
                     pageType: 'checkout'
                 });

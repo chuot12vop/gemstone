@@ -95,6 +95,37 @@ class PayPalApiClient
         return $clientToken !== '' ? $clientToken : null;
     }
 
+    public function generateBrowserSafeClientToken(?string $domain = null): ?string
+    {
+        $payload = [
+            'grant_type' => 'client_credentials',
+            'response_type' => 'client_token',
+        ];
+
+        $domain = trim((string) ($domain ?? url('/')));
+        if ($domain !== '') {
+            $payload['domains[]'] = $domain;
+        }
+
+        $response = Http::baseUrl($this->apiBaseUrl())
+            ->asForm()
+            ->withBasicAuth($this->clientId, $this->clientSecret)
+            ->post('/v1/oauth2/token', $payload);
+
+        if (! $response->successful()) {
+            Log::warning('PayPal browser-safe client token generation failed', [
+                'status' => $response->status(),
+                'body' => $response->json(),
+            ]);
+
+            return null;
+        }
+
+        $clientToken = trim((string) $response->json('access_token'));
+
+        return $clientToken !== '' ? $clientToken : null;
+    }
+
     /**
      * @param  array<string, string|null>  $headers
      * @param  array<string, mixed>  $event

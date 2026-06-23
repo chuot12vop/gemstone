@@ -15,6 +15,8 @@
 
     data-paypal-client-id="{{ $paypal['clientId'] }}"
 
+    data-paypal-client-token="{{ $paypal['clientToken'] }}"
+
     data-apple-pay-amount="{{ $paypal['amount'] }}"
 
     data-apple-pay-currency="{{ $paypal['currency'] }}"

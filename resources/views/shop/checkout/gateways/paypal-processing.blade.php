@@ -2,6 +2,7 @@
     $configured = ($data['configured'] ?? false) === true;
     $paypalOrderId = $data['paypalOrderId'] ?? '';
     $clientId = $data['clientId'] ?? '';
+    $clientToken = $data['clientToken'] ?? '';
     $webSdkUrl = $data['webSdkUrl'] ?? '';
     $currency = $data['currency'] ?? strtoupper((string) $order->currency_code);
     $sandbox = ($data['sandbox'] ?? false) === true;
@@ -16,7 +17,7 @@
         <p class="gateway-pane__hint gateway-pane__hint--warn">PayPal is not fully configured. Add <strong>Client ID</strong> and <strong>Client Secret</strong> in Admin → Payments → Payment settings, then save.</p>
     @elseif($error)
         <p class="gateway-pane__hint gateway-pane__hint--warn">{{ $error }}</p>
-    @elseif($paypalOrderId === '' || $clientId === '' || $webSdkUrl === '')
+    @elseif($paypalOrderId === '' || $clientId === '' || $clientToken === '' || $webSdkUrl === '')
         <p class="gateway-pane__hint gateway-pane__hint--warn">Unable to load PayPal checkout. Refresh this page or contact support.</p>
     @else
         <ul class="gateway-pane__steps">
@@ -36,6 +37,7 @@
         (async function () {
             var paypalOrderId = @json($paypalOrderId);
             var clientId = @json($clientId);
+            var clientToken = @json($clientToken);
             var currency = @json($currency);
             var confirmUrl = @json(route('shop.checkout.confirm', ['order_number' => $order->order_number]));
             var csrf = @json(csrf_token());
@@ -71,7 +73,7 @@
 
             try {
                 var sdk = await paypal.createInstance({
-                    clientId: clientId,
+                    clientToken: clientToken,
                     components: ['paypal-payments'],
                     pageType: 'checkout'
                 });

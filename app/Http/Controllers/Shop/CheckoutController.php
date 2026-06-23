@@ -83,14 +83,14 @@ class CheckoutController extends Controller
         $user = Auth::user();
         [$firstName, $lastName] = $this->splitName($user?->name ?? '');
 
-        $defaultMethod = $methods[0]->code();
-        $selected = (string) old('payment_method', session('checkout.method', $defaultMethod));
-
         $cardCheckout = $this->cardCheckoutConfig($currency);
         $expressCheckout = $this->expressCheckoutConfig($currency, $totals['totalUsd']);
         if ($cardCheckout !== null && isset($expressCheckout['paypal']['webSdkUrl'])) {
             $cardCheckout['webSdkUrl'] = $expressCheckout['paypal']['webSdkUrl'];
         }
+
+        $defaultMethod = $cardCheckout !== null ? 'card' : $methods[0]->code();
+        $selected = (string) old('payment_method', $defaultMethod);
 
         return view('shop.checkout.index', [
             'title' => 'Checkout',
@@ -940,8 +940,14 @@ class CheckoutController extends Controller
         }
 
         $code = strtoupper($currency->currentCode());
+        $clientToken = $client->generateBrowserSafeClientToken();
+        if ($clientToken === null) {
+            return ['show' => false, 'slots' => [], 'paypal' => null];
+        }
+
         $paypal = [
             'clientId' => $client->clientId(),
+            'clientToken' => $clientToken,
             'webSdkUrl' => $client->webSdkUrl(),
             'sandbox' => $client->isSandbox(),
             'initUrl' => route('shop.checkout.express.paypal'),
@@ -957,7 +963,7 @@ class CheckoutController extends Controller
         ];
     }
 
-    /** @return array{webSdkUrl: string, clientId: string, placeUrl: string, sandbox: bool, currency: string}|null */
+    /** @return array{webSdkUrl: string, clientId: string, clientToken: string, placeUrl: string, sandbox: bool, currency: string}|null */
     private function cardCheckoutConfig(CurrencyService $currency): ?array
     {
         $gateway = $this->registry->findEnabled('card');
@@ -970,9 +976,15 @@ class CheckoutController extends Controller
             return null;
         }
 
+        $clientToken = $client->generateBrowserSafeClientToken();
+        if ($clientToken === null) {
+            return null;
+        }
+
         return [
             'webSdkUrl' => $client->webSdkUrl(),
             'clientId' => $client->clientId(),
+            'clientToken' => $clientToken,
             'placeUrl' => route('shop.checkout.place'),
             'sandbox' => $client->isSandbox(),
             'currency' => strtoupper($currency->currentCode()),

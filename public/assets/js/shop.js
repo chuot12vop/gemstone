@@ -116,21 +116,32 @@ function loadCheckoutPayPalSdk(url) {
   });
 }
 
-const checkoutPayPalV6Instances = new Map();
+var checkoutPayPalV6Instances = null;
 
 function paypalV6Instance(config) {
+  if (!checkoutPayPalV6Instances) {
+    checkoutPayPalV6Instances = new Map();
+  }
+
   const components = Array.from(new Set(config.components || ['paypal-payments'])).sort();
-  const key = [config.webSdkUrl, config.clientId, components.join('|')].join('::');
+  const tokenOrClientId = config.clientToken || config.clientId;
+  const key = [config.webSdkUrl, tokenOrClientId, components.join('|')].join('::');
   if (!checkoutPayPalV6Instances.has(key)) {
     checkoutPayPalV6Instances.set(key, loadCheckoutPayPalSdk(config.webSdkUrl).then(function () {
       if (typeof paypal === 'undefined' || typeof paypal.createInstance !== 'function') {
         throw new Error('PayPal Web SDK v6 is unavailable.');
       }
-      return paypal.createInstance({
-        clientId: config.clientId,
+      const options = {
         components: components,
         pageType: 'checkout',
-      });
+      };
+      if (config.clientToken) {
+        options.clientToken = config.clientToken;
+      } else {
+        options.clientId = config.clientId;
+      }
+
+      return paypal.createInstance(options);
     }));
   }
 
@@ -1259,6 +1270,7 @@ function initCheckoutExpress() {
   const csrf = checkoutCsrfToken();
   const webSdkUrl = root.getAttribute('data-paypal-web-sdk');
   const clientId = root.getAttribute('data-paypal-client-id');
+  const clientToken = root.getAttribute('data-paypal-client-token');
   const currency = root.getAttribute('data-apple-pay-currency') || 'USD';
   const amount = root.getAttribute('data-apple-pay-amount') || '';
   const sandbox = root.getAttribute('data-paypal-sandbox') === '1';
@@ -1375,6 +1387,7 @@ function initCheckoutExpress() {
     return paypalV6Instance({
       webSdkUrl: webSdkUrl,
       clientId: clientId,
+      clientToken: clientToken,
       components: components,
     });
   }
@@ -1756,6 +1769,7 @@ function initCheckoutCardFields() {
   const placeUrl = root.getAttribute('data-card-place-url');
   const webSdkUrl = root.getAttribute('data-paypal-web-sdk');
   const clientId = root.getAttribute('data-paypal-client-id');
+  const clientToken = root.getAttribute('data-paypal-client-token');
   const currency = root.getAttribute('data-paypal-currency') || 'USD';
   const errorEl = root.querySelector('[data-checkout-card-error]');
   const submitBtn = form.querySelector('.btn--checkout-pay');
@@ -1881,6 +1895,7 @@ function initCheckoutCardFields() {
   paypalV6Instance({
     webSdkUrl: webSdkUrl,
     clientId: clientId,
+    clientToken: clientToken,
     components: ['card-fields'],
   })
     .then(function (sdk) {
@@ -2059,6 +2074,7 @@ function initCheckoutWalletPanels() {
     const mount = panel.querySelector('#checkout-paypal-button');
     const webSdkUrl = panel.getAttribute('data-paypal-web-sdk');
     const clientId = panel.getAttribute('data-paypal-client-id');
+    const clientToken = panel.getAttribute('data-paypal-client-token');
     const currency = panel.getAttribute('data-apple-pay-currency') || 'USD';
     const amount = panel.getAttribute('data-apple-pay-amount') || '';
     if (!mount || mount.dataset.walletMounted === '1' || mount.dataset.walletMounting === '1') {
@@ -2069,6 +2085,7 @@ function initCheckoutWalletPanels() {
     paypalV6Instance({
       webSdkUrl: webSdkUrl,
       clientId: clientId,
+      clientToken: clientToken,
       components: ['paypal-payments'],
     })
       .then(function (sdk) {
@@ -2137,6 +2154,7 @@ function initCheckoutWalletPanels() {
     const mount = panel.querySelector('#checkout-applepay-button');
     const webSdkUrl = panel.getAttribute('data-paypal-web-sdk');
     const clientId = panel.getAttribute('data-paypal-client-id');
+    const clientToken = panel.getAttribute('data-paypal-client-token');
     const currency = panel.getAttribute('data-apple-pay-currency') || 'USD';
     const amount = panel.getAttribute('data-apple-pay-amount') || '';
     if (!mount || mount.dataset.walletMounted === '1' || mount.dataset.walletMounting === '1') {
@@ -2149,6 +2167,7 @@ function initCheckoutWalletPanels() {
       paypalV6Instance({
         webSdkUrl: webSdkUrl,
         clientId: clientId,
+        clientToken: clientToken,
         components: ['applepay-payments'],
       }),
       loadCheckoutScriptOnce('https://applepay.cdn-apple.com/jsapi/1.latest/apple-pay-sdk.js', 'script[src*="apple-pay-sdk.js"]', 'Apple Pay SDK failed to load'),

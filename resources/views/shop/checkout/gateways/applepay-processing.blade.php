@@ -2,6 +2,7 @@
     $configured = ($data['configured'] ?? false) === true;
     $paypalOrderId = $data['paypalOrderId'] ?? '';
     $clientId = $data['clientId'] ?? '';
+    $clientToken = $data['clientToken'] ?? '';
     $webSdkUrl = $data['webSdkUrl'] ?? '';
     $amount = $data['amount'] ?? '';
     $currency = $data['currency'] ?? 'USD';
@@ -18,7 +19,7 @@
         <p class="gateway-pane__hint gateway-pane__hint--warn">Apple Pay is not fully configured. Add your PayPal REST API credentials in Admin - Payments - Payment settings.</p>
     @elseif($error)
         <p class="gateway-pane__hint gateway-pane__hint--warn">{{ $error }}</p>
-    @elseif($paypalOrderId === '' || $clientId === '' || $webSdkUrl === '' || $amount === '')
+    @elseif($paypalOrderId === '' || $clientId === '' || $clientToken === '' || $webSdkUrl === '' || $amount === '')
         <p class="gateway-pane__hint gateway-pane__hint--warn">Unable to load Apple Pay checkout. Refresh this page or contact support.</p>
     @else
         <ul class="gateway-pane__steps">
@@ -40,6 +41,7 @@
         (async function () {
             var paypalOrderId = @json($paypalOrderId);
             var clientId = @json($clientId);
+            var clientToken = @json($clientToken);
             var amount = @json($amount);
             var currency = @json($currency);
             var country = @json($country);
@@ -86,7 +88,7 @@
 
             try {
                 var sdk = await paypal.createInstance({
-                    clientId: clientId,
+                    clientToken: clientToken,
                     components: ['applepay-payments'],
                     pageType: 'checkout'
                 });
