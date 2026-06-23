@@ -61,6 +61,52 @@
                 errorEl.hidden = !message;
             }
 
+            function paypalErrorMessage(error, fallback) {
+                var messages = [];
+                var visited = new Set();
+
+                function add(value) {
+                    var message = String(value || '').trim();
+                    if (message && messages.indexOf(message) === -1) {
+                        messages.push(message);
+                    }
+                }
+
+                function inspect(value, depth) {
+                    if (value === null || value === undefined || depth > 4) return;
+                    if (typeof value === 'string') {
+                        var text = value.trim();
+                        if (!text) return;
+                        if (text[0] === '{' || text[0] === '[') {
+                            try {
+                                inspect(JSON.parse(text), depth + 1);
+                                return;
+                            } catch (parseError) {}
+                        }
+                        add(text);
+                        return;
+                    }
+                    if (typeof value !== 'object' || visited.has(value)) return;
+
+                    visited.add(value);
+                    ['issue', 'description', 'message'].forEach(function (key) {
+                        if (typeof value[key] === 'string') add(value[key]);
+                    });
+                    ['details', 'data', 'body', 'cause', 'error', 'errors', 'response'].forEach(function (key) {
+                        if (value[key] !== undefined) inspect(value[key], depth + 1);
+                    });
+                    if (Array.isArray(value)) {
+                        value.forEach(function (item) { inspect(item, depth + 1); });
+                    }
+                }
+
+                inspect(error, 0);
+                if (!messages.length) return fallback;
+
+                var code = String(error && (error.code || error.name) || '').trim();
+                return 'PayPal' + (code ? ' (' + code + ')' : '') + ': ' + messages.join(' — ');
+            }
+
             function setBusy(busy) {
                 submitBtn.disabled = busy;
                 submitBtn.textContent = busy ? 'Processing...' : buttonText;
@@ -104,7 +150,7 @@
                 });
                 var paymentMethods = await sdk.findEligibleMethods({ currencyCode: currency });
                 if (!paymentMethods.isEligible('advanced_cards')) {
-                    setError('Card payments are unavailable for this PayPal account or browser. Please choose another payment method.');
+                    setError('PayPal: Advanced Card Payments is not eligible for this merchant, buyer, currency, or browser context.');
                     submitBtn.hidden = true;
                     return;
                 }
@@ -115,7 +161,7 @@
                 document.getElementById('paypal-card-cvv').appendChild(cardSession.createCardFieldsComponent({ type: 'cvv', placeholder: 'CVV' }));
             } catch (error) {
                 console.error('PayPal card fields initialization failed', error);
-                setError('PayPal secure card fields could not be loaded. Check your connection or account eligibility.');
+                setError(paypalErrorMessage(error, 'PayPal secure card fields could not be loaded. Check your connection or account eligibility.'));
                 submitBtn.hidden = true;
                 return;
             }
@@ -135,7 +181,7 @@
                         throw new Error((result && result.data && result.data.message) || 'Card payment could not be completed.');
                     })
                     .catch(function (error) {
-                        setError((error && error.message) || 'Check your card details and try again.');
+                        setError(paypalErrorMessage(error, 'Check your card details and try again.'));
                         setBusy(false);
                     });
             });

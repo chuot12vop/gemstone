@@ -187,6 +187,8 @@ class CardPaymentGatewayTest extends TestCase
             ->assertDontSee('data-client-token=', false)
             ->assertSee('checkout:loading', false)
             ->assertSee('Processing your card payment...')
+            ->assertSee('paypalErrorMessage', false)
+            ->assertSee('Advanced Card Payments is not eligible for this merchant, buyer, currency, or browser context.')
             ->assertDontSee('js.stripe.com', false);
     }
 

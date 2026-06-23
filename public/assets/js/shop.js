@@ -172,6 +172,66 @@ function logUnexpectedCheckoutSdkError(label, error) {
   console.error(label, error);
 }
 
+function paypalErrorMessage(error, fallback) {
+  const messages = [];
+  const visited = new Set();
+
+  function add(value) {
+    const message = String(value || '').trim();
+    if (message && !messages.includes(message)) {
+      messages.push(message);
+    }
+  }
+
+  function inspect(value, depth) {
+    if (value === null || value === undefined || depth > 4) {
+      return;
+    }
+    if (typeof value === 'string') {
+      const text = value.trim();
+      if (!text) {
+        return;
+      }
+      if ((text[0] === '{' || text[0] === '[')) {
+        try {
+          inspect(JSON.parse(text), depth + 1);
+          return;
+        } catch (parseError) {
+          // The PayPal value is plain text, not JSON.
+        }
+      }
+      add(text);
+      return;
+    }
+    if (typeof value !== 'object' || visited.has(value)) {
+      return;
+    }
+
+    visited.add(value);
+    ['issue', 'description', 'message'].forEach(function (key) {
+      if (typeof value[key] === 'string') {
+        add(value[key]);
+      }
+    });
+    ['details', 'data', 'body', 'cause', 'error', 'errors', 'response'].forEach(function (key) {
+      if (value[key] !== undefined) {
+        inspect(value[key], depth + 1);
+      }
+    });
+    if (Array.isArray(value)) {
+      value.forEach(function (item) { inspect(item, depth + 1); });
+    }
+  }
+
+  inspect(error, 0);
+  if (!messages.length) {
+    return fallback;
+  }
+
+  const code = String(error && (error.code || error.name) || '').trim();
+  return 'PayPal' + (code ? ' (' + code + ')' : '') + ': ' + messages.join(' — ');
+}
+
 function loadCheckoutScriptOnce(url, selector, errorMessage) {
   const existing = document.querySelector(selector);
   if (existing) {
@@ -1927,7 +1987,7 @@ function initCheckoutCardFields() {
     .then(function (sdk) {
       return sdk.findEligibleMethods({ currencyCode: currency }).then(function (paymentMethods) {
         if (!paymentMethods.isEligible('advanced_cards')) {
-          throw new Error('Card fields are unavailable for this PayPal account or browser. You can continue to the secure card step.');
+          throw new Error('Advanced Card Payments is not eligible for this merchant, buyer, currency, or browser context.');
         }
 
         renderCardFields(sdk);
@@ -1935,7 +1995,7 @@ function initCheckoutCardFields() {
     })
     .catch(function (error) {
       logUnexpectedCheckoutSdkError('PayPal card fields setup failed', error);
-      setError(error.message || 'Secure card fields could not be loaded. You can continue to the secure card step.');
+      setError(paypalErrorMessage(error, 'PayPal secure card fields could not be loaded. You can continue to the secure card step.'));
     });
 
   form.addEventListener('submit', function (event) {
