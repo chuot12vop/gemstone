@@ -194,9 +194,11 @@ class CardGateway extends AbstractPaymentGateway
             'email' => (string) $request->input('customer_email', $order->customer_email),
             'phone' => (string) $request->input('shipping_phone', ''),
             'address' => [
-                'addressLine1' => (string) $request->input('shipping_address_line1', ''),
-                'addressLine2' => (string) $request->input('shipping_address_line2', ''),
-                'adminArea2' => (string) $request->input('shipping_city', ''),
+                'streetAddress' => $this->streetAddress(
+                    (string) $request->input('shipping_address_line1', ''),
+                    (string) $request->input('shipping_address_line2', ''),
+                ),
+                'city' => (string) $request->input('shipping_city', ''),
                 'postalCode' => (string) $request->input('shipping_postcode', ''),
                 'countryCode' => (string) $request->input('shipping_country', ''),
             ],
@@ -205,9 +207,11 @@ class CardGateway extends AbstractPaymentGateway
             'email' => (string) $request->input('customer_email', $order->customer_email),
             'phone' => (string) $request->input('shipping_phone', ''),
             'address' => [
-                'addressLine1' => (string) $request->input('card_billing_address_line1', ''),
-                'addressLine2' => (string) $request->input('card_billing_address_line2', ''),
-                'adminArea2' => (string) $request->input('card_billing_city', ''),
+                'streetAddress' => $this->streetAddress(
+                    (string) $request->input('card_billing_address_line1', ''),
+                    (string) $request->input('card_billing_address_line2', ''),
+                ),
+                'city' => (string) $request->input('card_billing_city', ''),
                 'postalCode' => (string) $request->input('card_billing_postcode', ''),
                 'countryCode' => (string) $request->input('card_billing_country', ''),
             ],
@@ -218,6 +222,14 @@ class CardGateway extends AbstractPaymentGateway
             $billing,
             static fn ($value) => is_array($value) ? $value !== [] : trim((string) $value) !== '',
         )]);
+    }
+
+    private function streetAddress(string $line1, string $line2): string
+    {
+        return implode(', ', array_filter(
+            [trim($line1), trim($line2)],
+            static fn (string $line): bool => $line !== '',
+        ));
     }
 
     private function apiClient(): ?PayPalApiClient

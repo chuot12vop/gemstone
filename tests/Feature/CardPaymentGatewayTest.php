@@ -82,6 +82,30 @@ class CardPaymentGatewayTest extends TestCase
         $this->assertSame('PAYPAL-EMBEDDED-CARD-1', PaymentTransaction::query()->firstOrFail()->gateway_transaction_id);
     }
 
+    public function test_card_checkout_stores_paypal_v6_billing_address_shape(): void
+    {
+        $this->enablePayments();
+        $this->addProductToCart();
+        $this->fakeInitiation('PAYPAL-BILLING-1');
+
+        $payload = $this->checkoutPayload('card');
+        $payload['shipping_address_line2'] = 'Unit 4';
+
+        $this->postJson(route('shop.checkout.place'), $payload)->assertOk();
+
+        $order = Order::query()->firstOrFail();
+        $billing = session('checkout.card.billing.'.$order->order_number);
+
+        $this->assertSame([
+            'streetAddress' => '123 Test St, Unit 4',
+            'city' => 'Austin',
+            'postalCode' => '78701',
+            'countryCode' => 'US',
+        ], $billing['address']);
+        $this->assertArrayNotHasKey('addressLine1', $billing['address']);
+        $this->assertArrayNotHasKey('adminArea2', $billing['address']);
+    }
+
     public function test_paypal_checkout_can_create_an_inline_order(): void
     {
         $this->enablePayments();

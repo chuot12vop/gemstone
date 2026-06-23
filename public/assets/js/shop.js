@@ -1876,13 +1876,21 @@ function initCheckoutCardFields() {
 
   function billingAddress() {
     const same = form.querySelector('[data-card-billing-same]')?.checked !== false;
-    return {
-      addressLine1: fieldValue(same ? 'shipping_address_line1' : 'card_billing_address_line1'),
-      addressLine2: fieldValue(same ? 'shipping_address_line2' : 'card_billing_address_line2'),
-      adminArea2: fieldValue(same ? 'shipping_city' : 'card_billing_city'),
+    const addressLine1 = fieldValue(same ? 'shipping_address_line1' : 'card_billing_address_line1');
+    const addressLine2 = fieldValue(same ? 'shipping_address_line2' : 'card_billing_address_line2');
+    const address = {
+      streetAddress: [addressLine1, addressLine2].filter(Boolean).join(', '),
+      city: fieldValue(same ? 'shipping_city' : 'card_billing_city'),
       postalCode: fieldValue(same ? 'shipping_postcode' : 'card_billing_postcode'),
       countryCode: fieldValue(same ? 'shipping_country' : 'card_billing_country'),
     };
+
+    return Object.keys(address).reduce(function (filtered, key) {
+      if (address[key] !== '') {
+        filtered[key] = address[key];
+      }
+      return filtered;
+    }, {});
   }
 
   if (!placeUrl || !webSdkUrl || !clientId) {
@@ -1922,8 +1930,6 @@ function initCheckoutCardFields() {
           throw new Error('Card fields are unavailable for this PayPal account or browser. You can continue to the secure card step.');
         }
 
-        renderCardFields(sdk);
-      }).catch(function () {
         renderCardFields(sdk);
       });
     })
