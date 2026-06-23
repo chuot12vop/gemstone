@@ -67,7 +67,11 @@
                     @if(!empty($cardCheckout))
                         <div class="checkout-card-fields"
                              data-checkout-card-fields
-                             data-card-place-url="{{ $cardCheckout['placeUrl'] }}">
+                             data-card-place-url="{{ $cardCheckout['placeUrl'] }}"
+                             data-paypal-web-sdk="{{ $cardCheckout['webSdkUrl'] }}"
+                             data-paypal-client-id="{{ $cardCheckout['clientId'] }}"
+                             data-paypal-currency="{{ $cardCheckout['currency'] }}"
+                             data-paypal-sandbox="{{ ($cardCheckout['sandbox'] ?? false) ? '1' : '0' }}">
                             <div id="checkout-card-number" class="checkout-card-fields__field checkout-card-fields__field--number"></div>
                             <div class="checkout-card-fields__row">
                                 <div id="checkout-card-expiry" class="checkout-card-fields__field"></div>
@@ -150,10 +154,12 @@
                                      data-payment-method-panel
                                      data-checkout-wallet-panel="{{ $method->code() }}"
                                      data-wallet-place-url="{{ route('shop.checkout.place') }}"
-                                     data-paypal-sdk="{{ $inlineWalletCheckout['sdkUrl'] }}"
+                                     data-paypal-web-sdk="{{ $inlineWalletCheckout['webSdkUrl'] }}"
+                                     data-paypal-client-id="{{ $inlineWalletCheckout['clientId'] }}"
                                      data-apple-pay-amount="{{ $inlineWalletCheckout['amount'] }}"
                                      data-apple-pay-currency="{{ $inlineWalletCheckout['currency'] }}"
                                      data-apple-pay-country="{{ $inlineWalletCheckout['country'] }}"
+                                     data-paypal-sandbox="{{ ($inlineWalletCheckout['sandbox'] ?? false) ? '1' : '0' }}"
                                      @if($selectedCode !== $method->code()) hidden @endif>
                                     @if($method->code() === 'paypal')
                                         <p class="checkout-wallet-panel__hint">Continue securely with PayPal. You can use your PayPal balance or eligible saved cards.</p>
@@ -172,11 +178,4 @@
         @endif
     </fieldset>
 
-    @if(!empty($cardCheckout))
-        @push('scripts')
-            <script src="{{ $cardCheckout['sdkUrl'] }}"
-                    data-client-token="{{ $cardCheckout['clientToken'] }}"
-                    data-sdk-integration-source="checkout-card-fields"></script>
-        @endpush
-    @endif
 </section>

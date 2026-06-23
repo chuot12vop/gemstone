@@ -1,8 +1,9 @@
 @php
     $configured = ($data['configured'] ?? false) === true;
     $paypalOrderId = $data['paypalOrderId'] ?? '';
-    $clientToken = $data['clientToken'] ?? '';
-    $sdkUrl = $data['sdkUrl'] ?? '';
+    $clientId = $data['clientId'] ?? '';
+    $webSdkUrl = $data['webSdkUrl'] ?? '';
+    $currency = $data['currency'] ?? strtoupper((string) $order->currency_code);
     $billingDetails = $data['billingDetails'] ?? [];
     $sandbox = ($data['sandbox'] ?? false) === true;
     $error = $data['error'] ?? null;
@@ -16,7 +17,7 @@
         <p class="gateway-pane__hint gateway-pane__hint--warn">Card payments are not fully configured. Add your PayPal REST API credentials in Admin - Payments - Payment settings.</p>
     @elseif($error)
         <p class="gateway-pane__hint gateway-pane__hint--warn">{{ $error }}</p>
-    @elseif($paypalOrderId === '' || $clientToken === '' || $sdkUrl === '')
+    @elseif($paypalOrderId === '' || $clientId === '' || $webSdkUrl === '')
         <p class="gateway-pane__hint gateway-pane__hint--warn">Unable to load secure card checkout. Refresh this page or contact support.</p>
     @else
         <form id="paypal-card-payment-form" class="paypal-card-form" data-paypal-card-form>
@@ -39,10 +40,12 @@
         @endif
 
         @push('scripts')
-        <script src="{{ $sdkUrl }}" data-client-token="{{ $clientToken }}"></script>
+        <script src="{{ $webSdkUrl }}" data-sdk-integration-source="paypal-web-sdk-v6-card-fields"></script>
         <script>
-        (function () {
+        (async function () {
             var paypalOrderId = @json($paypalOrderId);
+            var clientId = @json($clientId);
+            var currency = @json($currency);
             var billingDetails = @json($billingDetails);
             var confirmUrl = @json(route('shop.checkout.confirm', ['order_number' => $order->order_number]));
             var csrf = @json(csrf_token());
@@ -85,42 +88,50 @@
                 });
             }
 
-            if (!form || typeof paypal === 'undefined' || typeof paypal.CardFields !== 'function') {
+            if (!form || typeof paypal === 'undefined' || typeof paypal.createInstance !== 'function') {
                 setError('PayPal secure card fields could not be loaded. Check your connection or account eligibility.');
                 return;
             }
 
-            var cardFields = paypal.CardFields({
-                createOrder: function () { return paypalOrderId; },
-                onApprove: function () {
-                    return postConfirm().catch(function (error) {
-                        setError((error && error.message) || 'Payment could not be confirmed.');
-                        setBusy(false);
-                        throw error;
-                    });
-                },
-                onError: function (error) {
-                    setError((error && error.message) || 'Card payment could not be completed.');
-                    setBusy(false);
+            var cardSession;
+            try {
+                var sdk = await paypal.createInstance({
+                    clientId: clientId,
+                    components: ['card-fields'],
+                    pageType: 'checkout'
+                });
+                var paymentMethods = await sdk.findEligibleMethods({ currencyCode: currency });
+                if (!paymentMethods.isEligible('advanced_cards')) {
+                    setError('Card payments are unavailable for this PayPal account or browser. Please choose another payment method.');
+                    submitBtn.hidden = true;
+                    return;
                 }
-            });
-
-            if (!cardFields.isEligible()) {
-                setError('Card payments are unavailable for this PayPal account or browser. Please choose another payment method.');
+                cardSession = sdk.createCardFieldsOneTimePaymentSession();
+                document.getElementById('paypal-card-name').appendChild(cardSession.createCardFieldsComponent({ type: 'name', placeholder: 'Name on card' }));
+                document.getElementById('paypal-card-number').appendChild(cardSession.createCardFieldsComponent({ type: 'number', placeholder: 'Card number' }));
+                document.getElementById('paypal-card-expiry').appendChild(cardSession.createCardFieldsComponent({ type: 'expiry', placeholder: 'MM / YY' }));
+                document.getElementById('paypal-card-cvv').appendChild(cardSession.createCardFieldsComponent({ type: 'cvv', placeholder: 'CVV' }));
+            } catch (error) {
+                console.error('PayPal card fields initialization failed', error);
+                setError('PayPal secure card fields could not be loaded. Check your connection or account eligibility.');
                 submitBtn.hidden = true;
                 return;
             }
-
-            cardFields.NameField().render('#paypal-card-name');
-            cardFields.NumberField().render('#paypal-card-number');
-            cardFields.ExpiryField().render('#paypal-card-expiry');
-            cardFields.CVVField().render('#paypal-card-cvv');
 
             form.addEventListener('submit', function (event) {
                 event.preventDefault();
                 setError('');
                 setBusy(true);
-                cardFields.submit({ billingAddress: billingDetails.address || {} })
+                cardSession.submit(paypalOrderId, { billingAddress: billingDetails.address || {} })
+                    .then(function (result) {
+                        if (result && result.state === 'succeeded') {
+                            return postConfirm();
+                        }
+                        if (result && result.state === 'canceled') {
+                            throw new Error('Authentication was cancelled. Please try again.');
+                        }
+                        throw new Error((result && result.data && result.data.message) || 'Card payment could not be completed.');
+                    })
                     .catch(function (error) {
                         setError((error && error.message) || 'Check your card details and try again.');
                         setBusy(false);

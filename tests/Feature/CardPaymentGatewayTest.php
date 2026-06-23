@@ -36,10 +36,14 @@ class CardPaymentGatewayTest extends TestCase
             ->assertSee('PayPal')
             ->assertSee('Apple Pay')
             ->assertSee('id="express-applepay-button"', false)
-            ->assertSee('components=buttons%2Cgooglepay%2Capplepay%2Ccard-fields', false)
+            ->assertSee('data-paypal-web-sdk="https://www.sandbox.paypal.com/web-sdk/v6/core"', false)
+            ->assertSee('data-paypal-client-id="paypal-client-id"', false)
+            ->assertSee('data-paypal-sandbox="1"', false)
+            ->assertSee('data-apple-pay-amount="130.14"', false)
             ->assertSee('data-checkout-card-fields', false)
             ->assertSee('id="checkout-card-number"', false)
-            ->assertSee('data-client-token="client-token-test"', false)
+            ->assertDontSee('data-client-token=', false)
+            ->assertDontSee('components=buttons%2Cgooglepay%2Capplepay%2Ccard-fields', false)
             ->assertDontSee('enable-funding', false)
             ->assertSee('assets/img/payments/raster/visa.png')
             ->assertDontSee('Stripe');
@@ -55,7 +59,7 @@ class CardPaymentGatewayTest extends TestCase
         $this->get(route('shop.checkout'))
             ->assertOk()
             ->assertDontSee('id="express-applepay-button"', false)
-            ->assertSee('components=buttons%2Cgooglepay', false)
+            ->assertSee('/web-sdk/v6/core', false)
             ->assertDontSee('enable-funding', false)
             ->assertDontSee('%2Capplepay', false);
     }
@@ -133,7 +137,7 @@ class CardPaymentGatewayTest extends TestCase
             ->assertUnprocessable();
     }
 
-    public function test_card_checkout_creates_paypal_order_and_client_token(): void
+    public function test_card_checkout_creates_paypal_order_and_renders_v6_card_fields(): void
     {
         $this->enablePayments();
         $this->addProductToCart();
@@ -150,7 +154,9 @@ class CardPaymentGatewayTest extends TestCase
         $this->get(route('shop.checkout.processing', $order->order_number))
             ->assertOk()
             ->assertSee('card-fields', false)
-            ->assertSee('data-client-token="client-token-test"', false)
+            ->assertSee('/web-sdk/v6/core', false)
+            ->assertSee('paypal-client-id', false)
+            ->assertDontSee('data-client-token=', false)
             ->assertSee('checkout:loading', false)
             ->assertSee('Processing your card payment...')
             ->assertDontSee('js.stripe.com', false);
@@ -195,7 +201,8 @@ class CardPaymentGatewayTest extends TestCase
         $this->fakeOrderSummary('PAYPAL-APPLE-1', 'CREATED');
 
         $result = app(ApplePayGateway::class)->initiate($order, Request::create('/', 'GET'));
-        $this->assertStringContainsString('components=applepay', $result->viewData['sdkUrl']);
+        $this->assertSame('https://www.sandbox.paypal.com/web-sdk/v6/core', $result->viewData['webSdkUrl']);
+        $this->assertSame('paypal-client-id', $result->viewData['clientId']);
         $this->assertSame('PAYPAL-APPLE-1', $result->viewData['paypalOrderId']);
 
         $this->fakeConfirmation('PAYPAL-APPLE-1', 'APPROVED', 'CAPTURE-APPLE-1');

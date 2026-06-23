@@ -11,14 +11,16 @@
 
     @if($initialSlotCount === 0) hidden @endif
     data-paypal-init-url="{{ $paypal['initUrl'] }}"
-    data-paypal-sdk="{{ $paypal['sdkUrl'] }}"
+    data-paypal-web-sdk="{{ $paypal['webSdkUrl'] }}"
+
+    data-paypal-client-id="{{ $paypal['clientId'] }}"
 
     data-apple-pay-amount="{{ $paypal['amount'] }}"
 
     data-apple-pay-currency="{{ $paypal['currency'] }}"
 
     data-apple-pay-country="{{ $paypal['country'] }}"
-    data-paypal-sandbox="{{ ($paypal['sandbox'] ?? false) ? '1' : '0' }}">
+    data-paypal-sandbox="{{ ($paypal['sandbox'] ?? false) ? '1' : '0' }}">
     <h2 id="checkout-express-title" class="checkout-express__title">Express checkout</h2>
     <div class="checkout-express__buttons checkout-express__buttons--{{ $initialSlotCount }}" data-express-buttons>
         @if(in_array('paypal', $slots, true))

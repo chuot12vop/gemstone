@@ -70,7 +70,7 @@
                     <span class="switch__slider" aria-hidden="true"></span>
                 </span>
             </label>
-            <p class="muted" style="margin:0;">These credentials are shared by PayPal, card, and Apple Pay. Configure <code>{{ route('webhooks.paypal') }}</code> for capture completed and denied events. Use Sandbox credentials while testing.</p>
+            <p class="muted" style="margin:0;">These credentials are shared by PayPal, card, Apple Pay, and Google Pay through PayPal JavaScript SDK v6. Configure <code>{{ route('webhooks.paypal') }}</code> for capture completed and denied events. Use Sandbox credentials while testing.</p>
         </fieldset>
 
         <fieldset class="form-fieldset">
@@ -82,7 +82,7 @@
                     <span class="switch__slider" aria-hidden="true"></span>
                 </span>
             </label>
-            <p class="muted" style="margin:0;">Requires Apple Pay approval for your PayPal merchant account, HTTPS, and domain registration in PayPal. It uses the PayPal credentials and Sandbox mode above.</p>
+            <p class="muted" style="margin:0;">Requires PayPal Apple Pay eligibility, HTTPS, and domain registration in PayPal. If the PayPal app Features section does not show Apple Pay/Google Pay, the SDK will hide those buttons even when this method is enabled.</p>
         </fieldset>
 
         <fieldset class="form-fieldset">

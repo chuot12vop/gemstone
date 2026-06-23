@@ -41,6 +41,13 @@ class PayPalApiClient
         return $this->clientId;
     }
 
+    public function webSdkUrl(): string
+    {
+        return $this->sandbox
+            ? 'https://www.sandbox.paypal.com/web-sdk/v6/core'
+            : 'https://www.paypal.com/web-sdk/v6/core';
+    }
+
     public function sdkUrl(string $currencyCode, string $components = 'buttons'): string
     {
         $host = $this->sandbox
@@ -53,6 +60,10 @@ class PayPalApiClient
             'intent' => 'capture',
             'components' => $components,
         ];
+
+        if ($this->sandbox) {
+            $query['buyer-country'] = 'US';
+        }
 
         return $host.'/sdk/js?'.http_build_query($query);
     }

@@ -85,17 +85,17 @@ function firstCheckoutJsonError(data, fallback) {
 }
 
 function loadCheckoutPayPalSdk(url) {
-  if (typeof paypal !== 'undefined') {
+  if (typeof paypal !== 'undefined' && typeof paypal.createInstance === 'function') {
     return Promise.resolve();
   }
   if (!url) {
-    return Promise.reject(new Error('PayPal SDK URL missing'));
+    return Promise.reject(new Error('PayPal Web SDK URL missing'));
   }
 
-  const existing = document.querySelector('script[data-paypal-sdk-express], script[src*="paypal.com/sdk/js"]');
+  const existing = document.querySelector('script[data-paypal-web-sdk-v6], script[src*="/web-sdk/v6/core"]');
   if (existing) {
     return new Promise(function (resolve, reject) {
-      if (typeof paypal !== 'undefined') {
+      if (typeof paypal !== 'undefined' && typeof paypal.createInstance === 'function') {
         resolve();
         return;
       }
@@ -108,10 +108,56 @@ function loadCheckoutPayPalSdk(url) {
     const script = document.createElement('script');
     script.src = url;
     script.async = true;
-    script.dataset.paypalSdkExpress = '1';
-    script.dataset.sdkIntegrationSource = 'checkout-inline-wallets';
+    script.dataset.paypalWebSdkV6 = '1';
+    script.dataset.sdkIntegrationSource = 'checkout-paypal-v6';
     script.onload = function () { resolve(); };
-    script.onerror = function () { reject(new Error('PayPal SDK failed to load')); };
+    script.onerror = function () { reject(new Error('PayPal Web SDK failed to load')); };
+    document.head.appendChild(script);
+  });
+}
+
+const checkoutPayPalV6Instances = new Map();
+
+function paypalV6Instance(config) {
+  const components = Array.from(new Set(config.components || ['paypal-payments'])).sort();
+  const key = [config.webSdkUrl, config.clientId, components.join('|')].join('::');
+  if (!checkoutPayPalV6Instances.has(key)) {
+    checkoutPayPalV6Instances.set(key, loadCheckoutPayPalSdk(config.webSdkUrl).then(function () {
+      if (typeof paypal === 'undefined' || typeof paypal.createInstance !== 'function') {
+        throw new Error('PayPal Web SDK v6 is unavailable.');
+      }
+      return paypal.createInstance({
+        clientId: config.clientId,
+        components: components,
+        pageType: 'checkout',
+      });
+    }));
+  }
+
+  return checkoutPayPalV6Instances.get(key);
+}
+
+function loadCheckoutScriptOnce(url, selector, errorMessage) {
+  const existing = document.querySelector(selector);
+  if (existing) {
+    if (existing.dataset.loaded === '1') {
+      return Promise.resolve();
+    }
+    return new Promise(function (resolve, reject) {
+      existing.addEventListener('load', function () { resolve(); }, { once: true });
+      existing.addEventListener('error', function () { reject(new Error(errorMessage || 'Script failed to load')); }, { once: true });
+    });
+  }
+
+  return new Promise(function (resolve, reject) {
+    const script = document.createElement('script');
+    script.src = url;
+    script.async = true;
+    script.onload = function () {
+      script.dataset.loaded = '1';
+      resolve();
+    };
+    script.onerror = function () { reject(new Error(errorMessage || 'Script failed to load')); };
     document.head.appendChild(script);
   });
 }
@@ -1210,44 +1256,15 @@ function initCheckoutExpress() {
 
   const form = document.querySelector('[data-checkout-delivery]');
   const initUrl = root.getAttribute('data-paypal-init-url');
-  const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')
-    || document.querySelector('input[name="_token"]')?.value
-    || '';
+  const csrf = checkoutCsrfToken();
+  const webSdkUrl = root.getAttribute('data-paypal-web-sdk');
+  const clientId = root.getAttribute('data-paypal-client-id');
+  const currency = root.getAttribute('data-apple-pay-currency') || 'USD';
+  const amount = root.getAttribute('data-apple-pay-amount') || '';
+  const sandbox = root.getAttribute('data-paypal-sandbox') === '1';
 
-  if (!initUrl) {
+  if (!initUrl || !webSdkUrl || !clientId) {
     return;
-  }
-
-  const sdkUrl = root.getAttribute('data-paypal-sdk');
-
-  function loadPayPalSdk(url) {
-    if (typeof paypal !== 'undefined') {
-      return Promise.resolve();
-    }
-    if (!url) {
-      return Promise.reject(new Error('PayPal SDK URL missing'));
-    }
-    const existing = document.querySelector('script[data-paypal-sdk-express]');
-    if (existing) {
-      return new Promise(function (resolve, reject) {
-        if (typeof paypal !== 'undefined') {
-          resolve();
-          return;
-        }
-        existing.addEventListener('load', function () { resolve(); }, { once: true });
-        existing.addEventListener('error', function () { reject(new Error('PayPal SDK failed to load')); }, { once: true });
-      });
-    }
-    return new Promise(function (resolve, reject) {
-      const script = document.createElement('script');
-      script.src = url;
-      script.async = true;
-      script.dataset.paypalSdkExpress = '1';
-      script.dataset.sdkIntegrationSource = 'express-checkout';
-      script.onload = function () { resolve(); };
-      script.onerror = function () { reject(new Error('PayPal SDK failed to load')); };
-      document.head.appendChild(script);
-    });
   }
 
   function showPayPalMountError(mountSelector, message) {
@@ -1354,194 +1371,258 @@ function initCheckoutExpress() {
     });
   }
 
-  function mountPayPal() {
-    if (typeof paypal === 'undefined') {
-      showPayPalMountError('#express-paypal-button', 'PayPal could not be loaded. Check your connection or ad blocker.');
-      return;
-    }
-
-    let lastInit = null;
-
-    function bindExpressButton(mountSelector, options, style) {
-      const mount = document.querySelector(mountSelector);
-      if (!mount) {
-        return;
-      }
-      const buttonOptions = Object.assign({}, options, {
-        style: style,
-        createOrder: function () {
-          startCheckoutLoading('Starting secure checkout...');
-          return postInit('paypal')
-            .then(function (data) {
-              lastInit = data;
-              stopCheckoutLoading();
-              return data.paypal_order_id;
-            })
-            .catch(function (err) {
-              stopCheckoutLoading();
-              showToast(err && err.message ? err.message : 'Could not start express checkout.');
-              throw err;
-            });
-        },
-        onApprove: function (data) {
-          if (!lastInit || !lastInit.confirm_url) {
-            const expiredMsg = 'Checkout session expired. Please try again.';
-            showToast(expiredMsg);
-            return Promise.reject(new Error(expiredMsg));
-          }
-          startCheckoutLoading('Confirming your payment...');
-          return postConfirm(lastInit.confirm_url, { paypal_order_id: data.orderID }).catch(function (err) {
-            stopCheckoutLoading();
-            showToast(err && err.message ? err.message : 'Payment could not be confirmed.');
-            throw err;
-          });
-        },
-        onCancel: function () {
-          stopCheckoutLoading();
-        },
-        onError: function (err) {
-          stopCheckoutLoading();
-          console.error('PayPal express error', err);
-        },
-      });
-      paypal
-        .Buttons(buttonOptions)
-        .render(mount)
-        .catch(function (err) {
-          console.error('PayPal express render failed', mountSelector, err);
-          if (mountSelector === '#express-googlepay-button') {
-            setExpressSlotVisibility(mountSelector, false);
-          } else {
-            showPayPalMountError(mountSelector, 'PayPal is unavailable in this browser.');
-          }
-        });
-    }
-
-    bindExpressButton('#express-paypal-button', { fundingSource: paypal.FUNDING.PAYPAL }, {
-      layout: 'vertical',
-      color: 'gold',
-      shape: 'rect',
-      label: 'paypal',
-      height: 48,
-      tagline: false,
+  function sdkInstance(components) {
+    return paypalV6Instance({
+      webSdkUrl: webSdkUrl,
+      clientId: clientId,
+      components: components,
     });
-
-    const gpayFunding = paypal.FUNDING && paypal.FUNDING.GOOGLEPAY;
-    if (gpayFunding) {
-      setExpressSlotVisibility('#express-googlepay-button', true);
-      bindExpressButton('#express-googlepay-button', { fundingSource: gpayFunding }, {
-        layout: 'vertical',
-        color: 'black',
-        shape: 'rect',
-        height: 48,
-        tagline: false,
-      });
-    } else {
-      setExpressSlotVisibility('#express-googlepay-button', false);
-    }
-
-    mountApplePay();
   }
 
-  function mountApplePay() {
-    const mount = document.querySelector('#express-applepay-button');
+  function eligibility(sdk) {
+    return sdk.findEligibleMethods({ currencyCode: currency, amount: amount });
+  }
+
+  function mountPayPal(paymentMethods, sdk) {
+    const mount = document.querySelector('#express-paypal-button');
     if (!mount) {
       return;
     }
-    if (typeof paypal === 'undefined' || typeof paypal.Applepay !== 'function' || typeof ApplePaySession === 'undefined') {
+    if (!paymentMethods.isEligible('paypal')) {
+      showPayPalMountError('#express-paypal-button', 'PayPal is unavailable in this browser.');
+      return;
+    }
+
+    let expressOrder = null;
+    const session = sdk.createPayPalOneTimePaymentSession({
+      onApprove: function (data) {
+        if (!expressOrder || !expressOrder.confirm_url) {
+          const expiredMsg = 'Checkout session expired. Please try again.';
+          showToast(expiredMsg);
+          return Promise.reject(new Error(expiredMsg));
+        }
+        startCheckoutLoading('Confirming your payment...');
+        return postConfirm(expressOrder.confirm_url, { paypal_order_id: data.orderId || expressOrder.paypal_order_id }).catch(function (err) {
+          stopCheckoutLoading();
+          showToast(err && err.message ? err.message : 'Payment could not be confirmed.');
+          throw err;
+        });
+      },
+      onCancel: function () {
+        stopCheckoutLoading();
+      },
+      onError: function (err) {
+        stopCheckoutLoading();
+        console.error('PayPal express error', err);
+      },
+    });
+
+    const button = document.createElement('paypal-button');
+    mount.replaceChildren(button);
+    button.addEventListener('click', function () {
+      startCheckoutLoading('Starting secure checkout...');
+      postInit('paypal')
+        .then(function (data) {
+          expressOrder = data;
+          return session.start({ presentationMode: 'auto' }, Promise.resolve({ orderId: data.paypal_order_id }));
+        })
+        .catch(function (err) {
+          stopCheckoutLoading();
+          showToast(err && err.message ? err.message : 'Could not start express checkout.');
+        });
+    });
+  }
+
+  function mountGooglePay(paymentMethods, sdk) {
+    const mount = document.querySelector('#express-googlepay-button');
+    if (!mount || !paymentMethods.isEligible('googlepay')) {
+      setExpressSlotVisibility('#express-googlepay-button', false);
+      return Promise.resolve();
+    }
+
+    return loadCheckoutScriptOnce('https://pay.google.com/gp/p/js/pay.js', 'script[src*="pay.google.com/gp/p/js/pay.js"]', 'Google Pay SDK failed to load')
+      .then(function () {
+        if (!globalThis.google || !globalThis.google.payments || !globalThis.google.payments.api) {
+          throw new Error('Google Pay SDK unavailable.');
+        }
+        const details = paymentMethods.getDetails('googlepay');
+        const googlePaySession = sdk.createGooglePayOneTimePaymentSession();
+        const googlePayConfig = googlePaySession.formatConfigForPaymentRequest(details.config);
+        const paymentsClient = new google.payments.api.PaymentsClient({
+          environment: sandbox ? 'TEST' : 'PRODUCTION',
+          paymentDataCallbacks: {
+            onPaymentAuthorized: function (paymentData) {
+              return postInit('paypal')
+                .then(function (data) {
+                  return googlePaySession.confirmOrder({
+                    orderId: data.paypal_order_id,
+                    paymentMethodData: paymentData.paymentMethodData,
+                  }).then(function (result) {
+                    const continueAfterAuth = result && result.status === 'PAYER_ACTION_REQUIRED' && typeof googlePaySession.initiatePayerAction === 'function'
+                      ? googlePaySession.initiatePayerAction({ orderId: data.paypal_order_id })
+                      : Promise.resolve();
+
+                    return continueAfterAuth.then(function () {
+                      return postConfirm(data.confirm_url, { paypal_order_id: data.paypal_order_id });
+                    });
+                  });
+                })
+                .then(function () {
+                  return { transactionState: 'SUCCESS' };
+                })
+                .catch(function (err) {
+                  console.error('Google Pay authorization failed', err);
+                  return {
+                    transactionState: 'ERROR',
+                    error: { message: err && err.message ? err.message : 'Google Pay could not be completed.' },
+                  };
+                });
+            },
+          },
+        });
+
+        return paymentsClient.isReadyToPay({
+          allowedPaymentMethods: googlePayConfig.allowedPaymentMethods,
+          apiVersion: googlePayConfig.apiVersion,
+          apiVersionMinor: googlePayConfig.apiVersionMinor,
+        }).then(function (ready) {
+          if (!ready || !ready.result) {
+            setExpressSlotVisibility('#express-googlepay-button', false);
+            return;
+          }
+          setExpressSlotVisibility('#express-googlepay-button', true);
+          const button = paymentsClient.createButton({
+            onClick: function () {
+              paymentsClient.loadPaymentData(Object.assign({}, googlePayConfig, {
+                transactionInfo: {
+                  countryCode: googlePayConfig.countryCode,
+                  currencyCode: currency,
+                  totalPriceStatus: 'FINAL',
+                  totalPrice: amount,
+                },
+                callbackIntents: ['PAYMENT_AUTHORIZATION'],
+              }));
+            },
+          });
+          mount.replaceChildren(button);
+        });
+      })
+      .catch(function (err) {
+        console.warn('Google Pay is unavailable.', err);
+        setExpressSlotVisibility('#express-googlepay-button', false);
+      });
+  }
+
+  function mountApplePay(paymentMethods, sdk) {
+    const mount = document.querySelector('#express-applepay-button');
+    if (!mount || !paymentMethods.isEligible('applepay')) {
       setExpressSlotVisibility('#express-applepay-button', false);
       return;
     }
 
-    const applepay = paypal.Applepay();
-    applepay.config().then(function (config) {
-      if (!config.isEligible) {
-        setExpressSlotVisibility('#express-applepay-button', false);
-        return;
-      }
+    loadCheckoutScriptOnce('https://applepay.cdn-apple.com/jsapi/1.latest/apple-pay-sdk.js', 'script[src*="apple-pay-sdk.js"]', 'Apple Pay SDK failed to load')
+      .then(function () {
+        if (typeof ApplePaySession === 'undefined' || (typeof ApplePaySession.canMakePayments === 'function' && !ApplePaySession.canMakePayments())) {
+          setExpressSlotVisibility('#express-applepay-button', false);
+          return null;
+        }
+        return sdk.createApplePayOneTimePaymentSession();
+      })
+      .then(function (applepay) {
+        if (!applepay) {
+          return;
+        }
+        return applepay.config().then(function (config) {
+          setExpressSlotVisibility('#express-applepay-button', true);
+          const button = document.createElement('apple-pay-button');
+          button.setAttribute('buttonstyle', 'black');
+          button.setAttribute('type', 'buy');
+          button.setAttribute('locale', 'en-US');
+          mount.replaceChildren(button);
 
-      setExpressSlotVisibility('#express-applepay-button', true);
-      const button = document.createElement('apple-pay-button');
-      button.setAttribute('buttonstyle', 'black');
-      button.setAttribute('type', 'buy');
-      button.setAttribute('locale', 'en-US');
-      mount.appendChild(button);
-
-      button.addEventListener('click', function () {
-        const displayName = document.title || 'Store';
-        let expressOrder = null;
-        const session = new ApplePaySession(4, {
-          countryCode: root.getAttribute('data-apple-pay-country'),
-          currencyCode: root.getAttribute('data-apple-pay-currency'),
-          merchantCapabilities: config.merchantCapabilities,
-          supportedNetworks: config.supportedNetworks,
-          requiredBillingContactFields: ['name', 'postalAddress'],
-          total: {
-            label: displayName,
-            amount: root.getAttribute('data-apple-pay-amount'),
-            type: 'final',
-          },
-        });
-
-        const initPromise = postInit('apple_pay')
-          .then(function (data) {
-            expressOrder = data;
-            return data;
-          })
-          .catch(function (err) {
-            session.abort();
-            showToast(err && err.message ? err.message : 'Could not start Apple Pay.');
-            return null;
-          });
-
-        session.onvalidatemerchant = function (event) {
-          applepay.validateMerchant({ validationUrl: event.validationURL, displayName: displayName })
-            .then(function (merchantSession) {
-              session.completeMerchantValidation(merchantSession.merchantSession);
-            })
-            .catch(function () {
-              session.abort();
-              showToast('Apple Pay merchant validation failed.');
+          button.addEventListener('click', function () {
+            const displayName = document.title || 'Store';
+            let expressOrder = null;
+            const session = new ApplePaySession(4, {
+              countryCode: config.countryCode || root.getAttribute('data-apple-pay-country'),
+              currencyCode: currency,
+              merchantCapabilities: config.merchantCapabilities,
+              supportedNetworks: config.supportedNetworks,
+              requiredBillingContactFields: ['name', 'postalAddress'],
+              total: {
+                label: displayName,
+                amount: amount,
+                type: 'final',
+              },
             });
-        };
 
-        session.onpaymentauthorized = function (event) {
-          startCheckoutLoading('Confirming your Apple Pay payment...');
-          initPromise
-            .then(function (data) {
-              if (!data) {
-                throw new Error('Could not start Apple Pay.');
-              }
-              return applepay.confirmOrder({
-                orderId: data.paypal_order_id,
-                token: event.payment.token,
-                billingContact: event.payment.billingContact,
+            const initPromise = postInit('apple_pay')
+              .then(function (data) {
+                expressOrder = data;
+                return data;
+              })
+              .catch(function (err) {
+                session.abort();
+                showToast(err && err.message ? err.message : 'Could not start Apple Pay.');
+                return null;
               });
-            })
-            .then(function () {
-              session.completePayment(ApplePaySession.STATUS_SUCCESS);
-              return postConfirm(expressOrder.confirm_url, { paypal_order_id: expressOrder.paypal_order_id });
-            })
-            .catch(function (err) {
-              stopCheckoutLoading();
-              session.completePayment(ApplePaySession.STATUS_FAILURE);
-              showToast(err && err.message ? err.message : 'Apple Pay could not be completed.');
-            });
-        };
 
-        session.oncancel = function () {
-          stopCheckoutLoading();
-        };
-        session.begin();
+            session.onvalidatemerchant = function (event) {
+              applepay.validateMerchant({ validationUrl: event.validationURL })
+                .then(function (merchantSession) {
+                  session.completeMerchantValidation(merchantSession.merchantSession);
+                })
+                .catch(function () {
+                  session.abort();
+                  showToast('Apple Pay merchant validation failed.');
+                });
+            };
+
+            session.onpaymentauthorized = function (event) {
+              startCheckoutLoading('Confirming your Apple Pay payment...');
+              initPromise
+                .then(function (data) {
+                  if (!data) {
+                    throw new Error('Could not start Apple Pay.');
+                  }
+                  return applepay.confirmOrder({
+                    orderId: data.paypal_order_id,
+                    token: event.payment.token,
+                    billingContact: event.payment.billingContact,
+                    shippingContact: event.payment.shippingContact,
+                  });
+                })
+                .then(function () {
+                  session.completePayment(ApplePaySession.STATUS_SUCCESS);
+                  return postConfirm(expressOrder.confirm_url, { paypal_order_id: expressOrder.paypal_order_id });
+                })
+                .catch(function (err) {
+                  stopCheckoutLoading();
+                  session.completePayment(ApplePaySession.STATUS_FAILURE);
+                  showToast(err && err.message ? err.message : 'Apple Pay could not be completed.');
+                });
+            };
+
+            session.oncancel = function () {
+              stopCheckoutLoading();
+            };
+            session.begin();
+          });
+        });
+      })
+      .catch(function (err) {
+        console.warn('Apple Pay is unavailable.', err);
+        setExpressSlotVisibility('#express-applepay-button', false);
       });
-    }).catch(function () {
-      setExpressSlotVisibility('#express-applepay-button', false);
-    });
   }
 
-  loadPayPalSdk(sdkUrl)
-    .then(function () {
-      mountPayPal();
+  sdkInstance(['paypal-payments', 'googlepay-payments', 'applepay-payments'])
+    .then(function (sdk) {
+      return eligibility(sdk).then(function (paymentMethods) {
+        mountPayPal(paymentMethods, sdk);
+        mountGooglePay(paymentMethods, sdk);
+        mountApplePay(paymentMethods, sdk);
+      });
     })
     .catch(function (err) {
       console.error(err);
@@ -1673,6 +1754,9 @@ function initCheckoutCardFields() {
   }
 
   const placeUrl = root.getAttribute('data-card-place-url');
+  const webSdkUrl = root.getAttribute('data-paypal-web-sdk');
+  const clientId = root.getAttribute('data-paypal-client-id');
+  const currency = root.getAttribute('data-paypal-currency') || 'USD';
   const errorEl = root.querySelector('[data-checkout-card-error]');
   const submitBtn = form.querySelector('.btn--checkout-pay');
   let checkoutOrder = null;
@@ -1768,7 +1852,7 @@ function initCheckoutCardFields() {
     };
   }
 
-  if (!placeUrl || typeof paypal === 'undefined' || typeof paypal.CardFields !== 'function') {
+  if (!placeUrl || !webSdkUrl || !clientId) {
     setError('Secure card fields could not be loaded. You can continue to the secure card step.');
     return;
   }
@@ -1792,30 +1876,31 @@ function initCheckoutCardFields() {
       'box-shadow': '0 0 0 3px rgba(166, 124, 61, 0.15)',
     },
   };
-  const cardFields = paypal.CardFields({
-    createOrder: createCheckoutOrder,
-    onApprove: function () {
-      return confirmCheckoutOrder().catch(function (error) {
-        setError(error.message || 'Card payment could not be confirmed.');
-        setBusy(false);
-        throw error;
+  let cardSession = null;
+  let cardReady = false;
+  paypalV6Instance({
+    webSdkUrl: webSdkUrl,
+    clientId: clientId,
+    components: ['card-fields'],
+  })
+    .then(function (sdk) {
+      return sdk.findEligibleMethods({ currencyCode: currency }).then(function (paymentMethods) {
+        if (!paymentMethods.isEligible('advanced_cards')) {
+          throw new Error('Card fields are unavailable for this PayPal account or browser. You can continue to the secure card step.');
+        }
+
+        cardSession = sdk.createCardFieldsOneTimePaymentSession();
+        document.getElementById('checkout-card-number')?.appendChild(cardSession.createCardFieldsComponent({ type: 'number', placeholder: 'Card number', style: fieldStyle }));
+        document.getElementById('checkout-card-expiry')?.appendChild(cardSession.createCardFieldsComponent({ type: 'expiry', placeholder: 'Expiration date (MM / YY)', style: fieldStyle }));
+        document.getElementById('checkout-card-cvv')?.appendChild(cardSession.createCardFieldsComponent({ type: 'cvv', placeholder: 'Security code', style: fieldStyle }));
+        document.getElementById('checkout-card-name')?.appendChild(cardSession.createCardFieldsComponent({ type: 'name', placeholder: 'Name on card', style: fieldStyle }));
+        cardReady = true;
       });
-    },
-    onError: function (error) {
-      setError((error && error.message) || 'Check your card details and try again.');
-      setBusy(false);
-    },
-  });
-
-  if (!cardFields.isEligible()) {
-    setError('Card fields are unavailable for this PayPal account or browser. You can continue to the secure card step.');
-    return;
-  }
-
-  cardFields.NumberField({ style: fieldStyle, placeholder: 'Card number' }).render('#checkout-card-number');
-  cardFields.ExpiryField({ style: fieldStyle, placeholder: 'Expiration date (MM / YY)' }).render('#checkout-card-expiry');
-  cardFields.CVVField({ style: fieldStyle, placeholder: 'Security code' }).render('#checkout-card-cvv');
-  cardFields.NameField({ style: fieldStyle, placeholder: 'Name on card' }).render('#checkout-card-name');
+    })
+    .catch(function (error) {
+      console.error('PayPal card fields setup failed', error);
+      setError(error.message || 'Secure card fields could not be loaded. You can continue to the secure card step.');
+    });
 
   form.addEventListener('submit', function (event) {
     const selected = form.querySelector('[data-payment-method-radio]:checked');
@@ -1834,10 +1919,28 @@ function initCheckoutCardFields() {
     }
     setError('');
     setBusy(true);
-    cardFields.submit({ billingAddress: billingAddress() }).catch(function (error) {
-      setError((error && error.message) || 'Check your card details and try again.');
+    if (!cardReady || !cardSession) {
+      setError('Secure card fields are still loading. Please wait a moment.');
       setBusy(false);
-    });
+      return;
+    }
+    createCheckoutOrder()
+      .then(function (paypalOrderId) {
+        return cardSession.submit(paypalOrderId, { billingAddress: billingAddress() });
+      })
+      .then(function (result) {
+        if (result && result.state === 'succeeded') {
+          return confirmCheckoutOrder();
+        }
+        if (result && result.state === 'canceled') {
+          throw new Error('Authentication was cancelled. Please try again.');
+        }
+        throw new Error((result && result.data && result.data.message) || 'Check your card details and try again.');
+      })
+      .catch(function (error) {
+        setError((error && error.message) || 'Check your card details and try again.');
+        setBusy(false);
+      });
   });
 }
 
@@ -1905,74 +2008,8 @@ function initCheckoutWalletPanels() {
     panel.dataset.walletUnavailableMessage = message || '';
   }
 
-  function isSecureApplePayContext() {
-    const host = globalThis.location ? globalThis.location.hostname : '';
-    return globalThis.isSecureContext === true || host === 'localhost' || host === '127.0.0.1';
-  }
-
-  function paypalSdkComponents(panel) {
-    const sdkUrl = panel.getAttribute('data-paypal-sdk') || '';
-    try {
-      const url = new URL(sdkUrl, globalThis.location ? globalThis.location.href : undefined);
-      return url.searchParams.get('components') || 'unknown';
-    } catch (error) {
-      console.error('Could not parse PayPal SDK URL', error);
-      return sdkUrl ? 'unreadable' : 'missing';
-    }
-  }
-
-  function applePayDiagnosticDetails(panel, extra) {
-    const supportsVersion4 = typeof ApplePaySession !== 'undefined' && typeof ApplePaySession.supportsVersion === 'function'
-      ? (ApplePaySession.supportsVersion(4) ? 'yes' : 'no')
-      : 'unknown';
-    const details = [
-      'protocol=' + (globalThis.location ? globalThis.location.protocol : 'unknown'),
-      'secureContext=' + (globalThis.isSecureContext === true ? 'yes' : 'no'),
-      'ApplePaySession=' + (typeof ApplePaySession !== 'undefined' ? 'yes' : 'no'),
-      'supportsVersion4=' + supportsVersion4,
-      'paypalSdk=' + (typeof paypal !== 'undefined' ? 'yes' : 'no'),
-      'paypalApplepay=' + (typeof paypal !== 'undefined' && typeof paypal.Applepay === 'function' ? 'yes' : 'no'),
-      'sdkComponents=' + paypalSdkComponents(panel),
-    ];
-    if (extra) {
-      details.push(extra);
-    }
-
-    return ' Apple Pay SDK details: ' + details.join(', ') + '.';
-  }
-
-  function applePayReadinessError(panel) {
-    if (!isSecureApplePayContext()) {
-      return 'Apple Pay requires HTTPS on iPhone. Open checkout on a secure HTTPS domain/tunnel, not an http:// LAN URL.'
-        + applePayDiagnosticDetails(panel);
-    }
-    if (typeof ApplePaySession === 'undefined') {
-      return 'Apple Pay is only available in supported Safari/iOS browsers. Open checkout in Safari on an Apple Pay-capable device.'
-        + applePayDiagnosticDetails(panel);
-    }
-    if (typeof ApplePaySession.supportsVersion === 'function' && !ApplePaySession.supportsVersion(4)) {
-      return 'This iOS/Safari version is too old for this Apple Pay checkout. Update iOS/Safari or choose Card/PayPal.'
-        + applePayDiagnosticDetails(panel);
-    }
-    if (typeof paypal === 'undefined') {
-      return 'PayPal SDK is not loaded. Check PayPal Client ID, SDK URL, network connection, or ad blocker.'
-        + applePayDiagnosticDetails(panel);
-    }
-    if (typeof paypal.Applepay !== 'function') {
-      return 'PayPal Apple Pay component is missing. Check that the PayPal SDK URL includes components=applepay.'
-        + applePayDiagnosticDetails(panel);
-    }
-
-    return '';
-  }
-
-  function applePayEligibilityMessage(panel, config) {
-    const extra = config
-      ? 'isEligible=' + (config.isEligible ? 'yes' : 'no')
-        + ', supportedNetworks=' + (Array.isArray(config.supportedNetworks) ? config.supportedNetworks.join('|') : 'unknown')
-      : 'isEligible=no';
-    return 'PayPal says Apple Pay is not eligible. Check PayPal Apple Pay setup, sandbox/live credentials, HTTPS domain, Safari, and that a supported card is added to Apple Wallet.'
-      + applePayDiagnosticDetails(panel, extra);
+  function publicApplePayUnavailableMessage() {
+    return 'Apple Pay is not available for this checkout right now. Please choose Card or PayPal.';
   }
 
   function postPlace(method, panel) {
@@ -2020,67 +2057,68 @@ function initCheckoutWalletPanels() {
 
   function mountPayPalPanel(panel) {
     const mount = panel.querySelector('#checkout-paypal-button');
-    const sdkUrl = panel.getAttribute('data-paypal-sdk');
+    const webSdkUrl = panel.getAttribute('data-paypal-web-sdk');
+    const clientId = panel.getAttribute('data-paypal-client-id');
+    const currency = panel.getAttribute('data-apple-pay-currency') || 'USD';
+    const amount = panel.getAttribute('data-apple-pay-amount') || '';
     if (!mount || mount.dataset.walletMounted === '1' || mount.dataset.walletMounting === '1') {
       return;
     }
 
     mount.dataset.walletMounting = '1';
-    loadCheckoutPayPalSdk(sdkUrl)
-      .then(function () {
-        if (typeof paypal === 'undefined' || typeof paypal.Buttons !== 'function') {
-          throw new Error('PayPal is unavailable in this browser.');
-        }
+    paypalV6Instance({
+      webSdkUrl: webSdkUrl,
+      clientId: clientId,
+      components: ['paypal-payments'],
+    })
+      .then(function (sdk) {
+        return sdk.findEligibleMethods({ currencyCode: currency, amount: amount }).then(function (paymentMethods) {
+          if (!paymentMethods.isEligible('paypal')) {
+            throw new Error('PayPal is unavailable in this browser.');
+          }
 
-        let checkoutOrder = null;
-        return paypal.Buttons({
-          fundingSource: paypal.FUNDING && paypal.FUNDING.PAYPAL,
-          style: {
-            layout: 'vertical',
-            color: 'gold',
-            shape: 'rect',
-            label: 'paypal',
-            height: 48,
-            tagline: false,
-          },
-          createOrder: function () {
+          let checkoutOrder = null;
+          const session = sdk.createPayPalOneTimePaymentSession({
+            onApprove: function (data) {
+              if (!checkoutOrder || !checkoutOrder.confirm_url) {
+                const expired = 'Checkout session expired. Please try PayPal again.';
+                setMessage(panel, expired);
+                return Promise.reject(new Error(expired));
+              }
+              setBusy(true, 'Confirming your PayPal payment...');
+              return postConfirm(checkoutOrder.confirm_url, data.orderId || checkoutOrder.paypal_order_id, 'PayPal payment could not be confirmed.')
+                .catch(function (error) {
+                  setBusy(false);
+                  setMessage(panel, error.message || 'PayPal payment could not be confirmed.');
+                  throw error;
+                });
+            },
+            onCancel: function () {
+              setBusy(false);
+            },
+            onError: function (error) {
+              console.error('PayPal inline checkout error', error);
+              setBusy(false);
+              setMessage(panel, 'PayPal reported an error. Please try again or choose another payment method.');
+            },
+          });
+
+          const button = document.createElement('paypal-button');
+          mount.replaceChildren(button);
+          button.addEventListener('click', function () {
             setMessage(panel, '');
             setBusy(true, 'Starting PayPal checkout...');
-            return postPlace('paypal', panel)
+            postPlace('paypal', panel)
               .then(function (data) {
                 checkoutOrder = data;
-                setBusy(false);
-                return data.paypal_order_id;
+                return session.start({ presentationMode: 'auto' }, Promise.resolve({ orderId: data.paypal_order_id }));
               })
               .catch(function (error) {
                 setBusy(false);
                 setMessage(panel, error.message || 'Could not start PayPal checkout.');
-                throw error;
               });
-          },
-          onApprove: function (data) {
-            if (!checkoutOrder || !checkoutOrder.confirm_url) {
-              const expired = 'Checkout session expired. Please try PayPal again.';
-              setMessage(panel, expired);
-              return Promise.reject(new Error(expired));
-            }
-            setBusy(true, 'Confirming your PayPal payment...');
-            return postConfirm(checkoutOrder.confirm_url, data.orderID, 'PayPal payment could not be confirmed.')
-              .catch(function (error) {
-                setBusy(false);
-                setMessage(panel, error.message || 'PayPal payment could not be confirmed.');
-                throw error;
-              });
-          },
-          onCancel: function () {
-            setBusy(false);
-          },
-          onError: function (error) {
-            console.error('PayPal inline checkout error', error);
-            setBusy(false);
-            setMessage(panel, 'PayPal reported an error. Please try again or choose another payment method.');
-          },
-        }).render(mount).then(function () {
+          });
+
           delete mount.dataset.walletMounting;
           mount.dataset.walletMounted = '1';
           markWalletReady(panel, true, '');
@@ -2097,31 +2135,44 @@ function initCheckoutWalletPanels() {
 
   function mountApplePayPanel(panel) {
     const mount = panel.querySelector('#checkout-applepay-button');
-    const sdkUrl = panel.getAttribute('data-paypal-sdk');
+    const webSdkUrl = panel.getAttribute('data-paypal-web-sdk');
+    const clientId = panel.getAttribute('data-paypal-client-id');
+    const currency = panel.getAttribute('data-apple-pay-currency') || 'USD';
+    const amount = panel.getAttribute('data-apple-pay-amount') || '';
     if (!mount || mount.dataset.walletMounted === '1' || mount.dataset.walletMounting === '1') {
       return;
     }
 
     mount.dataset.walletMounting = '1';
     setMessage(panel, 'Checking Apple Pay availability...');
-    loadCheckoutPayPalSdk(sdkUrl)
-      .then(function () {
-        const readinessError = applePayReadinessError(panel);
-        if (readinessError) {
-          throw new Error(readinessError);
+    Promise.all([
+      paypalV6Instance({
+        webSdkUrl: webSdkUrl,
+        clientId: clientId,
+        components: ['applepay-payments'],
+      }),
+      loadCheckoutScriptOnce('https://applepay.cdn-apple.com/jsapi/1.latest/apple-pay-sdk.js', 'script[src*="apple-pay-sdk.js"]', 'Apple Pay SDK failed to load'),
+    ])
+      .then(function (values) {
+        const sdk = values[0];
+        if (typeof ApplePaySession === 'undefined' || (typeof ApplePaySession.canMakePayments === 'function' && !ApplePaySession.canMakePayments())) {
+          throw new Error('Apple Pay is not available on this device.');
         }
 
-        const applepay = paypal.Applepay();
-        return applepay.config().then(function (config) {
-          if (!config.isEligible) {
-            throw new Error(applePayEligibilityMessage(panel, config));
+        return sdk.findEligibleMethods({ currencyCode: currency, amount: amount }).then(function (paymentMethods) {
+          if (!paymentMethods.isEligible('applepay')) {
+            throw new Error('PayPal says Apple Pay is not eligible for this merchant or buyer context.');
           }
-
+          return sdk.createApplePayOneTimePaymentSession();
+        });
+      })
+      .then(function (applepay) {
+        return applepay.config().then(function (config) {
           const button = document.createElement('apple-pay-button');
           button.setAttribute('buttonstyle', 'black');
           button.setAttribute('type', 'buy');
           button.setAttribute('locale', 'en-US');
-          mount.appendChild(button);
+          mount.replaceChildren(button);
           delete mount.dataset.walletMounting;
           mount.dataset.walletMounted = '1';
           markWalletReady(panel, true, '');
@@ -2132,8 +2183,8 @@ function initCheckoutWalletPanels() {
             const displayName = document.title || 'Store';
             let checkoutOrder = null;
             const session = new ApplePaySession(4, {
-              countryCode: panel.getAttribute('data-apple-pay-country'),
-              currencyCode: panel.getAttribute('data-apple-pay-currency'),
+              countryCode: config.countryCode || panel.getAttribute('data-apple-pay-country'),
+              currencyCode: currency,
               merchantCapabilities: config.merchantCapabilities,
               supportedNetworks: config.supportedNetworks,
               requiredBillingContactFields: ['name', 'postalAddress'],
@@ -2178,6 +2229,7 @@ function initCheckoutWalletPanels() {
                     orderId: data.paypal_order_id,
                     token: event.payment.token,
                     billingContact: event.payment.billingContact,
+                    shippingContact: event.payment.shippingContact,
                   });
                 })
                 .then(function () {
@@ -2201,8 +2253,8 @@ function initCheckoutWalletPanels() {
       .catch(function (error) {
         console.error(error);
         delete mount.dataset.walletMounting;
-        const message = error.message || 'Apple Pay could not be loaded. Please choose Card/PayPal.';
-        markWalletReady(panel, false, message);
+        const message = publicApplePayUnavailableMessage();
+        markWalletReady(panel, false, error.message || message);
         setMessage(panel, message);
       });
   }

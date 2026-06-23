@@ -1,7 +1,8 @@
 @php
     $configured = ($data['configured'] ?? false) === true;
     $paypalOrderId = $data['paypalOrderId'] ?? '';
-    $sdkUrl = $data['sdkUrl'] ?? '';
+    $clientId = $data['clientId'] ?? '';
+    $webSdkUrl = $data['webSdkUrl'] ?? '';
     $amount = $data['amount'] ?? '';
     $currency = $data['currency'] ?? 'USD';
     $country = $data['country'] ?? 'US';
@@ -17,7 +18,7 @@
         <p class="gateway-pane__hint gateway-pane__hint--warn">Apple Pay is not fully configured. Add your PayPal REST API credentials in Admin - Payments - Payment settings.</p>
     @elseif($error)
         <p class="gateway-pane__hint gateway-pane__hint--warn">{{ $error }}</p>
-    @elseif($paypalOrderId === '' || $sdkUrl === '' || $amount === '')
+    @elseif($paypalOrderId === '' || $clientId === '' || $webSdkUrl === '' || $amount === '')
         <p class="gateway-pane__hint gateway-pane__hint--warn">Unable to load Apple Pay checkout. Refresh this page or contact support.</p>
     @else
         <ul class="gateway-pane__steps">
@@ -33,10 +34,12 @@
         @endif
 
         @push('scripts')
-        <script src="{{ $sdkUrl }}"></script>
+        <script src="{{ $webSdkUrl }}" data-sdk-integration-source="paypal-web-sdk-v6-applepay"></script>
+        <script src="https://applepay.cdn-apple.com/jsapi/1.latest/apple-pay-sdk.js"></script>
         <script>
-        (function () {
+        (async function () {
             var paypalOrderId = @json($paypalOrderId);
+            var clientId = @json($clientId);
             var amount = @json($amount);
             var currency = @json($currency);
             var country = @json($country);
@@ -72,17 +75,29 @@
                 });
             }
 
-            if (typeof paypal === 'undefined' || typeof paypal.Applepay !== 'function' || typeof ApplePaySession === 'undefined') {
+            if (typeof paypal === 'undefined' || typeof paypal.createInstance !== 'function' || typeof ApplePaySession === 'undefined') {
                 showError('Apple Pay is not available on this browser or device. Please choose another payment method.');
                 return;
             }
+            if (typeof ApplePaySession.canMakePayments === 'function' && !ApplePaySession.canMakePayments()) {
+                showError('Apple Pay is not set up on this device. Please choose another payment method.');
+                return;
+            }
 
-            var applepay = paypal.Applepay();
-            applepay.config().then(function (config) {
-                if (!config.isEligible) {
+            try {
+                var sdk = await paypal.createInstance({
+                    clientId: clientId,
+                    components: ['applepay-payments'],
+                    pageType: 'checkout'
+                });
+                var paymentMethods = await sdk.findEligibleMethods({ currencyCode: currency, amount: amount });
+                if (!paymentMethods.isEligible('applepay')) {
+                    console.warn('Apple Pay is not eligible for this PayPal merchant or buyer context.');
                     showError('Apple Pay is not available for this PayPal account, browser, or device.');
                     return;
                 }
+                var applepay = await sdk.createApplePayOneTimePaymentSession();
+                var config = await applepay.config();
 
                 var button = document.createElement('apple-pay-button');
                 button.setAttribute('buttonstyle', 'black');
@@ -92,7 +107,7 @@
 
                 button.addEventListener('click', function () {
                     var session = new ApplePaySession(4, {
-                        countryCode: country,
+                        countryCode: config.countryCode || country,
                         currencyCode: currency,
                         merchantCapabilities: config.merchantCapabilities,
                         supportedNetworks: config.supportedNetworks,
@@ -129,9 +144,10 @@
 
                     session.begin();
                 });
-            }).catch(function () {
+            } catch (error) {
+                console.error('PayPal Apple Pay setup failed', error);
                 showError('PayPal Apple Pay configuration could not be loaded. Please choose another payment method.');
-            });
+            }
         })();
         </script>
         @endpush

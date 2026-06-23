@@ -2,7 +2,8 @@
     $configured = ($data['configured'] ?? false) === true;
     $paypalOrderId = $data['paypalOrderId'] ?? '';
     $clientId = $data['clientId'] ?? '';
-    $sdkUrl = $data['sdkUrl'] ?? '';
+    $webSdkUrl = $data['webSdkUrl'] ?? '';
+    $currency = $data['currency'] ?? strtoupper((string) $order->currency_code);
     $sandbox = ($data['sandbox'] ?? false) === true;
     $error = $data['error'] ?? null;
 @endphp
@@ -15,7 +16,7 @@
         <p class="gateway-pane__hint gateway-pane__hint--warn">PayPal is not fully configured. Add <strong>Client ID</strong> and <strong>Client Secret</strong> in Admin → Payments → Payment settings, then save.</p>
     @elseif($error)
         <p class="gateway-pane__hint gateway-pane__hint--warn">{{ $error }}</p>
-    @elseif($paypalOrderId === '' || $clientId === '' || $sdkUrl === '')
+    @elseif($paypalOrderId === '' || $clientId === '' || $webSdkUrl === '')
         <p class="gateway-pane__hint gateway-pane__hint--warn">Unable to load PayPal checkout. Refresh this page or contact support.</p>
     @else
         <ul class="gateway-pane__steps">
@@ -30,12 +31,15 @@
         @endif
 
         @push('scripts')
-        <script src="{{ $sdkUrl }}" data-sdk-integration-source="button-factory"></script>
+        <script src="{{ $webSdkUrl }}" data-sdk-integration-source="paypal-web-sdk-v6"></script>
         <script>
-        (function () {
+        (async function () {
             var paypalOrderId = @json($paypalOrderId);
+            var clientId = @json($clientId);
+            var currency = @json($currency);
             var confirmUrl = @json(route('shop.checkout.confirm', ['order_number' => $order->order_number]));
             var csrf = @json(csrf_token());
+            var container = document.getElementById('paypal-button-container');
 
             function postConfirm(body) {
                 return fetch(confirmUrl, {
@@ -59,34 +63,59 @@
                 });
             }
 
-            if (typeof paypal === 'undefined') {
-                document.getElementById('paypal-button-container').innerHTML =
+            if (typeof paypal === 'undefined' || typeof paypal.createInstance !== 'function') {
+                container.innerHTML =
                     '<p class="gateway-pane__hint gateway-pane__hint--warn">PayPal could not be loaded. Check your connection or ad blocker.</p>';
                 return;
             }
 
-            paypal.Buttons({
-                createOrder: function () {
-                    return paypalOrderId;
-                },
-                onApprove: function (data) {
-                    document.dispatchEvent(new CustomEvent('checkout:loading', {
-                        detail: { message: 'Confirming your PayPal payment...' }
-                    }));
-                    return postConfirm({ paypal_order_id: data.orderID }).catch(function (err) {
+            try {
+                var sdk = await paypal.createInstance({
+                    clientId: clientId,
+                    components: ['paypal-payments'],
+                    pageType: 'checkout'
+                });
+                var paymentMethods = await sdk.findEligibleMethods({ currencyCode: currency });
+                if (!paymentMethods.isEligible('paypal')) {
+                    container.innerHTML = '<p class="gateway-pane__hint gateway-pane__hint--warn">PayPal is not available for this checkout. Please choose another payment method.</p>';
+                    return;
+                }
+
+                var session = sdk.createPayPalOneTimePaymentSession({
+                    onApprove: function (data) {
+                        document.dispatchEvent(new CustomEvent('checkout:loading', {
+                            detail: { message: 'Confirming your PayPal payment...' }
+                        }));
+                        return postConfirm({ paypal_order_id: data.orderId || paypalOrderId }).catch(function (err) {
+                            document.dispatchEvent(new CustomEvent('checkout:loading-end'));
+                            throw err;
+                        });
+                    },
+                    onCancel: function () {
                         document.dispatchEvent(new CustomEvent('checkout:loading-end'));
-                        throw err;
+                    },
+                    onError: function (err) {
+                        document.dispatchEvent(new CustomEvent('checkout:loading-end'));
+                        console.error('PayPal error', err);
+                        alert('PayPal reported an error. Please try again or choose another payment method.');
+                    }
+                });
+                var button = document.createElement('paypal-button');
+                container.appendChild(button);
+                button.addEventListener('click', function () {
+                    document.dispatchEvent(new CustomEvent('checkout:loading', {
+                        detail: { message: 'Opening PayPal checkout...' }
+                    }));
+                    session.start({ presentationMode: 'auto' }, Promise.resolve({ orderId: paypalOrderId })).catch(function (err) {
+                        document.dispatchEvent(new CustomEvent('checkout:loading-end'));
+                        console.error('PayPal start error', err);
+                        alert('PayPal could not be started. Please try again or choose another payment method.');
                     });
-                },
-                onCancel: function () {
-                    document.dispatchEvent(new CustomEvent('checkout:loading-end'));
-                },
-                onError: function (err) {
-                    document.dispatchEvent(new CustomEvent('checkout:loading-end'));
-                    console.error('PayPal error', err);
-                    alert('PayPal reported an error. Please try again or choose another payment method.');
-                },
-            }).render('#paypal-button-container');
+                });
+            } catch (err) {
+                console.error('PayPal SDK v6 initialization failed', err);
+                container.innerHTML = '<p class="gateway-pane__hint gateway-pane__hint--warn">PayPal could not be loaded. Please choose another payment method.</p>';
+            }
         })();
         </script>
         @endpush

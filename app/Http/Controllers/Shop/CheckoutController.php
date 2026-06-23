@@ -87,9 +87,9 @@ class CheckoutController extends Controller
         $selected = (string) old('payment_method', session('checkout.method', $defaultMethod));
 
         $cardCheckout = $this->cardCheckoutConfig($currency);
-        $expressCheckout = $this->expressCheckoutConfig($currency, $totals['totalUsd'], $cardCheckout !== null);
-        if ($cardCheckout !== null && isset($expressCheckout['paypal']['sdkUrl'])) {
-            $cardCheckout['sdkUrl'] = $expressCheckout['paypal']['sdkUrl'];
+        $expressCheckout = $this->expressCheckoutConfig($currency, $totals['totalUsd']);
+        if ($cardCheckout !== null && isset($expressCheckout['paypal']['webSdkUrl'])) {
+            $cardCheckout['webSdkUrl'] = $expressCheckout['paypal']['webSdkUrl'];
         }
 
         return view('shop.checkout.index', [
@@ -917,7 +917,7 @@ class CheckoutController extends Controller
     /**
      * @return array{show: bool, slots: list<string>, paypal: ?array<string, mixed>}
      */
-    private function expressCheckoutConfig(CurrencyService $currency, float $totalUsd, bool $includeCardFields = false): array
+    private function expressCheckoutConfig(CurrencyService $currency, float $totalUsd): array
     {
         $paypalGateway = $this->registry->findEnabled('paypal');
         $applePayGateway = $this->registry->findEnabled('apple_pay');
@@ -940,19 +940,9 @@ class CheckoutController extends Controller
         }
 
         $code = strtoupper($currency->currentCode());
-        $sdkComponents = ['buttons'];
-        if ($paypalEnabled) {
-            $sdkComponents[] = 'googlepay';
-        }
-        if ($applePayEnabled) {
-            $sdkComponents[] = 'applepay';
-        }
-        if ($includeCardFields) {
-            $sdkComponents[] = 'card-fields';
-        }
         $paypal = [
             'clientId' => $client->clientId(),
-            'sdkUrl' => $client->sdkUrl($code, implode(',', $sdkComponents)),
+            'webSdkUrl' => $client->webSdkUrl(),
             'sandbox' => $client->isSandbox(),
             'initUrl' => route('shop.checkout.express.paypal'),
             'currency' => $code,
@@ -967,7 +957,7 @@ class CheckoutController extends Controller
         ];
     }
 
-    /** @return array{sdkUrl: string, clientToken: string, placeUrl: string, sandbox: bool}|null */
+    /** @return array{webSdkUrl: string, clientId: string, placeUrl: string, sandbox: bool, currency: string}|null */
     private function cardCheckoutConfig(CurrencyService $currency): ?array
     {
         $gateway = $this->registry->findEnabled('card');
@@ -980,23 +970,12 @@ class CheckoutController extends Controller
             return null;
         }
 
-        try {
-            $clientToken = $client->generateClientToken();
-        } catch (\Throwable $e) {
-            Log::warning('Could not prepare card fields on checkout.', ['message' => $e->getMessage()]);
-
-            return null;
-        }
-
-        if ($clientToken === null) {
-            return null;
-        }
-
         return [
-            'sdkUrl' => $client->sdkUrl($currency->currentCode(), 'card-fields'),
-            'clientToken' => $clientToken,
+            'webSdkUrl' => $client->webSdkUrl(),
+            'clientId' => $client->clientId(),
             'placeUrl' => route('shop.checkout.place'),
             'sandbox' => $client->isSandbox(),
+            'currency' => strtoupper($currency->currentCode()),
         ];
     }
 

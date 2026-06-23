@@ -30,13 +30,14 @@
                     type="tel"
                     name="phone"
                     inputmode="tel"
-                    minlength="9"
+                    minlength="10"
+                    maxlength="11"
                     required
                     value="{{ old('phone', $user->phone) }}"
                     placeholder="+1 555 000 0000"
-                    title="Enter at least 9 digits"
+                    title="Enter at least 10 digits"
                 >
-                <small class="muted">Required. Minimum 9 digits.</small>
+                <small class="muted">Required. Minimum 10 digits. Maximum 11 digits.</small>
             </div>
         </div>
         <div class="account-profile-form__actions">

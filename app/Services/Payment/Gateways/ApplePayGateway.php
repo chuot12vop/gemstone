@@ -116,7 +116,8 @@ SVG;
             viewData: [
                 'configured' => true,
                 'paypalOrderId' => $paypalOrderId,
-                'sdkUrl' => $client->sdkUrl((string) $order->currency_code, 'applepay'),
+                'clientId' => $client->clientId(),
+                'webSdkUrl' => $client->webSdkUrl(),
                 'amount' => number_format((float) $order->total_display, 2, '.', ''),
                 'currency' => strtoupper((string) $order->currency_code),
                 'country' => CheckoutCountries::defaultCode(),
