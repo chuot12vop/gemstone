@@ -148,6 +148,30 @@ function paypalV6Instance(config) {
   return checkoutPayPalV6Instances.get(key);
 }
 
+function isExpectedCheckoutSdkError(error) {
+  if (!error) {
+    return false;
+  }
+
+  const code = String(error.code || '');
+  const name = String(error.name || '');
+  const message = String(error.message || '');
+
+  return code === 'ERR_DEV_RECEIVED_CLIENT_ERROR_RESPONSE'
+    || name === 'DevError'
+    || name === 'SdkInitError'
+    || message.indexOf('findEligibleMethods') !== -1
+    || message.indexOf('fetching eligible methods') !== -1;
+}
+
+function logUnexpectedCheckoutSdkError(label, error) {
+  if (isExpectedCheckoutSdkError(error)) {
+    return;
+  }
+
+  console.error(label, error);
+}
+
 function loadCheckoutScriptOnce(url, selector, errorMessage) {
   const existing = document.querySelector(selector);
   if (existing) {
@@ -1418,7 +1442,7 @@ function initCheckoutExpress() {
       },
       onError: function (err) {
         stopCheckoutLoading();
-        console.error('PayPal express error', err);
+        logUnexpectedCheckoutSdkError('PayPal express error', err);
       },
     });
 
@@ -1476,7 +1500,7 @@ function initCheckoutExpress() {
                   return { transactionState: 'SUCCESS' };
                 })
                 .catch(function (err) {
-                  console.error('Google Pay authorization failed', err);
+                  logUnexpectedCheckoutSdkError('Google Pay authorization failed', err);
                   return {
                     transactionState: 'ERROR',
                     error: { message: err && err.message ? err.message : 'Google Pay could not be completed.' },
@@ -1513,7 +1537,6 @@ function initCheckoutExpress() {
         });
       })
       .catch(function (err) {
-        console.warn('Google Pay is unavailable.', err);
         setExpressSlotVisibility('#express-googlepay-button', false);
       });
   }
@@ -1616,7 +1639,6 @@ function initCheckoutExpress() {
         });
       })
       .catch(function (err) {
-        console.warn('Apple Pay is unavailable.', err);
         setExpressSlotVisibility('#express-applepay-button', false);
       });
   }
@@ -1627,14 +1649,13 @@ function initCheckoutExpress() {
       return sdk.findEligibleMethods({ currencyCode: currency, amount: amount }).then(function (paymentMethods) {
         mountGooglePay(paymentMethods, sdk);
         mountApplePay(paymentMethods, sdk);
-      }).catch(function (err) {
-        console.warn('Express wallet eligibility check failed.', err);
+      }).catch(function () {
         setExpressSlotVisibility('#express-googlepay-button', false);
         setExpressSlotVisibility('#express-applepay-button', false);
       });
     })
     .catch(function (err) {
-      console.error(err);
+      logUnexpectedCheckoutSdkError('PayPal express setup failed', err);
       showPayPalMountError('#express-paypal-button', 'PayPal could not be loaded. Refresh the page or use Pay now below.');
       setExpressSlotVisibility('#express-googlepay-button', false);
       setExpressSlotVisibility('#express-applepay-button', false);
@@ -1666,7 +1687,7 @@ function initCheckoutGatewayFields() {
       item.classList.toggle('is-selected', !!selected);
       const panel = item.querySelector('[data-payment-method-panel]');
       if (panel) {
-        panel.hidden = !selected && panel.getAttribute('data-wallet-preload') !== '1';
+        panel.hidden = !selected;
       }
     });
     if (moreItem && morePanel && moreToggle) {
@@ -1674,6 +1695,8 @@ function initCheckoutGatewayFields() {
       moreItem.classList.toggle('is-selected', selectedInMore);
       if (selectedInMore) {
         setMoreOpen(true);
+      } else if (code === 'card') {
+        setMoreOpen(false);
       }
     }
     if (cardToggle && cardPanel) {
@@ -1691,6 +1714,10 @@ function initCheckoutGatewayFields() {
     if (moreRadio) {
       moreRadio.checked = open;
     }
+    if (open && cardPanel && cardToggle) {
+      cardPanel.hidden = true;
+      cardToggle.setAttribute('aria-expanded', 'false');
+    }
   }
 
   radios.forEach(function (radio) {
@@ -1700,6 +1727,13 @@ function initCheckoutGatewayFields() {
     moreRadio.addEventListener('change', function () {
       if (moreRadio.checked) {
         setMoreOpen(true);
+        const paypalRadio = morePanel.querySelector('[data-payment-method-radio][value="paypal"]');
+        const fallbackRadio = morePanel.querySelector('[data-payment-method-radio]');
+        const nextRadio = paypalRadio || fallbackRadio;
+        if (nextRadio && !nextRadio.checked) {
+          nextRadio.checked = true;
+          nextRadio.dispatchEvent(new Event('change', { bubbles: true }));
+        }
       }
     });
   }
@@ -1715,6 +1749,7 @@ function initCheckoutGatewayFields() {
         if (!cardRadio || !cardRadio.checked) {
           return;
         }
+        setMoreOpen(false);
         cardPanel.hidden = false;
         cardToggle.setAttribute('aria-expanded', 'true');
       }, 0);
@@ -1888,13 +1923,12 @@ function initCheckoutCardFields() {
         }
 
         renderCardFields(sdk);
-      }).catch(function (error) {
-        console.warn('PayPal card fields eligibility check failed; trying to render fields.', error);
+      }).catch(function () {
         renderCardFields(sdk);
       });
     })
     .catch(function (error) {
-      console.error('PayPal card fields setup failed', error);
+      logUnexpectedCheckoutSdkError('PayPal card fields setup failed', error);
       setError(error.message || 'Secure card fields could not be loaded. You can continue to the secure card step.');
     });
 
@@ -2086,7 +2120,7 @@ function initCheckoutWalletPanels() {
             setBusy(false);
           },
           onError: function (error) {
-            console.error('PayPal inline checkout error', error);
+            logUnexpectedCheckoutSdkError('PayPal inline checkout error', error);
             setBusy(false);
             setMessage(panel, 'PayPal reported an error. Please try again or choose another payment method.');
           },
@@ -2113,7 +2147,7 @@ function initCheckoutWalletPanels() {
         markWalletReady(panel, true, '');
       })
       .catch(function (error) {
-        console.error(error);
+        logUnexpectedCheckoutSdkError('PayPal inline setup failed', error);
         delete mount.dataset.walletMounting;
         const message = error.message || 'PayPal could not be loaded. Check your connection or ad blocker.';
         markWalletReady(panel, false, message);
@@ -2241,7 +2275,7 @@ function initCheckoutWalletPanels() {
         });
       })
       .catch(function (error) {
-        console.error(error);
+        logUnexpectedCheckoutSdkError('Apple Pay setup failed', error);
         delete mount.dataset.walletMounting;
         markWalletReady(panel, false, error.message || 'Apple Pay is unavailable.');
         setMessage(panel, '');

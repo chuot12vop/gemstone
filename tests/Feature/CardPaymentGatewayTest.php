@@ -43,7 +43,7 @@ class CardPaymentGatewayTest extends TestCase
             ->assertSee('data-checkout-card-fields', false)
             ->assertSee('id="checkout-card-number"', false)
             ->assertSee('id="payment-more-panel"', false)
-            ->assertSee('data-wallet-preload="1"', false)
+            ->assertDontSee('data-wallet-preload="1"', false)
             ->assertSee('id="checkout-paypal-button"', false)
             ->assertSee('id="checkout-applepay-button"', false)
             ->assertDontSee('data-client-token=', false)

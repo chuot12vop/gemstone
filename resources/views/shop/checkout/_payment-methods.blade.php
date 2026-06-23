@@ -9,7 +9,7 @@
     $selectedCode = (string) ($selected ?? ($cardMethod ? 'card' : optional($moreMethods->first())->code()));
     $cardSelected = $cardMethod && $selectedCode === 'card';
     $moreSelected = $moreMethods->contains(fn ($method) => $method->code() === $selectedCode);
-    $moreExpanded = $moreMethods->isNotEmpty();
+    $moreExpanded = $moreSelected;
     $morePaymentLogos = collect($paymentLogos ?? [])
         ->filter(fn ($logo) => !empty($logo['src']))
         ->values();
@@ -167,7 +167,7 @@
                                      data-apple-pay-currency="{{ $inlineWalletCheckout['currency'] }}"
                                      data-apple-pay-country="{{ $inlineWalletCheckout['country'] }}"
                                      data-paypal-sandbox="{{ ($inlineWalletCheckout['sandbox'] ?? false) ? '1' : '0' }}"
-                                    data-wallet-preload="1">
+                                     @if($selectedCode !== $method->code()) hidden @endif>
                                     @if($method->code() === 'paypal')
                                         <div id="checkout-paypal-button" class="checkout-wallet-panel__mount checkout-wallet-panel__mount--paypal" aria-label="PayPal"></div>
                                     @elseif($method->code() === 'apple_pay')
