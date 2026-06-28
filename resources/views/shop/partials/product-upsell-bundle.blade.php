@@ -5,8 +5,15 @@
     $parentVariant = $product->defaultVariant();
     $mainImage = $parentVariant?->frontImage($product) ?: ($product->thumbnail ?: ($product->image ?: asset('assets/img/placeholder.svg')));
     $mainBase = $parentVariant ? (float) $parentVariant->price_usd : (float) $product->price_usd;
-    $mainDisplay = $mainBase;
-    $mainCart = $mainBase;
+    $mainPrice = ProductPricing::display(
+        $mainBase,
+        $parentVariant?->compare_at_price_usd !== null ? (float) $parentVariant->compare_at_price_usd : null,
+        (float) ($product->discount ?? 0)
+    );
+    $mainDisplay = $mainPrice['display'];
+    $mainCompare = $mainPrice['compare'];
+    $mainWas = $mainCompare ?? $mainBase;
+    $mainCart = $mainDisplay;
     $mainStock = $parentVariant ? (int) $parentVariant->stock : (int) $product->stock;
     $currencyCode = $currency->currentCode();
     $currencyRate = CurrencyRate::query()->where('code', $currencyCode)->where('is_active', true)->first();
@@ -28,7 +35,7 @@
 
         <ul class="product-upsell__list">
             <li class="product-upsell__item product-upsell__item--locked"
-                data-base-usd="{{ $mainBase }}"
+                data-base-usd="{{ $mainWas }}"
                 data-display-usd="{{ $mainDisplay }}"
                 data-cart-usd="{{ $mainCart }}">
                 <label class="product-upsell__row">
@@ -40,7 +47,7 @@
                            disabled
                            data-upsell-check
                            data-upsell-locked
-                           data-base-usd="{{ $mainBase }}"
+                           data-base-usd="{{ $mainWas }}"
                            data-display-usd="{{ $mainDisplay }}"
                            data-cart-usd="{{ $mainCart }}">
                     <input type="hidden" name="items[{{ $product->id }}][product_id]" value="{{ $product->id }}">
@@ -53,10 +60,13 @@
                     </span>
                     <span class="product-upsell__body">
                         <span class="product-upsell__name">{{ $product->name }}</span>
-                        <span class="product-upsell__prices">
-                            <span class="product-upsell__price product-upsell__price--sale"
+                            <span class="product-upsell__prices">
+                                <span class="product-upsell__price product-upsell__price--sale"
                                   data-upsell-sale>{{ $currency->formatUsd($mainDisplay) }}</span>
-                        </span>
+                                @if($mainCompare !== null)
+                                    <span class="product-upsell__price product-upsell__price--was">{{ $currency->formatUsd($mainCompare) }}</span>
+                                @endif
+                            </span>
                     </span>
                 </label>
             </li>
@@ -68,8 +78,21 @@
                     $base = $upsellVariant ? (float) $upsellVariant->price_usd : (float) $upsell->price_usd;
                     $discountPct = (float) ($upsell->pivot->discount ?? 0);
                     $upsalePct = (float) ($upsell->pivot->upsale_discount ?? 0);
-                    $cartUsd = ProductPricing::afterPercentDiscount($base, $upsalePct > 0 ? $upsalePct : ($discountPct > 0 ? $discountPct : null));
+                    $percent = $upsalePct > 0 ? $upsalePct : $discountPct;
+                    if ($percent > 0) {
+                        $cartUsd = ProductPricing::afterPercentDiscount($base, $percent);
+                        $compareUsd = $base;
+                    } else {
+                        $upsellPrice = ProductPricing::display(
+                            $base,
+                            $upsellVariant?->compare_at_price_usd !== null ? (float) $upsellVariant->compare_at_price_usd : null,
+                            (float) ($upsell->discount ?? 0)
+                        );
+                        $cartUsd = $upsellPrice['display'];
+                        $compareUsd = $upsellPrice['compare'];
+                    }
                     $displayUsd = $cartUsd;
+                    $wasUsd = $compareUsd ?? $base;
                     $inStock = ($upsellVariant?->stock ?? $upsell->stock) > 0;
                 @endphp
                 <li class="product-upsell__item">
@@ -81,7 +104,7 @@
                                checked
                                {{ $inStock ? '' : 'disabled' }}
                                data-upsell-check
-                               data-base-usd="{{ $base }}"
+                               data-base-usd="{{ $wasUsd }}"
                                data-display-usd="{{ $displayUsd }}"
                                data-cart-usd="{{ $cartUsd }}">
                         <input type="hidden" name="items[{{ $upsell->id }}][product_id]" value="{{ $upsell->id }}" data-upsell-product-id disabled>
@@ -96,8 +119,8 @@
                             <span class="product-upsell__name">{{ $upsell->name }}</span>
                             <span class="product-upsell__prices">
                                 <span class="product-upsell__price product-upsell__price--sale">{{ $currency->formatUsd($displayUsd) }}</span>
-                                @if($displayUsd < $base - 0.001)
-                                    <span class="product-upsell__price product-upsell__price--was">{{ $currency->formatUsd($base) }}</span>
+                                @if($compareUsd !== null && $compareUsd > $displayUsd + 0.001)
+                                    <span class="product-upsell__price product-upsell__price--was">{{ $currency->formatUsd($compareUsd) }}</span>
                                 @endif
                             </span>
                             @if(! $inStock)
@@ -111,7 +134,7 @@
 
         @php
             $bundleSaleUsd = $mainCart;
-            $bundleBaseUsd = $mainBase;
+            $bundleBaseUsd = $mainWas;
             foreach ($product->upsellProducts as $upsell) {
                 $upsellVariant = $upsell->defaultVariant();
                 if (($upsellVariant?->stock ?? $upsell->stock) < 1) {
@@ -121,8 +144,18 @@
                 $discountPct = (float) ($upsell->pivot->discount ?? 0);
                 $upsalePct = (float) ($upsell->pivot->upsale_discount ?? 0);
                 $pct = $upsalePct > 0 ? $upsalePct : $discountPct;
-                $bundleSaleUsd += ProductPricing::afterPercentDiscount($base, $pct > 0 ? $pct : null);
-                $bundleBaseUsd += $base;
+                if ($pct > 0) {
+                    $bundleSaleUsd += ProductPricing::afterPercentDiscount($base, $pct);
+                    $bundleBaseUsd += $base;
+                } else {
+                    $upsellPrice = ProductPricing::display(
+                        $base,
+                        $upsellVariant?->compare_at_price_usd !== null ? (float) $upsellVariant->compare_at_price_usd : null,
+                        (float) ($upsell->discount ?? 0)
+                    );
+                    $bundleSaleUsd += $upsellPrice['display'];
+                    $bundleBaseUsd += $upsellPrice['compare'] ?? $base;
+                }
             }
         @endphp
         <button type="submit" class="product-upsell__claim" data-upsell-submit {{ $mainStock < 1 ? 'disabled' : '' }}>

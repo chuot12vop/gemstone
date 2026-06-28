@@ -29,7 +29,12 @@
                     @if($row['variant_label'] !== 'Default')
                         <p class="pc-drawer__line-variant">{{ $row['variant_label'] }}</p>
                     @endif
-                    <p class="pc-drawer__line-price">{{ $currency->formatUsd((float) $row['unit_price_usd']) }}</p>
+                    <p class="pc-drawer__line-price">
+                        <span>{{ $currency->formatUsd((float) $row['unit_price_usd']) }}</span>
+                        @if(!empty($row['compare_unit_price_usd']) && (float) $row['compare_unit_price_usd'] > (float) $row['unit_price_usd'] + 0.001)
+                            <span class="pc-drawer__line-compare">{{ $currency->formatUsd((float) $row['compare_unit_price_usd']) }}</span>
+                        @endif
+                    </p>
                     <div class="pc-drawer__line-qty">
                         <button type="button" class="pc-drawer__qty-btn" data-cart-qty-dec aria-label="Decrease quantity">−</button>
                         <span class="pc-drawer__qty-val" data-cart-qty-val>{{ $row['quantity'] }}</span>

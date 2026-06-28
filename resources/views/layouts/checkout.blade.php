@@ -86,6 +86,7 @@
     </div>
 
     <script src="{{ asset('assets/js/file-upload.js') }}" defer></script>
+    <script src="{{ asset('assets/js/paypal-checkout.js') }}"></script>
     <script src="{{ asset('assets/js/shop.js') }}" defer></script>
     @stack('scripts')
 </body>

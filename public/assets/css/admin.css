@@ -520,6 +520,45 @@ body.admin {
 .tox-tinymce { margin-top: 0.35rem; border-radius: 8px !important; }
 .form-fieldset { border: 1px solid var(--border-soft); border-radius: 10px; padding: 0.75rem 1rem; margin: 0.75rem 0; }
 .form-fieldset legend { padding: 0 0.4rem; color: var(--muted); font-weight: 600; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; }
+#interface-banner-form input[type="color"] {
+  min-height: 2.35rem;
+  padding: 0;
+  overflow: hidden;
+  cursor: pointer;
+}
+#interface-banner-form input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+#interface-banner-form input[type="color"]::-webkit-color-swatch { border: 0; border-radius: 7px; }
+#interface-banner-form input[type="color"]::-moz-color-swatch { border: 0; border-radius: 7px; }
+#interface-banner-form .interface-section-row {
+  grid-column: 1 / -1;
+  margin-top: 8px;
+  padding: 10px 12px;
+  border: 1px solid #e2e6ec;
+  border-radius: 10px;
+  background: #fff;
+}
+#interface-banner-form .interface-section-row__title {
+  margin: 0 0 8px;
+  font-size: 1rem;
+}
+#interface-banner-form .interface-section-controls { gap: 0.35rem 0.75rem; }
+#interface-banner-form .interface-checkbox {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  font-weight: 500;
+}
+#interface-banner-form .interface-checkbox input[type="checkbox"] {
+  width: auto;
+  margin: 0;
+  padding: 0;
+  flex: 0 0 auto;
+}
+#interface-banner-form .interface-checkbox--remove-bg { margin-top: 0.35rem; }
+#interface-banner-form .interface-section-upload { margin-top: 8px; }
 .admin-hint { margin: 0 0 0.75rem; color: var(--muted); font-size: 0.92rem; line-height: 1.5; }
 .upsell-picker { position: relative; }
 .upsell-picker__search-label { display: block; margin-bottom: 0.75rem; }
@@ -573,6 +612,12 @@ body.admin {
 .upsell-picker__product img { border-radius: 6px; object-fit: cover; }
 .upsell-picker__row label { margin: 0; font-size: 0.85rem; }
 .upsell-picker__row input[type="number"] { width: 5.5rem; margin-top: 0.25rem; }
+.home-product-picker .upsell-picker__selected { margin-top: 0.75rem; }
+.home-product-picker__row {
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
+  align-items: center;
+}
+.home-product-picker__row .btn-admin { margin: 0; white-space: nowrap; }
 @media (max-width: 720px) {
   .upsell-picker__row { grid-template-columns: 1fr; }
 }

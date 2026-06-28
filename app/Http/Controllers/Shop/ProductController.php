@@ -50,12 +50,17 @@ class ProductController extends Controller
                 ->get();
         }
 
-        $reviews = $product->approvedReviews()->with('images')->get();
+        $reviewRatings = $product->approvedReviews()->pluck('rating');
+        $reviews = $product->approvedReviews()
+            ->with('images')
+            ->paginate(4)
+            ->withQueryString()
+            ->fragment('reviews');
         $reviewStats = [
-            'count' => $reviews->count(),
-            'average' => $reviews->isEmpty() ? 0.0 : round($reviews->avg('rating'), 2),
+            'count' => $reviewRatings->count(),
+            'average' => $reviewRatings->isEmpty() ? 0.0 : round($reviewRatings->avg(), 2),
             'distribution' => collect([5, 4, 3, 2, 1])
-                ->mapWithKeys(fn (int $star) => [$star => $reviews->where('rating', $star)->count()])
+                ->mapWithKeys(fn (int $star) => [$star => $reviewRatings->filter(fn (int $rating) => $rating === $star)->count()])
                 ->all(),
         ];
 

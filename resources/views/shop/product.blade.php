@@ -1,6 +1,7 @@
 @extends('layouts.shop')
 
 @php
+    use App\Support\ProductPricing;
     use App\Support\ProductVariantOptions;
 
     $activeVariants = $product->variants->where('is_active', true)->values();
@@ -30,7 +31,14 @@
         $galleryImages->push(asset('assets/img/placeholder.svg'));
     }
 
-    $displayPrice = $defaultVariant ? (float) $defaultVariant->price_usd : (float) $product->price_usd;
+    $initialPrice = ProductPricing::display(
+        $defaultVariant ? (float) $defaultVariant->price_usd : (float) $product->price_usd,
+        $defaultVariant?->compare_at_price_usd !== null ? (float) $defaultVariant->compare_at_price_usd : null,
+        (float) ($product->discount ?? 0)
+    );
+    $displayPrice = $initialPrice['display'];
+    $comparePrice = $initialPrice['compare'];
+    $onSale = $initialPrice['on_sale'];
     $displayStock = $defaultVariant ? (int) $defaultVariant->stock : (int) $product->stock;
 @endphp
 
@@ -94,10 +102,15 @@
                 </div>
             @endif
 
-            <p class="product-detail__price" itemprop="offers" itemscope itemtype="https://schema.org/Offer" data-pd-price>
+            <p class="product-detail__price{{ $onSale ? ' product-detail__price--sale' : '' }}" itemprop="offers" itemscope itemtype="https://schema.org/Offer" data-pd-price>
                 <span class="sr-only" itemprop="priceCurrency" content="USD">USD base</span>
                 <span class="sr-only" itemprop="price" content="{{ $displayPrice }}"></span>
-                {{ $currency->formatUsd($displayPrice) }}
+                <span data-pd-price-current>{{ $currency->formatUsd($displayPrice) }}</span>
+                @if($comparePrice !== null)
+                    <span class="product-detail__compare" data-pd-price-compare>{{ $currency->formatUsd($comparePrice) }}</span>
+                @else
+                    <span class="product-detail__compare" data-pd-price-compare hidden></span>
+                @endif
             </p>
 
             @if($activeVariants->isNotEmpty())

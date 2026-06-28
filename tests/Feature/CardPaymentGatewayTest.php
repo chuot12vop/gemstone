@@ -29,6 +29,7 @@ class CardPaymentGatewayTest extends TestCase
         $this->get(route('shop.checkout'))
             ->assertOk()
             ->assertSee('data-checkout-loading', false)
+            ->assertSee('assets/js/paypal-checkout.js')
             ->assertSee('aria-live="polite"', false)
             ->assertSeeInOrder(['data-checkout-discount-row', 'hidden'], false)
             ->assertSee('Processing your payment...')
@@ -187,7 +188,7 @@ class CardPaymentGatewayTest extends TestCase
             ->assertDontSee('data-client-token=', false)
             ->assertSee('checkout:loading', false)
             ->assertSee('Processing your card payment...')
-            ->assertSee('paypalErrorMessage', false)
+            ->assertSee('PayPalCheckout.errorMessage', false)
             ->assertSee('Advanced Card Payments is not eligible for this merchant, buyer, currency, or browser context.')
             ->assertDontSee('js.stripe.com', false);
     }

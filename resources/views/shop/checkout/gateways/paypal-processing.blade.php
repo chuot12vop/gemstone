@@ -72,10 +72,10 @@
             }
 
             try {
-                var sdk = await paypal.createInstance({
+                var sdk = await PayPalCheckout.createInstance({
+                    webSdkUrl: @json($webSdkUrl),
                     clientToken: clientToken,
                     components: ['paypal-payments'],
-                    pageType: 'checkout'
                 });
                 var paymentMethods = await sdk.findEligibleMethods({ currencyCode: currency });
                 if (!paymentMethods.isEligible('paypal')) {
@@ -99,7 +99,7 @@
                     onError: function (err) {
                         document.dispatchEvent(new CustomEvent('checkout:loading-end'));
                         console.error('PayPal error', err);
-                        alert('PayPal reported an error. Please try again or choose another payment method.');
+                        alert(PayPalCheckout.errorMessage(err, 'PayPal reported an error. Please try again or choose another payment method.'));
                     }
                 });
                 var button = document.createElement('paypal-button');
@@ -111,7 +111,7 @@
                     session.start({ presentationMode: 'auto' }, Promise.resolve({ orderId: paypalOrderId })).catch(function (err) {
                         document.dispatchEvent(new CustomEvent('checkout:loading-end'));
                         console.error('PayPal start error', err);
-                        alert('PayPal could not be started. Please try again or choose another payment method.');
+                        alert(PayPalCheckout.errorMessage(err, 'PayPal could not be started. Please try again or choose another payment method.'));
                     });
                 });
             } catch (err) {

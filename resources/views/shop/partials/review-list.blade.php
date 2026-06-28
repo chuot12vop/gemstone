@@ -61,5 +61,11 @@
                 </li>
             @endforeach
         </ul>
+
+        @if($reviews->hasPages())
+            <nav class="pagination-wrap" aria-label="Customer reviews pagination">
+                {{ $reviews->links('shop.partials.pagination') }}
+            </nav>
+        @endif
     @endif
 </section>

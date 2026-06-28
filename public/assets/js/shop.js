@@ -84,154 +84,6 @@ function firstCheckoutJsonError(data, fallback) {
   return (data && data.message) || fallback;
 }
 
-function loadCheckoutPayPalSdk(url) {
-  if (typeof paypal !== 'undefined' && typeof paypal.createInstance === 'function') {
-    return Promise.resolve();
-  }
-  if (!url) {
-    return Promise.reject(new Error('PayPal Web SDK URL missing'));
-  }
-
-  const existing = document.querySelector('script[data-paypal-web-sdk-v6], script[src*="/web-sdk/v6/core"]');
-  if (existing) {
-    return new Promise(function (resolve, reject) {
-      if (typeof paypal !== 'undefined' && typeof paypal.createInstance === 'function') {
-        resolve();
-        return;
-      }
-      existing.addEventListener('load', function () { resolve(); }, { once: true });
-      existing.addEventListener('error', function () { reject(new Error('PayPal SDK failed to load')); }, { once: true });
-    });
-  }
-
-  return new Promise(function (resolve, reject) {
-    const script = document.createElement('script');
-    script.src = url;
-    script.async = true;
-    script.dataset.paypalWebSdkV6 = '1';
-    script.dataset.sdkIntegrationSource = 'checkout-paypal-v6';
-    script.onload = function () { resolve(); };
-    script.onerror = function () { reject(new Error('PayPal Web SDK failed to load')); };
-    document.head.appendChild(script);
-  });
-}
-
-var checkoutPayPalV6Instances = null;
-
-function paypalV6Instance(config) {
-  if (!checkoutPayPalV6Instances) {
-    checkoutPayPalV6Instances = new Map();
-  }
-
-  const components = Array.from(new Set(config.components || ['paypal-payments'])).sort();
-  const tokenOrClientId = config.clientToken || config.clientId;
-  const key = [config.webSdkUrl, tokenOrClientId, components.join('|')].join('::');
-  if (!checkoutPayPalV6Instances.has(key)) {
-    checkoutPayPalV6Instances.set(key, loadCheckoutPayPalSdk(config.webSdkUrl).then(function () {
-      if (typeof paypal === 'undefined' || typeof paypal.createInstance !== 'function') {
-        throw new Error('PayPal Web SDK v6 is unavailable.');
-      }
-      const options = {
-        components: components,
-        pageType: 'checkout',
-      };
-      if (config.clientToken) {
-        options.clientToken = config.clientToken;
-      } else {
-        options.clientId = config.clientId;
-      }
-
-      return paypal.createInstance(options);
-    }));
-  }
-
-  return checkoutPayPalV6Instances.get(key);
-}
-
-function isExpectedCheckoutSdkError(error) {
-  if (!error) {
-    return false;
-  }
-
-  const code = String(error.code || '');
-  const name = String(error.name || '');
-  const message = String(error.message || '');
-
-  return code === 'ERR_DEV_RECEIVED_CLIENT_ERROR_RESPONSE'
-    || name === 'DevError'
-    || name === 'SdkInitError'
-    || message.indexOf('findEligibleMethods') !== -1
-    || message.indexOf('fetching eligible methods') !== -1;
-}
-
-function logUnexpectedCheckoutSdkError(label, error) {
-  if (isExpectedCheckoutSdkError(error)) {
-    return;
-  }
-
-  console.error(label, error);
-}
-
-function paypalErrorMessage(error, fallback) {
-  const messages = [];
-  const visited = new Set();
-
-  function add(value) {
-    const message = String(value || '').trim();
-    if (message && !messages.includes(message)) {
-      messages.push(message);
-    }
-  }
-
-  function inspect(value, depth) {
-    if (value === null || value === undefined || depth > 4) {
-      return;
-    }
-    if (typeof value === 'string') {
-      const text = value.trim();
-      if (!text) {
-        return;
-      }
-      if ((text[0] === '{' || text[0] === '[')) {
-        try {
-          inspect(JSON.parse(text), depth + 1);
-          return;
-        } catch (parseError) {
-          // The PayPal value is plain text, not JSON.
-        }
-      }
-      add(text);
-      return;
-    }
-    if (typeof value !== 'object' || visited.has(value)) {
-      return;
-    }
-
-    visited.add(value);
-    ['issue', 'description', 'message'].forEach(function (key) {
-      if (typeof value[key] === 'string') {
-        add(value[key]);
-      }
-    });
-    ['details', 'data', 'body', 'cause', 'error', 'errors', 'response'].forEach(function (key) {
-      if (value[key] !== undefined) {
-        inspect(value[key], depth + 1);
-      }
-    });
-    if (Array.isArray(value)) {
-      value.forEach(function (item) { inspect(item, depth + 1); });
-    }
-  }
-
-  inspect(error, 0);
-  if (!messages.length) {
-    return fallback;
-  }
-
-  const code = String(error && (error.code || error.name) || '').trim();
-  return 'PayPal' + (code ? ' (' + code + ')' : '') + ': ' + messages.join(' — ');
-}
-
 function loadCheckoutScriptOnce(url, selector, errorMessage) {
   const existing = document.querySelector(selector);
   if (existing) {
@@ -1468,7 +1320,7 @@ function initCheckoutExpress() {
   }
 
   function sdkInstance(components) {
-    return paypalV6Instance({
+    return PayPalCheckout.createInstance({
       webSdkUrl: webSdkUrl,
       clientId: clientId,
       clientToken: clientToken,
@@ -1502,7 +1354,7 @@ function initCheckoutExpress() {
       },
       onError: function (err) {
         stopCheckoutLoading();
-        logUnexpectedCheckoutSdkError('PayPal express error', err);
+        PayPalCheckout.logError('PayPal express error', err);
       },
     });
 
@@ -1560,7 +1412,7 @@ function initCheckoutExpress() {
                   return { transactionState: 'SUCCESS' };
                 })
                 .catch(function (err) {
-                  logUnexpectedCheckoutSdkError('Google Pay authorization failed', err);
+                  PayPalCheckout.logError('Google Pay authorization failed', err);
                   return {
                     transactionState: 'ERROR',
                     error: { message: err && err.message ? err.message : 'Google Pay could not be completed.' },
@@ -1715,7 +1567,7 @@ function initCheckoutExpress() {
       });
     })
     .catch(function (err) {
-      logUnexpectedCheckoutSdkError('PayPal express setup failed', err);
+      PayPalCheckout.logError('PayPal express setup failed', err);
       showPayPalMountError('#express-paypal-button', 'PayPal could not be loaded. Refresh the page or use Pay now below.');
       setExpressSlotVisibility('#express-googlepay-button', false);
       setExpressSlotVisibility('#express-applepay-button', false);
@@ -1978,7 +1830,7 @@ function initCheckoutCardFields() {
     setError('');
   }
 
-  paypalV6Instance({
+  PayPalCheckout.createInstance({
     webSdkUrl: webSdkUrl,
     clientId: clientId,
     clientToken: clientToken,
@@ -1994,8 +1846,8 @@ function initCheckoutCardFields() {
       });
     })
     .catch(function (error) {
-      logUnexpectedCheckoutSdkError('PayPal card fields setup failed', error);
-      setError(paypalErrorMessage(error, 'PayPal secure card fields could not be loaded. You can continue to the secure card step.'));
+      PayPalCheckout.logError('PayPal card fields setup failed', error);
+      setError(PayPalCheckout.errorMessage(error, 'PayPal secure card fields could not be loaded. You can continue to the secure card step.'));
     });
 
   form.addEventListener('submit', function (event) {
@@ -2159,7 +2011,7 @@ function initCheckoutWalletPanels() {
     }
 
     mount.dataset.walletMounting = '1';
-    paypalV6Instance({
+    PayPalCheckout.createInstance({
       webSdkUrl: webSdkUrl,
       clientId: clientId,
       clientToken: clientToken,
@@ -2186,7 +2038,7 @@ function initCheckoutWalletPanels() {
             setBusy(false);
           },
           onError: function (error) {
-            logUnexpectedCheckoutSdkError('PayPal inline checkout error', error);
+            PayPalCheckout.logError('PayPal inline checkout error', error);
             setBusy(false);
             setMessage(panel, 'PayPal reported an error. Please try again or choose another payment method.');
           },
@@ -2213,7 +2065,7 @@ function initCheckoutWalletPanels() {
         markWalletReady(panel, true, '');
       })
       .catch(function (error) {
-        logUnexpectedCheckoutSdkError('PayPal inline setup failed', error);
+        PayPalCheckout.logError('PayPal inline setup failed', error);
         delete mount.dataset.walletMounting;
         const message = error.message || 'PayPal could not be loaded. Check your connection or ad blocker.';
         markWalletReady(panel, false, message);
@@ -2235,7 +2087,7 @@ function initCheckoutWalletPanels() {
     mount.dataset.walletMounting = '1';
     setMessage(panel, 'Checking Apple Pay availability...');
     Promise.all([
-      paypalV6Instance({
+      PayPalCheckout.createInstance({
         webSdkUrl: webSdkUrl,
         clientId: clientId,
         clientToken: clientToken,
@@ -2341,7 +2193,7 @@ function initCheckoutWalletPanels() {
         });
       })
       .catch(function (error) {
-        logUnexpectedCheckoutSdkError('Apple Pay setup failed', error);
+        PayPalCheckout.logError('Apple Pay setup failed', error);
         delete mount.dataset.walletMounting;
         markWalletReady(panel, false, error.message || 'Apple Pay is unavailable.');
         setMessage(panel, '');
@@ -4081,6 +3933,8 @@ function initProductVariantPicker() {
   const variantInput = document.querySelector('[data-pd-variant-id]');
   const ctaVariantInputs = document.querySelectorAll('[data-pd-cta-variant-id]');
   const priceEl = document.querySelector('[data-pd-price]');
+  const priceCurrentEl = document.querySelector('[data-pd-price-current]');
+  const priceCompareEl = document.querySelector('[data-pd-price-compare]');
   const ctaPriceEl = document.querySelector('[data-pd-cta-price]');
   const stockEl = document.querySelector('[data-pd-stock]');
   const submitButtons = document.querySelectorAll('[data-pd-submit]');
@@ -4154,10 +4008,29 @@ function initProductVariantPicker() {
     });
 
     if (priceEl) {
-      priceEl.textContent = formatUsd(variant.price_usd);
+      const displayPrice = variant.display_price_usd ?? variant.price_usd;
+      const comparePrice = variant.display_compare_price_usd ?? null;
+
+      if (priceCurrentEl) {
+        priceCurrentEl.textContent = formatUsd(displayPrice);
+      } else {
+        priceEl.textContent = formatUsd(displayPrice);
+      }
+
+      priceEl.classList.toggle('product-detail__price--sale', Boolean(comparePrice));
+
+      if (priceCompareEl) {
+        if (comparePrice) {
+          priceCompareEl.textContent = formatUsd(comparePrice);
+          priceCompareEl.hidden = false;
+        } else {
+          priceCompareEl.textContent = '';
+          priceCompareEl.hidden = true;
+        }
+      }
     }
     if (ctaPriceEl) {
-      ctaPriceEl.textContent = formatUsd(variant.price_usd);
+      ctaPriceEl.textContent = formatUsd(variant.display_price_usd ?? variant.price_usd);
     }
     if (stockEl) {
       stockEl.textContent = variant.stock > 0 ? variant.stock + ' in stock' : 'Out of stock';
@@ -4404,7 +4277,7 @@ function initProductCardDrawers() {
       addBtn.disabled = variant.stock < 1;
       const priceEl = drawer.querySelector('[data-pc-drawer-price]');
       const thumbEl = drawer.querySelector('[data-pc-drawer-thumb]');
-      if (priceEl && variant.price_usd) priceEl.textContent = formatUsd(variant.price_usd);
+      if (priceEl && variant.price_usd) priceEl.textContent = formatUsd(variant.display_price_usd ?? variant.price_usd);
       if (thumbEl instanceof HTMLImageElement && variant.image) {
         thumbEl.src = variant.image;
       }
@@ -4447,7 +4320,7 @@ function initProductCardDrawers() {
       if (!variant) return;
       addBtn.dataset.variantId = String(variant.id);
       addBtn.disabled = variant.stock < 1;
-      if (priceEl && variant.price_usd) priceEl.textContent = formatUsd(variant.price_usd);
+      if (priceEl && variant.price_usd) priceEl.textContent = formatUsd(variant.display_price_usd ?? variant.price_usd);
       if (thumbEl instanceof HTMLImageElement && variant.image) {
         thumbEl.src = variant.image;
       }

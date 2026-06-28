@@ -127,12 +127,19 @@ class ProductVariantOptions
      */
     public static function toPickerJson(Product $product, Collection $variants): array
     {
+        $productDiscount = (float) ($product->discount ?? 0);
+
         return $variants
             ->where('is_active', true)
             ->sortBy(['sort_order', 'id'])
             ->values()
-            ->map(function (ProductVariant $variant) use ($product) {
+            ->map(function (ProductVariant $variant) use ($product, $productDiscount) {
                 $images = $variant->galleryImages($product)->all();
+                $price = ProductPricing::display(
+                    (float) $variant->price_usd,
+                    $variant->compare_at_price_usd !== null ? (float) $variant->compare_at_price_usd : null,
+                    $productDiscount
+                );
 
                 return [
                     'id' => $variant->id,
@@ -144,6 +151,9 @@ class ProductVariantOptions
                     'compare_at_price_usd' => $variant->compare_at_price_usd !== null
                         ? (float) $variant->compare_at_price_usd
                         : null,
+                    'display_price_usd' => $price['display'],
+                    'display_compare_price_usd' => $price['compare'],
+                    'on_sale' => $price['on_sale'],
                     'stock' => (int) $variant->stock,
                     'is_default' => (bool) $variant->is_default,
                     'image' => $variant->frontImage($product),

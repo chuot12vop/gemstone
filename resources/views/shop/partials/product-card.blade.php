@@ -10,25 +10,18 @@
     $activeVariant = $defaultVariant;
     $frontImage = $activeVariant?->frontImage($product) ?: ($product->image ?: asset('assets/img/placeholder.svg'));
     $hoverImage = $activeVariant?->hoverImage($product) ?: $frontImage;
-    $basePrice = $activeVariant ? (float) $activeVariant->price_usd : (float) $product->price_usd;
-    $variantOnSale = $activeVariant && ProductVariantOptions::isOnSale($activeVariant);
     $productDiscountPct = (float) ($product->discount ?? 0);
     $hasProductDiscount = $productDiscountPct > 0;
     $stickerUrl = trim((string) ($product->sticker ?? ''));
     $cardBadgeLabel = trim((string) ($product->card_badge_label ?? ''));
-    if ($variantOnSale) {
-        $displayPrice = $basePrice;
-        $comparePrice = (float) $activeVariant->compare_at_price_usd;
-        $onSale = true;
-    } elseif ($hasProductDiscount) {
-        $displayPrice = ProductPricing::afterPercentDiscount($basePrice, $productDiscountPct);
-        $comparePrice = $basePrice;
-        $onSale = true;
-    } else {
-        $displayPrice = $basePrice;
-        $comparePrice = null;
-        $onSale = false;
-    }
+    $price = ProductPricing::display(
+        $activeVariant ? (float) $activeVariant->price_usd : (float) $product->price_usd,
+        $activeVariant?->compare_at_price_usd !== null ? (float) $activeVariant->compare_at_price_usd : null,
+        $productDiscountPct
+    );
+    $displayPrice = $price['display'];
+    $comparePrice = $price['compare'];
+    $onSale = $price['on_sale'];
     $inStock = ($activeVariant?->stock ?? $product->stock) > 0;
     $cardVariants = ProductVariantOptions::toPickerJson($product, $variants);
 @endphp
@@ -105,21 +98,15 @@
             <div class="shop-product-card__swatches" role="list" aria-label="Color options">
                 @foreach($swatches as $i => $swatch)
                     @php
-                        $swatchBase = (float) $swatch['price_usd'];
                         $swatchVariantSale = ! empty($swatch['on_sale']);
-                        if ($swatchVariantSale) {
-                            $swatchDisplay = $swatchBase;
-                            $swatchCompare = (float) $swatch['compare_at_price_usd'];
-                            $swatchOnSale = true;
-                        } elseif ($hasProductDiscount) {
-                            $swatchDisplay = ProductPricing::afterPercentDiscount($swatchBase, $productDiscountPct);
-                            $swatchCompare = $swatchBase;
-                            $swatchOnSale = true;
-                        } else {
-                            $swatchDisplay = $swatchBase;
-                            $swatchCompare = null;
-                            $swatchOnSale = false;
-                        }
+                        $swatchPrice = ProductPricing::display(
+                            (float) $swatch['price_usd'],
+                            $swatch['compare_at_price_usd'] !== null ? (float) $swatch['compare_at_price_usd'] : null,
+                            $productDiscountPct
+                        );
+                        $swatchDisplay = $swatchPrice['display'];
+                        $swatchCompare = $swatchPrice['compare'];
+                        $swatchOnSale = $swatchPrice['on_sale'];
                     @endphp
                     <button type="button"
                             class="shop-product-card__swatch {{ $i === 0 ? 'is-active' : '' }}"

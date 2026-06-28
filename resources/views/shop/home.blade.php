@@ -34,9 +34,9 @@
                             @endif
                             <span class="btn btn--primary home-hero__cta" style="max-width:200px;">
                                 @if(!empty($slide['category_id']))
-                                    Shop this category
+                                    DISCOVER NOW   
                                 @else
-                                    Shop the collection
+                                    SHOP NOW
                                 @endif
                             </span>
                         </div>
@@ -93,6 +93,20 @@
         <h2 id="home-bestsellers-title" class="section__title section__title--center">
             <a class="section__title-link" href="{{ $bestSellersUrl }}">Best Sellers</a>
         </h2>
+        @php($bestSellersImage = !empty($homeBestSellersBannerImage) ? $homeBestSellersBannerImage : ((isset($homeBestSellersCategory) && $homeBestSellersCategory && !empty($homeBestSellersCategory->image)) ? \App\Support\PublicAssetUrl::to($homeBestSellersCategory->image) : ''))
+        @if($bestSellersImage !== '')
+            <a class="home-category-feature" href="{{ $bestSellersUrl }}" aria-label="Shop Best Sellers">
+                <span class="home-category-feature__media">
+                    <img src="{{ $bestSellersImage }}" alt="Best Sellers" loading="lazy">
+                </span>
+                <span class="home-category-feature__body">
+                    <span class="home-category-feature__title">Best Sellers</span>
+                    @if(isset($homeBestSellersCategory) && $homeBestSellersCategory && trim((string) $homeBestSellersCategory->description) !== '')
+                        <span class="home-category-feature__desc">{{ $homeBestSellersCategory->description }}</span>
+                    @endif
+                </span>
+            </a>
+        @endif
         @if($homeBestSellers->isEmpty())
             <p class="home-section__empty home-section__empty--center">No best sellers yet — check back soon or <a href="{{ route('shop.products.index') }}">browse the shop</a>.</p>
         @else
@@ -129,14 +143,17 @@
     <h2 id="home-new-title" class="section__title section__title--center">
         <a class="section__title-link" href="{{ route('shop.products.index', ['sort' => 'newest']) }}">New Arrivals</a>
     </h2>
-    @if(isset($homeNewCategory) && $homeNewCategory && !empty($homeNewCategory->image))
-        <a class="home-category-feature" href="{{ route('shop.catalog.category', $homeNewCategory) }}" aria-label="Shop {{ $homeNewCategory->name }}">
+    @php($newArrivalsImage = !empty($homeNewBannerImage) ? $homeNewBannerImage : ((isset($homeNewCategory) && $homeNewCategory && !empty($homeNewCategory->image)) ? \App\Support\PublicAssetUrl::to($homeNewCategory->image) : ''))
+    @php($newArrivalsUrl = (isset($homeNewCategory) && $homeNewCategory) ? route('shop.catalog.category', $homeNewCategory) : route('shop.products.index', ['sort' => 'newest']))
+    @php($newArrivalsLabel = (isset($homeNewCategory) && $homeNewCategory) ? $homeNewCategory->name : 'New Arrivals')
+    @if($newArrivalsImage !== '')
+        <a class="home-category-feature" href="{{ $newArrivalsUrl }}" aria-label="Shop {{ $newArrivalsLabel }}">
             <span class="home-category-feature__media">
-                <img src="{{ \App\Support\PublicAssetUrl::to($homeNewCategory->image) }}" alt="{{ $homeNewCategory->name }}" loading="lazy">
+                <img src="{{ $newArrivalsImage }}" alt="{{ $newArrivalsLabel }}" loading="lazy">
             </span>
             <span class="home-category-feature__body">
-                <span class="home-category-feature__title">{{ $homeNewCategory->name }}</span>
-                @if(trim((string) $homeNewCategory->description) !== '')
+                <span class="home-category-feature__title">{{ $newArrivalsLabel }}</span>
+                @if(isset($homeNewCategory) && $homeNewCategory && trim((string) $homeNewCategory->description) !== '')
                     <span class="home-category-feature__desc">{{ $homeNewCategory->description }}</span>
                 @endif
             </span>

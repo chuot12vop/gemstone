@@ -15,10 +15,14 @@ use App\Support\ShopFrontSettings;
 use App\Support\WelcomePopupSettings;
 use App\Services\CurrencyService;
 use App\Support\PublicAssetUrl;
-use Carbon\Carbon;
+use Illuminate\Support\Collection;
 
 class HomeController extends Controller
 {
+    private const PRODUCT_SECTIONS_KEY = 'home_product_sections';
+
+    private const LEGACY_NEW_ARRIVALS_BANNER_KEY = 'home_new_arrivals_banner_image';
+
     public function index()
     {
         $defaults = [
@@ -48,26 +52,30 @@ class HomeController extends Controller
 
         $bannerSlides = $this->resolvedBannerSlides();
 
-        $homeNewProducts = Product::query()
-            ->where('is_active', true)
-            ->with(['category', 'variants' => fn ($q) => $q->where('is_active', true)->orderBy('sort_order')->orderBy('id')->with('hoverImages'), 'upsellProducts' => fn ($q) => $q->where('is_active', true)->with(['variants' => fn ($vq) => $vq->where('is_active', true)->orderBy('sort_order')->orderBy('id')->with('hoverImages')])])
-            ->latest('id')
-            ->limit(6)
-            ->get();
+        $productSectionSettings = $this->resolvedProductSections();
+
+        $homeNewProducts = $this->selectedProductsForSection($productSectionSettings['new']['product_ids'])
+            ?? Product::query()
+                ->where('is_active', true)
+                ->with($this->productCardRelations())
+                ->latest('id')
+                ->limit(6)
+                ->get();
         $homeNewCategory = $homeNewProducts->first()?->category;
         
         $bestSellers = Category::query()
             ->where('slug', 'Best-Sellers')
             ->first();
-        if ($bestSellers) {
+        $homeBestSellers = $this->selectedProductsForSection($productSectionSettings['bestsellers']['product_ids']);
+        if ($homeBestSellers === null && $bestSellers) {
             $homeBestSellers = Product::query()
                 ->where('is_active', true)
                 ->where('category_id', $bestSellers->id)
-                ->with(['category', 'variants' => fn ($q) => $q->where('is_active', true)->orderBy('sort_order')->orderBy('id')->with('hoverImages'), 'upsellProducts' => fn ($q) => $q->where('is_active', true)->with(['variants' => fn ($vq) => $vq->where('is_active', true)->orderBy('sort_order')->orderBy('id')->with('hoverImages')])])
+                ->with($this->productCardRelations())
                 ->limit(6)
                 ->get();
-        } else {
-            $homeBestSellers = [];
+        } elseif ($homeBestSellers === null) {
+            $homeBestSellers = collect();
         }
 
         $homeCollections = Category::query()
@@ -100,9 +108,13 @@ class HomeController extends Controller
             ->approved()
             ->whereHas('images')
             ->with('images')
+            ->orderByDesc('rating')
             ->latest()
-            ->take(10)
-            ->get();
+            ->take(100)
+            ->get()
+            ->unique('product_id')
+            ->take(6)
+            ->values();
 
         return view('shop.home', [
             'siteSettings' => $defaults,
@@ -112,8 +124,10 @@ class HomeController extends Controller
             'metaDescription' => $defaults['home_meta_description'] ?: 'Premium gemstone jewelry for balance, luck, and intention. Ethically sourced, handcrafted for the US market.',
             'homeNewProducts' => $homeNewProducts,
             'homeNewCategory' => $homeNewCategory,
+            'homeNewBannerImage' => $productSectionSettings['new']['banner_image'],
             'homeBestSellers' => $homeBestSellers,
             'homeBestSellersCategory' => $bestSellers,
+            'homeBestSellersBannerImage' => $productSectionSettings['bestsellers']['banner_image'],
             'homeCollections' => $homeCollections,
             'homeCertificates' => $homeCertificates,
             'homeStoryPage' => $homeStoryPage,
@@ -211,5 +225,73 @@ class HomeController extends Controller
         }
 
         return $slides;
+    }
+
+    /**
+     * @return array<string, array{banner_image: string, product_ids: list<int>}>
+     */
+    private function resolvedProductSections(): array
+    {
+        $raw = Setting::query()->where('key', self::PRODUCT_SECTIONS_KEY)->value('value');
+        $decoded = is_string($raw) && $raw !== '' ? json_decode($raw, true) : [];
+        $decoded = is_array($decoded) ? $decoded : [];
+        $legacyNewArrivalsBanner = $decoded === []
+            ? trim((string) Setting::query()->where('key', self::LEGACY_NEW_ARRIVALS_BANNER_KEY)->value('value'))
+            : '';
+
+        $sections = [];
+        foreach (['bestsellers', 'new'] as $key) {
+            $row = is_array($decoded[$key] ?? null) ? $decoded[$key] : [];
+            $path = trim((string) ($row['banner_image'] ?? ($key === 'new' ? $legacyNewArrivalsBanner : '')));
+            $ids = collect($row['product_ids'] ?? [])
+                ->map(fn ($id) => (int) $id)
+                ->filter(fn ($id) => $id > 0)
+                ->unique()
+                ->take(6)
+                ->values()
+                ->all();
+
+            $sections[$key] = [
+                'banner_image' => $path !== '' ? (PublicAssetUrl::to($path) ?: '') : '',
+                'product_ids' => $ids,
+            ];
+        }
+
+        return $sections;
+    }
+
+    /**
+     * @param  list<int>  $productIds
+     * @return Collection<int, Product>|null
+     */
+    private function selectedProductsForSection(array $productIds): ?Collection
+    {
+        if ($productIds === []) {
+            return null;
+        }
+
+        $positions = array_flip($productIds);
+
+        return Product::query()
+            ->where('is_active', true)
+            ->whereIn('id', $productIds)
+            ->with($this->productCardRelations())
+            ->get()
+            ->sortBy(fn (Product $product) => $positions[$product->id] ?? PHP_INT_MAX)
+            ->values();
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function productCardRelations(): array
+    {
+        return [
+            'category',
+            'variants' => fn ($q) => $q->where('is_active', true)->orderBy('sort_order')->orderBy('id')->with('hoverImages'),
+            'upsellProducts' => fn ($q) => $q->where('is_active', true)->with([
+                'variants' => fn ($vq) => $vq->where('is_active', true)->orderBy('sort_order')->orderBy('id')->with('hoverImages'),
+            ]),
+        ];
     }
 }

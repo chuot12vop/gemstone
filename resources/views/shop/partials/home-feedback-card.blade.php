@@ -31,7 +31,7 @@
     <div class="home-feedback-card__body">
         <p class="home-feedback-card__name">{{ $name }}</p>
         <p class="home-feedback-card__date">
-            <time datetime="{{ $review->created_at->toDateString() }}">{{ $review->created_at->format('j/n/Y') }}</time>
+            <time datetime="{{ $review->created_at->toDateString() }}">{{ $review->created_at->format('m/d/Y') }}</time>
         </p>
         <blockquote class="home-feedback-card__quote">
             <span class="home-feedback-card__quote-mark home-feedback-card__quote-mark--open" aria-hidden="true">&ldquo;</span>

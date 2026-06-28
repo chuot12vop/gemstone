@@ -87,10 +87,10 @@
             }
 
             try {
-                var sdk = await paypal.createInstance({
+                var sdk = await PayPalCheckout.createInstance({
+                    webSdkUrl: @json($webSdkUrl),
                     clientToken: clientToken,
                     components: ['applepay-payments'],
-                    pageType: 'checkout'
                 });
                 var paymentMethods = await sdk.findEligibleMethods({ currencyCode: currency, amount: amount });
                 if (!paymentMethods.isEligible('applepay')) {
@@ -140,7 +140,7 @@
                         }).catch(function (error) {
                             document.dispatchEvent(new CustomEvent('checkout:loading-end'));
                             session.completePayment(ApplePaySession.STATUS_FAILURE);
-                            showError((error && error.message) || 'Apple Pay could not be completed.');
+                            showError(PayPalCheckout.errorMessage(error, 'Apple Pay could not be completed.'));
                         });
                     };
 
@@ -148,7 +148,7 @@
                 });
             } catch (error) {
                 console.error('PayPal Apple Pay setup failed', error);
-                showError('PayPal Apple Pay configuration could not be loaded. Please choose another payment method.');
+                showError(PayPalCheckout.errorMessage(error, 'PayPal Apple Pay configuration could not be loaded. Please choose another payment method.'));
             }
         })();
         </script>

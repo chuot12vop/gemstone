@@ -38,7 +38,12 @@
                         @endif
                         <p class="checkout-aside__meta">
                             <span class="checkout-aside__qty">× {{ $row['quantity'] }}</span>
-                            <span class="checkout-aside__line">{{ $currency->formatUsd((float) $row['line_usd']) }}</span>
+                            <span class="checkout-aside__line">
+                                <span>{{ $currency->formatUsd((float) $row['line_usd']) }}</span>
+                                @if(!empty($row['compare_line_usd']) && (float) $row['compare_line_usd'] > (float) $row['line_usd'] + 0.001)
+                                    <span class="checkout-aside__line-compare">{{ $currency->formatUsd((float) $row['compare_line_usd']) }}</span>
+                                @endif
+                            </span>
                         </p>
                     </div>
                 </li>

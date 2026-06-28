@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Category;
+use App\Models\Product;
 use App\Models\Setting;
 use App\Services\PublicImageStore;
 use App\Support\HomeSectionSettings;
@@ -18,6 +19,14 @@ class InterfaceAdminController extends Controller
     private const SLIDES_KEY = 'home_banner_slides';
 
     private const SECTION_IMAGE_PREFIX = 'settings/home-sections/';
+
+    private const PRODUCT_SECTIONS_KEY = 'home_product_sections';
+
+    private const LEGACY_NEW_ARRIVALS_BANNER_KEY = 'home_new_arrivals_banner_image';
+
+    private const PRODUCT_SECTION_BANNER_PREFIX = 'settings/home-product-sections/';
+
+    private const PRODUCT_SECTION_KEYS = ['bestsellers', 'new'];
 
     private PublicImageStore $images;
 
@@ -35,9 +44,15 @@ class InterfaceAdminController extends Controller
             ],
             'slides' => $this->slidesForForm(),
             'categories' => Category::query()->orderBy('sort_order')->orderBy('name')->get(),
+            'products' => Product::query()->orderBy('name')->get(['id', 'name', 'thumbnail', 'image']),
             'sectionStyles' => HomeSectionSettings::resolveForForm(),
             'sectionLabels' => HomeSectionSettings::SECTION_LABELS,
             'sectionKeys' => HomeSectionSettings::SECTION_KEYS,
+            'productSections' => $this->productSectionsForForm(),
+            'productSectionLabels' => [
+                'bestsellers' => 'Best Sellers',
+                'new' => 'New Arrivals',
+            ],
         ]);
     }
 
@@ -57,6 +72,12 @@ class InterfaceAdminController extends Controller
             'sections.*.existing_background_image' => 'nullable|string|max:512',
             'sections.*.background_image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:8192',
             'sections.*.remove_background_image' => 'nullable|boolean',
+            'product_sections' => 'nullable|array',
+            'product_sections.*.existing_banner_image' => 'nullable|string|max:512',
+            'product_sections.*.banner_image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:8192',
+            'product_sections.*.remove_banner_image' => 'nullable|boolean',
+            'product_sections.*.product_ids' => 'nullable|array|max:6',
+            'product_sections.*.product_ids.*' => 'integer|exists:products,id',
         ]);
 
         $inputRows = $validated['slides'] ?? [];
@@ -108,6 +129,7 @@ class InterfaceAdminController extends Controller
         );
 
         $this->saveSectionStyles($request, $validated['sections'] ?? []);
+        $this->saveProductSections($request, $validated['product_sections'] ?? []);
 
         return redirect()->route('admin.interface.index')->with('success', 'Home interface updated.');
     }
@@ -270,6 +292,116 @@ class InterfaceAdminController extends Controller
             : ltrim($path, '/');
 
         if ($relativePath !== '' && Str::startsWith($relativePath, self::SECTION_IMAGE_PREFIX)) {
+            $this->images->delete($path);
+        }
+    }
+
+    /**
+     * @return array<string, array{banner_image: string, product_ids: list<int>}>
+     */
+    private function productSectionsForForm(): array
+    {
+        $raw = Setting::query()->where('key', self::PRODUCT_SECTIONS_KEY)->value('value');
+        $decoded = is_string($raw) && $raw !== '' ? json_decode($raw, true) : [];
+        $decoded = is_array($decoded) ? $decoded : [];
+        $legacyNewArrivalsBanner = $decoded === []
+            ? trim((string) Setting::query()->where('key', self::LEGACY_NEW_ARRIVALS_BANNER_KEY)->value('value'))
+            : '';
+
+        $sections = [];
+        foreach (self::PRODUCT_SECTION_KEYS as $key) {
+            $row = is_array($decoded[$key] ?? null) ? $decoded[$key] : [];
+            $ids = collect($row['product_ids'] ?? [])
+                ->map(fn ($id) => (int) $id)
+                ->filter(fn ($id) => $id > 0)
+                ->unique()
+                ->take(6)
+                ->values()
+                ->all();
+
+            $sections[$key] = [
+                'banner_image' => trim((string) ($row['banner_image'] ?? ($key === 'new' ? $legacyNewArrivalsBanner : ''))),
+                'product_ids' => $ids,
+            ];
+        }
+
+        return $sections;
+    }
+
+    /**
+     * @param  array<string, array{existing_banner_image?: string, remove_banner_image?: bool, product_ids?: array<int, int>}>  $inputRows
+     */
+    private function saveProductSections(Request $request, array $inputRows): void
+    {
+        $oldSections = $this->productSectionsForForm();
+        $newSections = [];
+
+        foreach (self::PRODUCT_SECTION_KEYS as $key) {
+            $row = $inputRows[$key] ?? [];
+            $existing = trim((string) ($row['existing_banner_image'] ?? ($oldSections[$key]['banner_image'] ?? '')));
+            $remove = filter_var($row['remove_banner_image'] ?? false, FILTER_VALIDATE_BOOLEAN);
+            $file = $request->file('product_sections.'.$key.'.banner_image');
+
+            $imagePath = $remove ? '' : $existing;
+            if ($file instanceof UploadedFile) {
+                $imagePath = $this->images->store($file, trim(self::PRODUCT_SECTION_BANNER_PREFIX, '/'), asWebp: true) ?? '';
+            }
+
+            $productIds = collect($row['product_ids'] ?? [])
+                ->map(fn ($id) => (int) $id)
+                ->filter(fn ($id) => $id > 0)
+                ->unique()
+                ->take(6)
+                ->values()
+                ->all();
+
+            $newSections[$key] = [
+                'banner_image' => $imagePath,
+                'product_ids' => $productIds,
+            ];
+        }
+
+        $oldPaths = $this->collectProductSectionBannerPaths($oldSections);
+        $newPaths = $this->collectProductSectionBannerPaths($newSections);
+        foreach (array_diff($oldPaths, $newPaths) as $removed) {
+            $this->deleteProductSectionBannerPath($removed);
+        }
+
+        Setting::query()->updateOrCreate(
+            ['key' => self::PRODUCT_SECTIONS_KEY],
+            ['value' => json_encode($newSections, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)]
+        );
+        Setting::query()->where('key', self::LEGACY_NEW_ARRIVALS_BANNER_KEY)->delete();
+    }
+
+    /**
+     * @param  array<string, array{banner_image?: string}>  $sections
+     * @return list<string>
+     */
+    private function collectProductSectionBannerPaths(array $sections): array
+    {
+        $paths = [];
+        foreach ($sections as $section) {
+            $path = trim((string) ($section['banner_image'] ?? ''));
+            if ($path !== '') {
+                $paths[] = $path;
+            }
+        }
+
+        return array_values(array_unique($paths));
+    }
+
+    private function deleteProductSectionBannerPath(?string $path): void
+    {
+        if ($path === null || $path === '') {
+            return;
+        }
+
+        $relativePath = Str::startsWith($path, self::PUBLIC_STORAGE_PREFIX)
+            ? Str::after($path, self::PUBLIC_STORAGE_PREFIX)
+            : ltrim($path, '/');
+
+        if ($relativePath !== '' && Str::startsWith($relativePath, self::PRODUCT_SECTION_BANNER_PREFIX)) {
             $this->images->delete($path);
         }
     }

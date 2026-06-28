@@ -28,6 +28,7 @@ class Review extends Model
         'title',
         'content',
         'status',
+        'created_at',
     ];
 
     protected $casts = [
@@ -36,6 +37,7 @@ class Review extends Model
         'order_id' => 'integer',
         'order_item_id' => 'integer',
         'user_id' => 'integer',
+        'created_at' => 'datetime',
     ];
 
     /** @return BelongsTo<Product, Review> */

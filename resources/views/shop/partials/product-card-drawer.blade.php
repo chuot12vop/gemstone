@@ -12,7 +12,12 @@
     $initialColor = $defaultVariant?->option_color ?? '';
     $initialSize = $defaultVariant?->option_size ?? '';
     $mainImage = $defaultVariant?->frontImage($product) ?: ($product->image ?: asset('assets/img/placeholder.svg'));
-    $displayPrice = $defaultVariant ? (float) $defaultVariant->price_usd : (float) $product->price_usd;
+    $drawerPrice = ProductPricing::display(
+        $defaultVariant ? (float) $defaultVariant->price_usd : (float) $product->price_usd,
+        $defaultVariant?->compare_at_price_usd !== null ? (float) $defaultVariant->compare_at_price_usd : null,
+        (float) ($product->discount ?? 0)
+    );
+    $displayPrice = $drawerPrice['display'];
     $inStock = ($defaultVariant?->stock ?? $product->stock) > 0;
     $hasUpsells = $product->relationLoaded('upsellProducts') && $product->upsellProducts->isNotEmpty();
 @endphp

@@ -7,6 +7,7 @@ use App\Models\Product;
 use App\Models\Review;
 use App\Models\ReviewImage;
 use App\Services\PublicImageStore;
+use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -163,6 +164,7 @@ class ReviewAdminController extends Controller
             'title' => 'nullable|string|max:200',
             'content' => 'required|string|max:5000',
             'status' => 'required|in:'.implode(',', Review::STATUSES),
+            'created_at' => 'nullable|date_format:Y-m-d',
             'images' => 'nullable|array|max:5',
             'images.*' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:4096',
             'delete_image_ids' => 'nullable|array',
@@ -171,7 +173,7 @@ class ReviewAdminController extends Controller
 
         $validated = $request->validate($rules);
 
-        return [
+        $data = [
             'product_id' => (int) $validated['product_id'],
             'customer_name' => $validated['customer_name'],
             'customer_email' => $validated['customer_email'],
@@ -183,5 +185,11 @@ class ReviewAdminController extends Controller
             'order_item_id' => $review?->order_item_id,
             'user_id' => $review?->user_id,
         ];
+
+        if (! empty($validated['created_at'])) {
+            $data['created_at'] = Carbon::createFromFormat('Y-m-d', $validated['created_at'])->startOfDay();
+        }
+
+        return $data;
     }
 }

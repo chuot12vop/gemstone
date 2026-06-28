@@ -191,13 +191,27 @@ class CartController extends Controller
             }
 
             if ($pid === $parent->id) {
-                $unitPrice = (float) $variant->price_usd;
+                $price = ProductPricing::display(
+                    (float) $variant->price_usd,
+                    $variant->compare_at_price_usd !== null ? (float) $variant->compare_at_price_usd : null,
+                    (float) ($parent->discount ?? 0)
+                );
+                $unitPrice = (float) $price['display'];
             } else {
                 $base = (float) $variant->price_usd;
                 $upsalePct = (float) ($p->pivot->upsale_discount ?? 0);
                 $discountPct = (float) ($p->pivot->discount ?? 0);
                 $percent = $upsalePct > 0 ? $upsalePct : $discountPct;
-                $unitPrice = ProductPricing::afterPercentDiscount($base, $percent > 0 ? $percent : null);
+                if ($percent > 0) {
+                    $unitPrice = ProductPricing::afterPercentDiscount($base, $percent);
+                } else {
+                    $price = ProductPricing::display(
+                        $base,
+                        $variant->compare_at_price_usd !== null ? (float) $variant->compare_at_price_usd : null,
+                        (float) ($p->discount ?? 0)
+                    );
+                    $unitPrice = (float) $price['display'];
+                }
             }
 
             $upsellParentId = $pid === $parent->id ? null : $parent->id;

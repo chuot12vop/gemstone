@@ -136,11 +136,7 @@ class CartService
 
     public function unitPriceUsd(ProductVariant $variant, ?float $stored = null): float
     {
-        if ($stored !== null && $stored >= 0) {
-            return (float) $stored;
-        }
-
-        return (float) $variant->price_usd;
+        return $this->regularUnitPrice($variant);
     }
 
     /**
@@ -149,7 +145,9 @@ class CartService
      *     variant: ProductVariant,
      *     quantity: int,
      *     unit_price_usd: float,
+     *     compare_unit_price_usd: float|null,
      *     line_usd: float,
+     *     compare_line_usd: float|null,
      *     variant_label: string,
      *     is_upsell: bool
      * }>
@@ -178,31 +176,62 @@ class CartService
 
             $parentProductId = (int) ($entry['upsell_parent_product_id'] ?? 0);
             $baseUnit = (float) $variant->price_usd;
+            $compareUnit = null;
             if ($parentProductId > 0) {
                 $hasParentInCart = in_array($parentProductId, $productIdsInCart, true);
                 $unit = $hasParentInCart
                     ? $this->upsellDiscountedPrice($parentProductId, $variant->product_id, $variant)
-                    : $baseUnit;
+                    : $this->regularUnitPrice($variant);
+                $regularPrice = $this->regularPrice($variant);
+                $compareUnit = $hasParentInCart && $unit < $baseUnit - 0.001
+                    ? $baseUnit
+                    : $regularPrice['compare'];
                 $lineUsd = $hasParentInCart
                     ? $this->upsellLinePrice($unit, $baseUnit, $q)
                     : $unit * $q;
             } else {
                 $unit = $this->unitPriceUsd($variant, $entry['unit_price_usd'] ?? null);
+                $regularPrice = $this->regularPrice($variant);
+                $compareUnit = $regularPrice['compare'];
                 $lineUsd = $unit * $q;
             }
+            $compareLineUsd = $compareUnit !== null && $compareUnit > $unit + 0.001
+                ? $compareUnit * $q
+                : null;
 
             $lines[] = [
                 'product' => $variant->product,
                 'variant' => $variant,
                 'quantity' => $q,
                 'unit_price_usd' => $unit,
+                'compare_unit_price_usd' => $compareUnit,
                 'line_usd' => $lineUsd,
+                'compare_line_usd' => $compareLineUsd,
                 'variant_label' => $variant->label(),
                 'is_upsell' => $parentProductId > 0,
             ];
         }
 
         return $lines;
+    }
+
+    private function regularUnitPrice(ProductVariant $variant): float
+    {
+        return (float) $this->regularPrice($variant)['display'];
+    }
+
+    /**
+     * @return array{base: float, display: float, compare: ?float, on_sale: bool}
+     */
+    private function regularPrice(ProductVariant $variant): array
+    {
+        $product = $variant->relationLoaded('product') ? $variant->product : $variant->product()->first();
+
+        return ProductPricing::display(
+            (float) $variant->price_usd,
+            $variant->compare_at_price_usd !== null ? (float) $variant->compare_at_price_usd : null,
+            $product ? (float) ($product->discount ?? 0) : 0.0
+        );
     }
 
     private function upsellDiscountedPrice(int $parentProductId, int $upsellProductId, ProductVariant $variant): float
@@ -222,7 +251,11 @@ class CartService
         $discountPct = (float) ($upsell->pivot->discount ?? 0);
         $percent = $upsalePct > 0 ? $upsalePct : $discountPct;
 
-        return ProductPricing::afterPercentDiscount($base, $percent > 0 ? $percent : null);
+        if ($percent > 0) {
+            return ProductPricing::afterPercentDiscount($base, $percent);
+        }
+
+        return $this->regularUnitPrice($variant);
     }
 
     private function upsellLinePrice(float $discountedUnitPrice, float $baseUnitPrice, int $quantity): float

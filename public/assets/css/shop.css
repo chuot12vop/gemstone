@@ -1548,7 +1548,9 @@ body.site-nav-open {
 .product-detail__grid { display: grid; gap: 1.5rem; }
 @media (min-width: 900px) { .product-detail__grid { grid-template-columns: 1.05fr 1fr; align-items: start; gap: 2.5rem; } }
 .product-detail__title { font-family: "Cormorant Garamond", Georgia, serif; font-size: 2rem; margin: 0.25rem 0 0.5rem; line-height: 1.15; }
-.product-detail__price { font-size: 1.4rem; font-weight: 700; color: var(--gold-deep); margin: 0 0 0.75rem; }
+.product-detail__price { display: flex; align-items: baseline; gap: 0.55rem; flex-wrap: wrap; font-size: 1.4rem; font-weight: 700; color: var(--gold-deep); margin: 0 0 0.75rem; }
+.product-detail__price--sale [data-pd-price-current] { color: red; }
+.product-detail__compare { font-size: 1rem; font-weight: 400; color: #9a9a9a; text-decoration: line-through; }
 .product-detail__section-title { font-family: "Cormorant Garamond", Georgia, serif; font-size: 1.4rem; margin: 1.5rem 0 0.6rem; }
 .product-detail__description { margin-top: 1.25rem; }
 .product-detail__info .product-upsell {
@@ -2251,6 +2253,11 @@ body.pd-lightbox-open { overflow: hidden; }
   font-size: 0.9rem;
   color: var(--ink);
 }
+.cart-page__line-compare {
+  margin-left: 0.35rem;
+  color: #9a9a9a;
+  text-decoration: line-through;
+}
 .cart-page__line-qty {
   display: inline-flex;
   align-items: center;
@@ -2671,9 +2678,17 @@ body.pd-lightbox-open { overflow: hidden; }
   color: var(--muted);
 }
 .checkout-aside__line {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.35rem;
   font-weight: 600;
   color: var(--gold-deep);
   white-space: nowrap;
+}
+.checkout-aside__line-compare {
+  font-weight: 400;
+  color: #9a9a9a;
+  text-decoration: line-through;
 }
 .checkout-aside__subtotal {
   display: flex;
@@ -4714,6 +4729,11 @@ body.is-catalog-filters-open {
 .pc-drawer__line-price {
   margin: 0.25rem 0 0;
   font-size: 0.85rem;
+}
+.pc-drawer__line-compare {
+  margin-left: 0.35rem;
+  color: #9a9a9a;
+  text-decoration: line-through;
 }
 .pc-drawer__line-qty {
   display: inline-flex;

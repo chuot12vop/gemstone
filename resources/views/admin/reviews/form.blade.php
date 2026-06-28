@@ -61,6 +61,11 @@
             </select>
         </label>
         <label>
+            Review date
+            <input type="date" name="created_at"
+                   value="{{ old('created_at', $review?->created_at?->format('Y-m-d')) }}">
+        </label>
+        <label>
             Title
             <input type="text" name="title" maxlength="200"
                    value="{{ old('title', $review?->title) }}">
