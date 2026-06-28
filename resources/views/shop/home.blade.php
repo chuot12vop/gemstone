@@ -93,7 +93,7 @@
         <h2 id="home-bestsellers-title" class="section__title section__title--center">
             <a class="section__title-link" href="{{ $bestSellersUrl }}">Best Sellers</a>
         </h2>
-        @php($bestSellersImage = !empty($homeBestSellersBannerImage) ? $homeBestSellersBannerImage : ((isset($homeBestSellersCategory) && $homeBestSellersCategory && !empty($homeBestSellersCategory->image)) ? \App\Support\PublicAssetUrl::to($homeBestSellersCategory->image) : ''))
+        @php($bestSellersImage = !empty($homeBestSellersBannerHidden) ? '' : (!empty($homeBestSellersBannerImage) ? $homeBestSellersBannerImage : ((isset($homeBestSellersCategory) && $homeBestSellersCategory && !empty($homeBestSellersCategory->image)) ? \App\Support\PublicAssetUrl::to($homeBestSellersCategory->image) : '')))
         @if($bestSellersImage !== '')
             <a class="home-category-feature" href="{{ $bestSellersUrl }}" aria-label="Shop Best Sellers">
                 <span class="home-category-feature__media">
@@ -143,7 +143,7 @@
     <h2 id="home-new-title" class="section__title section__title--center">
         <a class="section__title-link" href="{{ route('shop.products.index', ['sort' => 'newest']) }}">New Arrivals</a>
     </h2>
-    @php($newArrivalsImage = !empty($homeNewBannerImage) ? $homeNewBannerImage : ((isset($homeNewCategory) && $homeNewCategory && !empty($homeNewCategory->image)) ? \App\Support\PublicAssetUrl::to($homeNewCategory->image) : ''))
+    @php($newArrivalsImage = !empty($homeNewBannerHidden) ? '' : (!empty($homeNewBannerImage) ? $homeNewBannerImage : ((isset($homeNewCategory) && $homeNewCategory && !empty($homeNewCategory->image)) ? \App\Support\PublicAssetUrl::to($homeNewCategory->image) : '')))
     @php($newArrivalsUrl = (isset($homeNewCategory) && $homeNewCategory) ? route('shop.catalog.category', $homeNewCategory) : route('shop.products.index', ['sort' => 'newest']))
     @php($newArrivalsLabel = (isset($homeNewCategory) && $homeNewCategory) ? $homeNewCategory->name : 'New Arrivals')
     @if($newArrivalsImage !== '')

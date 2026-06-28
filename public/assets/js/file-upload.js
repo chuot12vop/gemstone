@@ -64,6 +64,7 @@
     var targets = upload.getAttribute('data-clear-targets');
     if (!targets) return;
     var root = upload.closest('.js-slide-row')
+      || upload.closest('.js-product-section-row')
       || upload.closest('.js-section-style-row')
       || upload.closest('form')
       || document;

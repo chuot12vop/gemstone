@@ -125,9 +125,11 @@ class HomeController extends Controller
             'homeNewProducts' => $homeNewProducts,
             'homeNewCategory' => $homeNewCategory,
             'homeNewBannerImage' => $productSectionSettings['new']['banner_image'],
+            'homeNewBannerHidden' => $productSectionSettings['new']['banner_hidden'],
             'homeBestSellers' => $homeBestSellers,
             'homeBestSellersCategory' => $bestSellers,
             'homeBestSellersBannerImage' => $productSectionSettings['bestsellers']['banner_image'],
+            'homeBestSellersBannerHidden' => $productSectionSettings['bestsellers']['banner_hidden'],
             'homeCollections' => $homeCollections,
             'homeCertificates' => $homeCertificates,
             'homeStoryPage' => $homeStoryPage,
@@ -228,7 +230,7 @@ class HomeController extends Controller
     }
 
     /**
-     * @return array<string, array{banner_image: string, product_ids: list<int>}>
+     * @return array<string, array{banner_image: string, banner_hidden: bool, product_ids: list<int>}>
      */
     private function resolvedProductSections(): array
     {
@@ -253,6 +255,7 @@ class HomeController extends Controller
 
             $sections[$key] = [
                 'banner_image' => $path !== '' ? (PublicAssetUrl::to($path) ?: '') : '',
+                'banner_hidden' => (bool) ($row['banner_hidden'] ?? false),
                 'product_ids' => $ids,
             ];
         }

@@ -98,7 +98,13 @@
                 @php($selectedProductIds = collect(old('product_sections.'.$sectionKey.'.product_ids', $section['product_ids'] ?? []))->map(fn ($id) => (int) $id)->all())
                 @php($productsById = $products->keyBy('id'))
                 <div class="js-product-section-row form-fieldset interface-section-row">
-                    <h3 class="interface-section-row__title">{{ $productSectionLabels[$sectionKey] ?? $sectionKey }}</h3>
+                    <div class="interface-section-header">
+                        <h3 class="interface-section-row__title">{{ $productSectionLabels[$sectionKey] ?? $sectionKey }}</h3>
+                        <label class="interface-checkbox interface-checkbox--remove-bg">
+                            <input type="checkbox" class="js-product-section-remove-image" name="product_sections[{{ $sectionKey }}][remove_banner_image]" value="1" @checked(old('product_sections.'.$sectionKey.'.remove_banner_image', !empty($section['banner_hidden'] ?? false)))>
+                            Remove banner image
+                        </label>
+                    </div>
                     <input type="hidden" class="js-product-section-existing-image" name="product_sections[{{ $sectionKey }}][existing_banner_image]" value="{{ old('product_sections.'.$sectionKey.'.existing_banner_image', $section['banner_image'] ?? '') }}">
                     <div class="form-grid interface-section-controls">
                         <div class="home-product-picker upsell-picker" data-home-product-picker data-section-key="{{ $sectionKey }}" data-search-url="{{ route('admin.products.search') }}" style="grid-column:1 / -1;">
@@ -129,10 +135,6 @@
                                 @endforeach
                             </div>
                         </div>
-                        <label class="interface-checkbox interface-checkbox--remove-bg">
-                            <input type="checkbox" class="js-product-section-remove-image" name="product_sections[{{ $sectionKey }}][remove_banner_image]" value="1" @checked(old('product_sections.'.$sectionKey.'.remove_banner_image'))>
-                            Remove banner image
-                        </label>
                     </div>
                     <div class="interface-section-upload">
                         @include('partials.file-upload', [
@@ -144,7 +146,7 @@
                             'previewUrl' => !empty($section['banner_image']) ? \App\Support\PublicAssetUrl::to($section['banner_image']) : null,
                             'previewWidth' => 280,
                             'previewHeight' => 120,
-                            'clearTargets' => '.js-product-section-existing-image,.js-product-section-remove-image',
+                            'clearTargets' => '.js-product-section-existing-image',
                         ])
                         @error('product_sections.'.$sectionKey.'.banner_image')
                             <p style="margin:8px 0 0;color:#b33a3a;">{{ $message }}</p>
@@ -505,22 +507,6 @@
         });
 
         updateStatus();
-    });
-
-    document.querySelectorAll('.js-product-section-row').forEach((row) => {
-        const removeCheckbox = row.querySelector('.js-product-section-remove-image');
-        if (!(removeCheckbox instanceof HTMLInputElement)) return;
-
-        removeCheckbox.addEventListener('change', () => {
-            if (!removeCheckbox.checked) return;
-            const upload = row.querySelector('[data-file-upload]');
-            const fileInput = upload?.querySelector('[data-file-upload-input]');
-            const previewImg = upload?.querySelector('[data-file-upload-preview-img]');
-            const existing = row.querySelector('.js-product-section-existing-image');
-            if (fileInput instanceof HTMLInputElement) fileInput.value = '';
-            if (existing instanceof HTMLInputElement) existing.value = '';
-            if (previewImg instanceof HTMLImageElement) previewImg.src = placeholderSrc;
-        });
     });
 
     document.querySelectorAll('.js-section-style-row').forEach((row) => {

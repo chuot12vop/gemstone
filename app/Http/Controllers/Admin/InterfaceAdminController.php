@@ -297,7 +297,7 @@ class InterfaceAdminController extends Controller
     }
 
     /**
-     * @return array<string, array{banner_image: string, product_ids: list<int>}>
+     * @return array<string, array{banner_image: string, banner_hidden: bool, product_ids: list<int>}>
      */
     private function productSectionsForForm(): array
     {
@@ -321,6 +321,7 @@ class InterfaceAdminController extends Controller
 
             $sections[$key] = [
                 'banner_image' => trim((string) ($row['banner_image'] ?? ($key === 'new' ? $legacyNewArrivalsBanner : ''))),
+                'banner_hidden' => (bool) ($row['banner_hidden'] ?? false),
                 'product_ids' => $ids,
             ];
         }
@@ -339,12 +340,13 @@ class InterfaceAdminController extends Controller
         foreach (self::PRODUCT_SECTION_KEYS as $key) {
             $row = $inputRows[$key] ?? [];
             $existing = trim((string) ($row['existing_banner_image'] ?? ($oldSections[$key]['banner_image'] ?? '')));
-            $remove = filter_var($row['remove_banner_image'] ?? false, FILTER_VALIDATE_BOOLEAN);
+            $bannerHidden = filter_var($row['remove_banner_image'] ?? false, FILTER_VALIDATE_BOOLEAN);
             $file = $request->file('product_sections.'.$key.'.banner_image');
 
-            $imagePath = $remove ? '' : $existing;
+            $imagePath = $existing;
             if ($file instanceof UploadedFile) {
                 $imagePath = $this->images->store($file, trim(self::PRODUCT_SECTION_BANNER_PREFIX, '/'), asWebp: true) ?? '';
+                $bannerHidden = false;
             }
 
             $productIds = collect($row['product_ids'] ?? [])
@@ -357,6 +359,7 @@ class InterfaceAdminController extends Controller
 
             $newSections[$key] = [
                 'banner_image' => $imagePath,
+                'banner_hidden' => $bannerHidden,
                 'product_ids' => $productIds,
             ];
         }
