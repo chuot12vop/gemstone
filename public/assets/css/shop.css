@@ -339,6 +339,7 @@ body.site-nav-open {
   text-decoration: none;
   font-weight: 500;
   font-size: 16px;
+  font-family: "Source Sans 3", system-ui, sans-serif;
 }
 .site-nav__expand-toggle {
   display: inline-flex;
@@ -1197,7 +1198,8 @@ body.site-nav-open {
     flex-shrink: 1;
     min-width: 0;
   }
-  .site-header__nav-desktop .site-nav__list a {
+  .site-header__nav-desktop .site-nav__list a,
+  .site-header__nav-desktop .site-nav__mega-trigger {
     font-size: 0.92rem;
     white-space: nowrap;
     font-family: "Source Sans 3", system-ui, sans-serif;
