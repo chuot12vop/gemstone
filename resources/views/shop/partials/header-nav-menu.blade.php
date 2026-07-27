@@ -34,19 +34,16 @@
             <div class="catalog-mega" id="{{ $brandPanelId }}" role="region" aria-labelledby="{{ $brandTriggerId }}" data-catalog-mega-panel>
                 <div class="catalog-mega__inner">
                     <p class="catalog-mega__lede"><a href="{{ route('shop.catalog', ['brand' => $brand->slug]) }}">View all {{ $brand->name }}</a></p>
-                    @php
-                        $groupedBrandProducts = $brand->products->groupBy('category.name');
-                    @endphp
                     <div class="catalog-mega__list">
-                        @foreach($groupedBrandProducts as $categoryName => $brandProducts)
-                            <details class="catalog-mega__group catalog-mega__group--expandable">
-                                <summary class="catalog-mega__summary"><span class="catalog-mega__summary-label">{{ $categoryName }}</span><svg class="catalog-mega__expand-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2"/></svg></summary>
-                                <div class="catalog-mega__panel"><ul class="catalog-mega__products">
-                                    @foreach($brandProducts as $product)
-                                        <li><a class="catalog-mega__product-link" href="{{ route('shop.product', $product) }}"><span class="catalog-mega__product-thumb" aria-hidden="true"><img src="{{ $product->thumbnail ?: ($product->image ?: asset('assets/img/placeholder.svg')) }}" alt="" width="36" height="36" loading="lazy"></span><span class="catalog-mega__product-name">{{ $product->name }}</span></a></li>
-                                    @endforeach
-                                </ul></div>
-                            </details>
+                        @foreach($brand->products->take(12) as $product)
+                            <div class="catalog-mega__group catalog-mega__group--link">
+                                <a class="catalog-mega__product-link" href="{{ route('shop.product', $product) }}">
+                                    <span class="catalog-mega__product-thumb" aria-hidden="true">
+                                        <img src="{{ $product->thumbnail ?: ($product->image ?: asset('assets/img/placeholder.svg')) }}" alt="" width="36" height="36" loading="lazy">
+                                    </span>
+                                    <span class="catalog-mega__product-name">{{ $product->name }}</span>
+                                </a>
+                            </div>
                         @endforeach
                     </div>
                 </div>

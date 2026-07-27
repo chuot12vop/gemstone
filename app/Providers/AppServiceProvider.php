@@ -82,8 +82,8 @@ class AppServiceProvider extends ServiceProvider
                 ->whereIn('id', $featuredBrandIds)
                 ->whereHas('products', fn ($query) => $query->where('is_active', true))
                 ->with(['products' => fn ($query) => $query->where('is_active', true)
-                    ->orderBy('category_id')->orderBy('name')
-                    ->select('id', 'brand_id', 'category_id', 'name', 'slug', 'thumbnail', 'image'), 'products.category'])
+                    ->orderBy('name')
+                    ->select('id', 'brand_id', 'name', 'slug', 'thumbnail', 'image')])
                 ->get(['id', 'name', 'slug', 'image'])
                 ->sortBy(fn (Brand $brand) => $brandPositions[$brand->id] ?? PHP_INT_MAX)
                 ->values();

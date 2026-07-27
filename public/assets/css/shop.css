@@ -99,8 +99,7 @@ body.site-nav-open .site-top {
 }
 .site-header { background: rgba(253, 251, 247, 0.92); backdrop-filter: blur(10px); border-bottom: 1px solid var(--border); }
 .site-header__inner {
-  width: 100%;
-  max-width: none;
+  max-width: 1100px;
   margin: 0 auto;
   padding: 0.65rem 0.85rem;
   display: grid;
@@ -1122,7 +1121,7 @@ body.site-nav-open {
     grid-template-columns: auto minmax(0, 1fr) auto auto;
     grid-template-areas: "logo nav leading actions";
     gap: 1rem 1.25rem;
-    padding: 0.75rem clamp(1rem, 2vw, 2rem);
+    padding: 0.75rem 1rem;
   }
   .site-header__leading {
     grid-area: leading;
