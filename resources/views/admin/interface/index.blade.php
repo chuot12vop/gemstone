@@ -90,6 +90,37 @@
         <button class="btn-admin" type="button" id="add-slide" style="margin-top:12px;">+ Add slide</button>
     </fieldset>
 
+    @php($brandsById = $brands->keyBy('id'))
+    @php($orderedBrandIds = collect(old('featured_brand_ids', $selectedBrandIds))->map(fn ($id) => (int) $id)->filter(fn ($id) => $brandsById->has($id))->values())
+    @php($unselectedBrands = $brands->reject(fn ($brand) => $orderedBrandIds->contains($brand->id)))
+    <fieldset class="form-fieldset" style="margin-top:24px;" data-brand-picker>
+        <legend>Homepage and header brands</legend>
+        <p style="margin:0 0 12px;color:#5c6470;font-size:0.95rem;">Select brands, then drag them into the required order. This order is shared by the homepage and main navigation.</p>
+        <label>Add brand
+            <select data-brand-add>
+                <option value="">— Choose a brand —</option>
+                @foreach($unselectedBrands as $brand)
+                    <option value="{{ $brand->id }}" data-name="{{ $brand->name }}" data-image="{{ \App\Support\PublicAssetUrl::to($brand->image) }}">{{ $brand->name }}</option>
+                @endforeach
+            </select>
+        </label>
+        <div class="upsell-picker__selected" data-brand-selected style="margin-top:12px;">
+            @foreach($orderedBrandIds as $brandId)
+                @php($brand = $brandsById->get($brandId))
+                <div class="upsell-picker__row home-product-picker__row" draggable="true" data-brand-row data-brand-id="{{ $brand->id }}">
+                    <input type="hidden" name="featured_brand_ids[]" value="{{ $brand->id }}">
+                    <div class="upsell-picker__product">
+                        @if($brand->image)<img src="{{ \App\Support\PublicAssetUrl::to($brand->image) }}" alt="" width="40" height="40">@endif
+                        <span>{{ $brand->name }}</span>
+                    </div>
+                    <button type="button" class="btn-admin btn-admin--small" data-sort-up>Move up</button>
+                    <button type="button" class="btn-admin btn-admin--small" data-sort-down>Move down</button>
+                    <button type="button" class="btn-admin btn-admin--small btn-admin--danger" data-brand-remove>Remove</button>
+                </div>
+            @endforeach
+        </div>
+    </fieldset>
+
     <fieldset class="form-fieldset" style="margin-top:24px;">
         <legend>Home product sections</legend>
         <p style="margin:0 0 12px;color:#5c6470;font-size:0.95rem;">Choose a banner image and up to 6 products for Best Sellers and New Arrivals. When no products are selected, the homepage uses the default product list.</p>
@@ -326,6 +357,8 @@
     document.querySelectorAll('[data-home-product-picker]').forEach((root) => {
         const searchUrl = root.getAttribute('data-search-url') || '';
         const sectionKey = root.getAttribute('data-section-key') || '';
+        const inputName = root.getAttribute('data-input-name') || `product_sections[${sectionKey}][product_ids][]`;
+        const videoOnly = root.getAttribute('data-video-only') === 'true';
         const searchInput = root.querySelector('[data-home-product-search]');
         const results = root.querySelector('[data-home-product-results]');
         const selected = root.querySelector('[data-home-product-selected]');
@@ -368,10 +401,11 @@
             row.className = 'upsell-picker__row home-product-picker__row';
             row.setAttribute('data-home-product-row', '');
             row.setAttribute('data-product-id', String(product.id));
+            row.draggable = true;
 
             const hidden = document.createElement('input');
             hidden.type = 'hidden';
-            hidden.name = `product_sections[${sectionKey}][product_ids][]`;
+            hidden.name = inputName;
             hidden.value = String(product.id);
 
             const productWrap = document.createElement('div');
@@ -446,7 +480,7 @@
             }
 
             const ids = selectedIds();
-            const matches = (await response.json()).filter((item) => !ids.has(parseInt(String(item.id || '0'), 10)));
+            const matches = (await response.json()).filter((item) => !ids.has(parseInt(String(item.id || '0'), 10)) && (!videoOnly || item.has_video));
             if (matches.length === 0) {
                 renderEmpty('No products found.');
                 return;
@@ -501,12 +535,76 @@
             }
         });
 
+        let draggedRow = null;
+        selected.addEventListener('dragstart', (event) => {
+            draggedRow = event.target instanceof HTMLElement ? event.target.closest('[data-home-product-row]') : null;
+            if (draggedRow) event.dataTransfer.effectAllowed = 'move';
+        });
+        selected.addEventListener('dragover', (event) => {
+            const target = event.target instanceof HTMLElement ? event.target.closest('[data-home-product-row]') : null;
+            if (!draggedRow || !target || target === draggedRow) return;
+            event.preventDefault();
+            const rect = target.getBoundingClientRect();
+            selected.insertBefore(draggedRow, event.clientY < rect.top + rect.height / 2 ? target : target.nextSibling);
+        });
+        selected.addEventListener('dragend', () => { draggedRow = null; });
+
         document.addEventListener('click', (event) => {
             if (!(event.target instanceof Node) || root.contains(event.target)) return;
             hideResults();
         });
 
         updateStatus();
+    });
+
+    document.querySelectorAll('[data-brand-picker]').forEach((root) => {
+        const select = root.querySelector('[data-brand-add]');
+        const selected = root.querySelector('[data-brand-selected]');
+        if (!(select instanceof HTMLSelectElement) || !selected) return;
+        const move = (row, offset) => {
+            const sibling = offset < 0 ? row.previousElementSibling : row.nextElementSibling;
+            if (!sibling) return;
+            selected.insertBefore(row, offset < 0 ? sibling : sibling.nextSibling);
+        };
+        select.addEventListener('change', () => {
+            const option = select.selectedOptions[0];
+            if (!option || !option.value) return;
+            const row = document.createElement('div');
+            row.className = 'upsell-picker__row home-product-picker__row';
+            row.draggable = true;
+            row.setAttribute('data-brand-row', '');
+            row.setAttribute('data-brand-id', option.value);
+            const image = option.dataset.image ? `<img src="${option.dataset.image}" alt="" width="40" height="40">` : '';
+            row.innerHTML = `<input type="hidden" name="featured_brand_ids[]" value="${option.value}"><div class="upsell-picker__product">${image}<span></span></div><button type="button" class="btn-admin btn-admin--small" data-sort-up>Move up</button><button type="button" class="btn-admin btn-admin--small" data-sort-down>Move down</button><button type="button" class="btn-admin btn-admin--small btn-admin--danger" data-brand-remove>Remove</button>`;
+            row.querySelector('span').textContent = option.dataset.name || option.textContent;
+            selected.appendChild(row);
+            option.remove();
+            select.value = '';
+        });
+        selected.addEventListener('click', (event) => {
+            const target = event.target instanceof HTMLElement ? event.target : null;
+            const row = target?.closest('[data-brand-row]');
+            if (!row) return;
+            if (target.closest('[data-sort-up]')) move(row, -1);
+            if (target.closest('[data-sort-down]')) move(row, 1);
+            if (target.closest('[data-brand-remove]')) {
+                const option = document.createElement('option');
+                option.value = row.dataset.brandId || '';
+                option.textContent = row.querySelector('.upsell-picker__product span')?.textContent || option.value;
+                select.appendChild(option);
+                row.remove();
+            }
+        });
+        let dragged = null;
+        selected.addEventListener('dragstart', (event) => { dragged = event.target instanceof HTMLElement ? event.target.closest('[data-brand-row]') : null; });
+        selected.addEventListener('dragover', (event) => {
+            const target = event.target instanceof HTMLElement ? event.target.closest('[data-brand-row]') : null;
+            if (!dragged || !target || dragged === target) return;
+            event.preventDefault();
+            const rect = target.getBoundingClientRect();
+            selected.insertBefore(dragged, event.clientY < rect.top + rect.height / 2 ? target : target.nextSibling);
+        });
+        selected.addEventListener('dragend', () => { dragged = null; });
     });
 
     document.querySelectorAll('.js-section-style-row').forEach((row) => {

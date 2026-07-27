@@ -54,10 +54,13 @@
                          src="{{ $galleryImages->first() }}"
                          alt="{{ $product->name }}"
                          width="800" height="800">
+                    @if($product->videos->isNotEmpty())
+                        <video class="pd-gallery__main-video" data-pd-main-video controls playsinline preload="metadata" poster="{{ $galleryImages->first() }}" hidden></video>
+                    @endif
                     <button type="button" class="pd-gallery__nav pd-gallery__nav--prev" data-pd-prev aria-label="Previous image">&#10094;</button>
                     <button type="button" class="pd-gallery__nav pd-gallery__nav--next" data-pd-next aria-label="Next image">&#10095;</button>
                 </div>
-                @if($galleryImages->count() > 1)
+                @if($galleryImages->count() > 1 || $product->videos->isNotEmpty())
                     <div class="pd-gallery__thumbs" role="list">
                         @foreach($galleryImages as $idx => $imgPath)
                             <button type="button"
@@ -66,6 +69,12 @@
                                     data-pd-src="{{ $imgPath }}"
                                     aria-label="Show image {{ $idx + 1 }}">
                                 <img src="{{ $imgPath }}" alt="" loading="lazy">
+                            </button>
+                        @endforeach
+                        @foreach($product->videos as $videoIndex => $video)
+                            <button type="button" class="pd-gallery__thumb pd-gallery__thumb--video" data-pd-thumb data-pd-video="{{ \App\Support\PublicAssetUrl::to($video->path) }}" aria-label="Play product video {{ $videoIndex + 1 }}">
+                                <img src="{{ $galleryImages->first() }}" alt="" loading="lazy">
+                                <span class="pd-gallery__play" aria-hidden="true">&#9654;</span>
                             </button>
                         @endforeach
                     </div>
@@ -217,6 +226,7 @@
             </div>
 
             @include('shop.partials.product-upsell-bundle', ['product' => $product, 'currency' => $currency])
+            @include('shop.partials.product-video-list', ['product' => $product, 'galleryImages' => $galleryImages])
         </div>
     </div>
 

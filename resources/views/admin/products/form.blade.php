@@ -207,6 +207,27 @@
         ])
     </fieldset>
 
+    <fieldset class="form-fieldset" data-product-videos>
+        <legend>Product videos</legend>
+        <input type="hidden" name="video_order_present" value="1">
+        <p style="margin-top:0;color:#5c6470;">Upload up to 10 MP4 videos (50 MB each). Drag rows to reorder them; the first video is used on the homepage.</p>
+        <div data-product-video-list style="display:grid;gap:12px;margin-bottom:12px;">
+            @foreach(($product?->videos ?? collect()) as $video)
+                <div data-product-video-row draggable="true" style="display:flex;align-items:center;gap:12px;padding:10px;border:1px solid #dfe3e8;border-radius:8px;background:#fff;">
+                    <input type="hidden" name="video_order[]" value="existing:{{ $video->id }}">
+                    <video src="{{ \App\Support\PublicAssetUrl::to($video->path) }}" controls preload="metadata" style="width:90px;height:112px;object-fit:cover;background:#111;border-radius:6px;"></video>
+                    <strong data-video-position style="flex:1;">Video {{ $loop->iteration }}{{ $loop->first ? ' — Homepage video' : '' }}</strong>
+                    <button type="button" class="btn-admin btn-admin--small" data-product-video-remove>Remove</button>
+                </div>
+            @endforeach
+        </div>
+        <label>Add MP4 videos
+            <input type="file" name="videos[]" accept="video/mp4,.mp4" multiple data-product-video-input>
+        </label>
+        @error('videos')<p style="color:#b33a3a;">{{ $message }}</p>@enderror
+        @error('videos.*')<p style="color:#b33a3a;">{{ $message }}</p>@enderror
+    </fieldset>
+
     @include('partials.file-upload', [
         'name' => 'images[]',
         'label' => 'Product gallery images',
@@ -354,6 +375,11 @@
         <input type="checkbox" name="is_active" value="1" @checked(old('is_active', $product ? $product->is_active : true))>
         Active on storefront
     </label>
+    <label class="checkbox">
+        <input type="checkbox" name="show_at_home" value="1" @checked(old('show_at_home', $product ? $product->show_at_home : false))>
+        Show at home (uses the first product video)
+    </label>
+    @error('show_at_home')<p style="color:#b33a3a;">{{ $message }}</p>@enderror
 
     <div class="form-actions">
         <button class="btn-admin btn-admin--primary" type="submit">{{ $product ? 'Save changes' : 'Create product' }}</button>

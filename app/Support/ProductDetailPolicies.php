@@ -10,10 +10,10 @@ final class ProductDetailPolicies
     public static function rows(): array
     {
         return [
-            ['icon' => 'shipping', 'text' => 'Standard Shipping $5.99, FREE on orders over $100'],
-            ['icon' => 'locker', 'text' => 'Fast & Secure Shipping via UPS/USPS'],
-            ['icon' => 'warranty', 'text' => '2-Year Quality Warranty'],
-            ['icon' => 'returns', 'text' => '60-Day Easy Returns'],
+            ['icon' => 'shipping', 'text' => 'Free US Shipping over $120 & 30-Day Easy Returns'],
+            ['icon' => 'locker', 'text' => '18K Gold Vermeil / 925 Sterling Silver'],
+            ['icon' => 'warranty', 'text' => '100% Waterproof & Tarnish-Free Guarantee'],
+            // ['icon' => 'returns', 'text' => '60-Day Easy Returns'],
             ['icon' => 'gift', 'text' => 'Gift-wrap available at checkout'],
         ];
     }

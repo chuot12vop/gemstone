@@ -16,7 +16,7 @@ class Product extends Model
 
     protected $fillable = [
         'category_id', 'brand_id', 'name', 'slug', 'short_description', 'card_badge_label', 'discount', 'sticker',
-        'description', 'price_usd', 'image', 'thumbnail', 'stock', 'is_active', 'meta_title', 'meta_description',
+        'description', 'price_usd', 'image', 'thumbnail', 'stock', 'is_active', 'show_at_home', 'meta_title', 'meta_description',
     ];
 
     protected $casts = [
@@ -24,6 +24,7 @@ class Product extends Model
         'discount' => 'float',
         'stock' => 'integer',
         'is_active' => 'boolean',
+        'show_at_home' => 'boolean',
     ];
 
     /** @return BelongsTo<Category, Product> */
@@ -48,6 +49,12 @@ class Product extends Model
     public function productImages(): HasMany
     {
         return $this->hasMany(ProductImage::class)->orderBy('sort_order')->orderBy('id');
+    }
+
+    /** @return HasMany<ProductVideo, Product> */
+    public function videos(): HasMany
+    {
+        return $this->hasMany(ProductVideo::class)->orderBy('sort_order')->orderBy('id');
     }
 
     /** @return HasMany<ProductVariant, Product> */

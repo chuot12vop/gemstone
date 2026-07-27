@@ -20,6 +20,7 @@ class ProductController extends Controller
         $product->load([
             'category',
             'productImages',
+            'videos',
             'productAttributes',
             'variants' => static fn ($q) => $q->where('is_active', true)->orderBy('sort_order')->orderBy('id')->with('hoverImages'),
             'upsellProducts' => static fn ($q) => $q->where('is_active', true)->with([

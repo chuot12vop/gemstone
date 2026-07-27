@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Shop;
 
 use App\Http\Controllers\Controller;
 use App\Models\Certificate;
+use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Page;
 use App\Models\Post;
@@ -86,6 +87,25 @@ class HomeController extends Controller
             ->take(6)
             ->get();
 
+        $featuredBrandIds = $this->settingIds('home_featured_brand_ids');
+        $brandPositions = array_flip($featuredBrandIds);
+        $homeBrands = Brand::query()
+            ->whereIn('id', $featuredBrandIds)
+            ->whereHas('products', fn ($query) => $query->where('is_active', true))
+            ->get()
+            ->sortBy(fn (Brand $brand) => $brandPositions[$brand->id] ?? PHP_INT_MAX)
+            ->values();
+
+        $homeVideoProducts = Product::query()
+            ->where('is_active', true)
+            ->where('show_at_home', true)
+            ->whereHas('videos')
+            ->with('videos')
+            ->orderBy('name')
+            ->orderBy('id')
+            ->limit(12)
+            ->get();
+
         $homeCertificates = Certificate::query()
             ->whereNotNull('image')
             ->where('image', '!=', '')
@@ -131,6 +151,8 @@ class HomeController extends Controller
             'homeBestSellersBannerImage' => $productSectionSettings['bestsellers']['banner_image'],
             'homeBestSellersBannerHidden' => $productSectionSettings['bestsellers']['banner_hidden'],
             'homeCollections' => $homeCollections,
+            'homeBrands' => $homeBrands,
+            'homeVideoProducts' => $homeVideoProducts,
             'homeCertificates' => $homeCertificates,
             'homeStoryPage' => $homeStoryPage,
             'homeJournalPosts' => $homeJournalPosts,
@@ -227,6 +249,19 @@ class HomeController extends Controller
         }
 
         return $slides;
+    }
+
+    /** @return list<int> */
+    private function settingIds(string $key): array
+    {
+        $decoded = json_decode((string) Setting::query()->where('key', $key)->value('value'), true);
+
+        return collect(is_array($decoded) ? $decoded : [])
+            ->map(fn ($id) => (int) $id)
+            ->filter(fn ($id) => $id > 0)
+            ->unique()
+            ->values()
+            ->all();
     }
 
     /**

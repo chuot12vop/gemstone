@@ -98,6 +98,67 @@
 (function () {
   'use strict';
 
+  function initProductVideos() {
+    const root = document.querySelector('[data-product-videos]');
+    if (!root) return;
+    const list = root.querySelector('[data-product-video-list]');
+    const input = root.querySelector('[data-product-video-input]');
+    if (!list || !(input instanceof HTMLInputElement)) return;
+
+    function refreshLabels() {
+      Array.from(list.querySelectorAll('[data-product-video-row]')).forEach(function (row, index) {
+        const label = row.querySelector('[data-video-position]');
+        if (label) label.textContent = 'Video ' + (index + 1) + (index === 0 ? ' — Homepage video' : '');
+      });
+    }
+
+    list.addEventListener('click', function (event) {
+      const button = event.target instanceof Element ? event.target.closest('[data-product-video-remove]') : null;
+      if (!button) return;
+      button.closest('[data-product-video-row]')?.remove();
+      refreshLabels();
+    });
+
+    let dragged = null;
+    list.addEventListener('dragstart', function (event) {
+      dragged = event.target instanceof Element ? event.target.closest('[data-product-video-row]') : null;
+    });
+    list.addEventListener('dragover', function (event) {
+      const target = event.target instanceof Element ? event.target.closest('[data-product-video-row]') : null;
+      if (!dragged || !target || dragged === target) return;
+      event.preventDefault();
+      const rect = target.getBoundingClientRect();
+      list.insertBefore(dragged, event.clientY < rect.top + rect.height / 2 ? target : target.nextSibling);
+    });
+    list.addEventListener('dragend', function () { dragged = null; refreshLabels(); });
+
+    input.addEventListener('change', function () {
+      Array.from(list.querySelectorAll('[data-new-video-row]')).forEach(function (row) { row.remove(); });
+      Array.from(input.files || []).forEach(function (file, index) {
+        const row = document.createElement('div');
+        row.setAttribute('data-product-video-row', '');
+        row.setAttribute('data-new-video-row', '');
+        row.draggable = true;
+        row.style.cssText = 'display:flex;align-items:center;gap:12px;padding:10px;border:1px solid #dfe3e8;border-radius:8px;background:#fff;';
+        const url = URL.createObjectURL(file);
+        row.innerHTML = '<input type="hidden" name="video_order[]" value="new:' + index + '">' +
+          '<video src="' + url + '" controls preload="metadata" style="width:90px;height:112px;object-fit:cover;background:#111;border-radius:6px;"></video>' +
+          '<strong data-video-position style="flex:1;"></strong>' +
+          '<button type="button" class="btn-admin btn-admin--small" data-product-video-remove>Remove</button>';
+        list.appendChild(row);
+      });
+      refreshLabels();
+    });
+    refreshLabels();
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initProductVideos);
+  else initProductVideos();
+})();
+
+(function () {
+  'use strict';
+
   const DEFAULT_SWATCH = '#E3E3E3';
   const HEX_RE = /^#[0-9A-Fa-f]{6}$/;
 

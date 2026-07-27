@@ -7,9 +7,11 @@ use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductImage;
+use App\Models\ProductVideo;
 use App\Models\ProductVariant;
 use App\Models\ProductVariantHoverImage;
 use App\Services\PublicImageStore;
+use App\Services\PublicVideoStore;
 use App\Support\ProductVariantOptions;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -17,14 +19,18 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class ProductAdminController extends Controller
 {
     private PublicImageStore $images;
 
-    public function __construct(PublicImageStore $images)
+    private PublicVideoStore $videos;
+
+    public function __construct(PublicImageStore $images, PublicVideoStore $videos)
     {
         $this->images = $images;
+        $this->videos = $videos;
     }
 
     public function index(Request $request)
@@ -78,9 +84,11 @@ class ProductAdminController extends Controller
     public function store(Request $request)
     {
         $data = $this->validated($request);
+        $this->assertVideoRules($request, null, $data);
         $attributes = $this->extractAttributes($request);
         $thumbnailUrl = $this->images->store($request->file('thumbnail'), 'products/thumbnails', asWebp: true);
         $galleryImageUrls = $this->images->storeMany($this->normalizeUploadedFiles($request->file('images')), 'products/gallery');
+        $videoPaths = $this->storeNewVideos($request);
         if ($thumbnailUrl !== null) {
             $data['thumbnail'] = $thumbnailUrl;
             $data['image'] = $thumbnailUrl;
@@ -89,7 +97,7 @@ class ProductAdminController extends Controller
 
         $variants = $this->extractVariants($request);
 
-        DB::transaction(function () use ($data, $attributes, $galleryImageUrls, $request, $variants): void {
+        DB::transaction(function () use ($data, $attributes, $galleryImageUrls, $request, $variants, $videoPaths): void {
             $createPayload = $data;
             // Use a temporary unique slug to avoid violating unique index before final slug resolution.
             $createPayload['slug'] = $this->makeTemporarySlug($data['slug']);
@@ -100,6 +108,7 @@ class ProductAdminController extends Controller
             ]);
             $this->syncAttributes($product, $attributes);
             $this->syncGalleryImages($product, $galleryImageUrls);
+            $this->syncProductVideos($product, $request, $videoPaths);
             $this->syncVariants($product, $variants, $request);
             $this->syncUpsellProducts($product, $this->extractUpsells($request), $product->id);
         });
@@ -109,7 +118,7 @@ class ProductAdminController extends Controller
 
     public function edit(Product $product)
     {
-        $product->load('productAttributes', 'productImages', 'upsellProducts', 'variants.hoverImages');
+        $product->load('productAttributes', 'productImages', 'videos', 'upsellProducts', 'variants.hoverImages');
 
         return view('admin.products.form', [
             'title' => 'Edit product',
@@ -126,10 +135,13 @@ class ProductAdminController extends Controller
     public function update(Request $request, Product $product)
     {
         $data = $this->validated($request);
+        $product->loadMissing('videos');
+        $this->assertVideoRules($request, $product, $data);
         $data['slug'] = $this->resolveSlugForProduct($data['slug'], $product->id);
         $attributes = $this->extractAttributes($request);
         $thumbnailUrl = $this->images->store($request->file('thumbnail'), 'products/thumbnails', asWebp: true);
         $galleryImageUrls = $this->images->storeMany($this->normalizeUploadedFiles($request->file('images')), 'products/gallery');
+        $videoPaths = $this->storeNewVideos($request);
 
         if ($thumbnailUrl !== null) {
             $this->images->delete($product->thumbnail);
@@ -140,15 +152,21 @@ class ProductAdminController extends Controller
 
         $variants = $this->extractVariants($request);
 
-        DB::transaction(function () use ($product, $data, $attributes, $galleryImageUrls, $request, $variants): void {
+        $deletedVideoPaths = DB::transaction(function () use ($product, $data, $attributes, $galleryImageUrls, $request, $variants, $videoPaths): array {
             $product->update($data);
             $this->syncAttributes($product, $attributes);
             if ($galleryImageUrls->isNotEmpty()) {
                 $this->syncGalleryImages($product, $galleryImageUrls);
             }
+            $deletedVideoPaths = $this->syncProductVideos($product, $request, $videoPaths);
             $this->syncVariants($product, $variants, $request);
             $this->syncUpsellProducts($product, $this->extractUpsells($request), $product->id);
+            return $deletedVideoPaths;
         });
+
+        foreach ($deletedVideoPaths as $deletedVideoPath) {
+            $this->videos->delete($deletedVideoPath);
+        }
 
         return redirect()->route('admin.products.edit', $product)->with('success', 'Product updated.');
     }
@@ -173,7 +191,7 @@ class ProductAdminController extends Controller
             });
         }
 
-        $products = $query->limit(15)->get(['id', 'name', 'slug', 'price_usd', 'thumbnail', 'image']);
+        $products = $query->withExists('videos')->limit(15)->get(['id', 'name', 'slug', 'price_usd', 'thumbnail', 'image']);
 
         return response()->json($products->map(static function (Product $p): array {
             return [
@@ -182,6 +200,7 @@ class ProductAdminController extends Controller
                 'slug' => $p->slug,
                 'price_usd' => (float) $p->price_usd,
                 'thumbnail' => $p->thumbnail ?: $p->image,
+                'has_video' => (bool) $p->videos_exists,
             ];
         }));
     }
@@ -195,11 +214,12 @@ class ProductAdminController extends Controller
             );
         }
 
-        $product->load(['productImages', 'variants.hoverImages']);
+        $product->load(['productImages', 'videos', 'variants.hoverImages']);
 
         $this->images->delete($product->thumbnail);
         $this->images->delete($product->sticker);
         $this->images->delete($product->image);
+        $videoPaths = $product->videos->pluck('path')->all();
         foreach ($product->productImages as $image) {
             $this->images->delete($image->path);
         }
@@ -212,6 +232,10 @@ class ProductAdminController extends Controller
         }
 
         $product->delete();
+
+        foreach ($videoPaths as $videoPath) {
+            $this->videos->delete($videoPath);
+        }
 
         return redirect()->route('admin.products.index')->with('success', 'Product deleted.');
     }
@@ -239,9 +263,14 @@ class ProductAdminController extends Controller
             'thumbnail' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:4096',
             'images' => 'nullable|array',
             'images.*' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:6144',
+            'videos' => 'nullable|array|max:10',
+            'videos.*' => 'nullable|file|mimetypes:video/mp4,application/mp4|max:51200',
+            'video_order' => 'nullable|array|max:10',
+            'video_order.*' => ['string', 'regex:/^(existing|new):[0-9]+$/'],
             'meta_title' => 'nullable|string|max:190',
             'meta_description' => 'nullable|string|max:320',
             'is_active' => 'nullable|boolean',
+            'show_at_home' => 'nullable|boolean',
             'attributes' => 'nullable|array',
             'attributes.*.name' => 'nullable|string|max:120',
             'attributes.*.value' => 'nullable|string|max:5000',
@@ -289,7 +318,90 @@ class ProductAdminController extends Controller
             'meta_title' => $validated['meta_title'] ?? null,
             'meta_description' => $validated['meta_description'] ?? null,
             'is_active' => $request->boolean('is_active'),
+            'show_at_home' => $request->boolean('show_at_home'),
         ];
+    }
+
+    /** @param array<string, mixed> $data */
+    private function assertVideoRules(Request $request, ?Product $product, array $data): void
+    {
+        $existingIds = $product?->videos->pluck('id')->map(fn ($id) => (int) $id)->all() ?? [];
+        $tokens = collect($request->input('video_order', []))->map(fn ($token) => (string) $token);
+        $keptIds = $tokens->filter(fn ($token) => str_starts_with($token, 'existing:'))
+            ->map(fn ($token) => (int) substr($token, 9))->filter(fn ($id) => in_array($id, $existingIds, true))->unique();
+        $newIndexes = $tokens->filter(fn ($token) => str_starts_with($token, 'new:'))
+            ->map(fn ($token) => (int) substr($token, 4))->unique();
+        $files = collect($this->normalizeUploadedFiles($request->file('videos')));
+
+        $videoCount = ! $request->boolean('video_order_present')
+            ? count($existingIds) + $files->count()
+            : $keptIds->count() + $newIndexes->filter(fn ($index) => $files->has($index))->count();
+
+        if ($videoCount > 10) {
+            throw ValidationException::withMessages(['videos' => 'A product can have at most 10 videos.']);
+        }
+        if (! $data['show_at_home']) {
+            return;
+        }
+        if (! $data['is_active']) {
+            throw ValidationException::withMessages(['show_at_home' => 'Only an active product can be shown on the homepage.']);
+        }
+        if ($videoCount === 0) {
+            throw ValidationException::withMessages(['show_at_home' => 'Add at least one video before showing this product on the homepage.']);
+        }
+
+        $selectedCount = Product::query()->where('show_at_home', true)
+            ->when($product, fn ($query) => $query->whereKeyNot($product->id))
+            ->count();
+        if ($selectedCount >= 12) {
+            throw ValidationException::withMessages(['show_at_home' => 'A maximum of 12 products can be shown in the homepage video section.']);
+        }
+    }
+
+    /** @return array<int, string> */
+    private function storeNewVideos(Request $request): array
+    {
+        $files = collect($this->normalizeUploadedFiles($request->file('videos')));
+        $tokens = collect($request->input('video_order', []));
+        $wantedIndexes = ! $request->boolean('video_order_present')
+            ? $files->keys()
+            : $tokens->filter(fn ($token) => str_starts_with((string) $token, 'new:'))
+                ->map(fn ($token) => (int) substr((string) $token, 4))->unique();
+
+        return $wantedIndexes->filter(fn ($index) => $files->has($index))
+            ->mapWithKeys(function ($index) use ($files): array {
+                $path = $this->videos->store($files->get($index));
+                return $path === null ? [] : [(int) $index => $path];
+            })->all();
+    }
+
+    /** @param array<int, string> $newPaths @return list<string> */
+    private function syncProductVideos(Product $product, Request $request, array $newPaths): array
+    {
+        $existing = $product->videos()->get()->keyBy('id');
+        $tokens = collect($request->input('video_order', []));
+        if (! $request->boolean('video_order_present')) {
+            $tokens = $existing->keys()->map(fn ($id) => 'existing:'.$id)
+                ->concat(collect(array_keys($newPaths))->map(fn ($index) => 'new:'.$index));
+        }
+
+        $keptIds = [];
+        foreach ($tokens->unique()->values() as $sortOrder => $token) {
+            [$type, $rawId] = explode(':', (string) $token, 2);
+            $id = (int) $rawId;
+            if ($type === 'existing' && $existing->has($id)) {
+                $existing->get($id)->update(['sort_order' => $sortOrder]);
+                $keptIds[] = $id;
+            } elseif ($type === 'new' && isset($newPaths[$id])) {
+                $product->videos()->create(['path' => $newPaths[$id], 'sort_order' => $sortOrder]);
+            }
+        }
+
+        $removed = $existing->reject(fn (ProductVideo $video) => in_array($video->id, $keptIds, true));
+        $removedPaths = $removed->pluck('path')->values()->all();
+        ProductVideo::query()->whereIn('id', $removed->pluck('id'))->delete();
+
+        return $removedPaths;
     }
 
     /**

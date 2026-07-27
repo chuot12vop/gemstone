@@ -21,10 +21,38 @@
     $catalogMenuCategories = $catalogNavCategories->reject(fn ($cat) => $cat->slug === 'Best-Sellers');
 @endphp
 <ul class="site-nav__list">
-    <li><a href="{{ route('shop.home') }}">Home</a></li>
-    <li>
-        <a href="{{ $bestSellersCategory ? route('shop.catalog.category', $bestSellersCategory) : route('shop.products.index') }}">Best Sellers</a>
-    </li>
+    @foreach($featuredNavBrands as $brand)
+        @php
+            $brandTriggerId = 'brand-mega-trigger-'.$navPrefix.'-'.$brand->id;
+            $brandPanelId = 'brand-mega-panel-'.$navPrefix.'-'.$brand->id;
+        @endphp
+        <li class="site-nav__item site-nav__item--mega" data-nav-mega>
+            <button type="button" class="site-nav__expand-toggle" data-catalog-trigger aria-expanded="false" aria-controls="{{ $brandPanelId }}" aria-label="Toggle {{ $brand->name }} menu">
+                <a href="{{ route('shop.catalog', ['brand' => $brand->slug]) }}" class="site-nav__mega-trigger" id="{{ $brandTriggerId }}">{{ $brand->name }}</a>
+                <svg class="site-nav__expand-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <div class="catalog-mega" id="{{ $brandPanelId }}" role="region" aria-labelledby="{{ $brandTriggerId }}" data-catalog-mega-panel>
+                <div class="catalog-mega__inner">
+                    <p class="catalog-mega__lede"><a href="{{ route('shop.catalog', ['brand' => $brand->slug]) }}">View all {{ $brand->name }}</a></p>
+                    @php
+                        $groupedBrandProducts = $brand->products->groupBy('category.name');
+                    @endphp
+                    <div class="catalog-mega__list">
+                        @foreach($groupedBrandProducts as $categoryName => $brandProducts)
+                            <details class="catalog-mega__group catalog-mega__group--expandable">
+                                <summary class="catalog-mega__summary"><span class="catalog-mega__summary-label">{{ $categoryName }}</span><svg class="catalog-mega__expand-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2"/></svg></summary>
+                                <div class="catalog-mega__panel"><ul class="catalog-mega__products">
+                                    @foreach($brandProducts as $product)
+                                        <li><a class="catalog-mega__product-link" href="{{ route('shop.product', $product) }}"><span class="catalog-mega__product-thumb" aria-hidden="true"><img src="{{ $product->thumbnail ?: ($product->image ?: asset('assets/img/placeholder.svg')) }}" alt="" width="36" height="36" loading="lazy"></span><span class="catalog-mega__product-name">{{ $product->name }}</span></a></li>
+                                    @endforeach
+                                </ul></div>
+                            </details>
+                        @endforeach
+                    </div>
+                </div>
+            </div>
+        </li>
+    @endforeach
     <li class="site-nav__item site-nav__item--mega" data-nav-mega>
         <button type="button"
                 class="site-nav__expand-toggle"
@@ -89,9 +117,24 @@
             </div>
         </div>
     </li>
-    <li><a href="{{ route('shop.news.index') }}">News</a></li>
-    <li><a href="{{ route('shop.about') }}">About</a></li>
-    <li><a href="{{ route('shop.contact') }}">Contact</a></li>
+    <li><a href="{{ $bestSellersCategory ? route('shop.catalog.category', $bestSellersCategory) : route('shop.products.index') }}">Best Sellers</a></li>
+    @php
+        $storyTriggerId = 'story-mega-trigger-'.$navPrefix;
+        $storyPanelId = 'story-mega-panel-'.$navPrefix;
+    @endphp
+    <li class="site-nav__item site-nav__item--mega" data-nav-mega>
+        <button type="button" class="site-nav__expand-toggle" data-catalog-trigger aria-expanded="false" aria-controls="{{ $storyPanelId }}" aria-label="Toggle Our Story menu">
+            <span class="site-nav__mega-trigger" id="{{ $storyTriggerId }}">Our Story</span>
+            <svg class="site-nav__expand-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <div class="catalog-mega" id="{{ $storyPanelId }}" role="region" aria-labelledby="{{ $storyTriggerId }}" data-catalog-mega-panel>
+            <div class="catalog-mega__inner"><div class="catalog-mega__list">
+                <div class="catalog-mega__group catalog-mega__group--link"><a class="catalog-mega__direct" href="{{ route('shop.news.index') }}">News</a></div>
+                <div class="catalog-mega__group catalog-mega__group--link"><a class="catalog-mega__direct" href="{{ route('shop.about') }}">About</a></div>
+                <div class="catalog-mega__group catalog-mega__group--link"><a class="catalog-mega__direct" href="{{ route('shop.contact') }}">Contact</a></div>
+            </div></div>
+        </div>
+    </li>
 </ul>
 <form class="currency-form" method="post" action="{{ route('shop.currency') }}" data-currency-picker>
     @csrf

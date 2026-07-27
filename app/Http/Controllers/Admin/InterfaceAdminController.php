@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Category;
+use App\Models\Brand;
 use App\Models\Product;
 use App\Models\Setting;
 use App\Services\PublicImageStore;
@@ -28,6 +29,8 @@ class InterfaceAdminController extends Controller
 
     private const PRODUCT_SECTION_KEYS = ['bestsellers', 'new'];
 
+    private const FEATURED_BRANDS_KEY = 'home_featured_brand_ids';
+
     private PublicImageStore $images;
 
     public function __construct(PublicImageStore $images)
@@ -44,6 +47,8 @@ class InterfaceAdminController extends Controller
             ],
             'slides' => $this->slidesForForm(),
             'categories' => Category::query()->orderBy('sort_order')->orderBy('name')->get(),
+            'brands' => Brand::query()->orderBy('sort_order')->orderBy('name')->get(['id', 'name', 'image']),
+            'selectedBrandIds' => $this->settingIds(self::FEATURED_BRANDS_KEY),
             'products' => Product::query()->orderBy('name')->get(['id', 'name', 'thumbnail', 'image']),
             'sectionStyles' => HomeSectionSettings::resolveForForm(),
             'sectionLabels' => HomeSectionSettings::SECTION_LABELS,
@@ -78,6 +83,8 @@ class InterfaceAdminController extends Controller
             'product_sections.*.remove_banner_image' => 'nullable|boolean',
             'product_sections.*.product_ids' => 'nullable|array|max:6',
             'product_sections.*.product_ids.*' => 'integer|exists:products,id',
+            'featured_brand_ids' => 'nullable|array',
+            'featured_brand_ids.*' => 'integer|distinct|exists:brands,id',
         ]);
 
         $inputRows = $validated['slides'] ?? [];
@@ -130,8 +137,32 @@ class InterfaceAdminController extends Controller
 
         $this->saveSectionStyles($request, $validated['sections'] ?? []);
         $this->saveProductSections($request, $validated['product_sections'] ?? []);
+        $this->storeIds(self::FEATURED_BRANDS_KEY, $validated['featured_brand_ids'] ?? []);
 
         return redirect()->route('admin.interface.index')->with('success', 'Home interface updated.');
+    }
+
+    /** @return list<int> */
+    private function settingIds(string $key): array
+    {
+        $decoded = json_decode((string) Setting::query()->where('key', $key)->value('value'), true);
+
+        return collect(is_array($decoded) ? $decoded : [])
+            ->map(fn ($id) => (int) $id)
+            ->filter(fn ($id) => $id > 0)
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    /** @param array<int, mixed> $ids */
+    private function storeIds(string $key, array $ids): void
+    {
+        $ids = collect($ids)->map(fn ($id) => (int) $id)->filter(fn ($id) => $id > 0)->unique()->values()->all();
+        Setting::query()->updateOrCreate(
+            ['key' => $key],
+            ['value' => json_encode($ids, JSON_UNESCAPED_SLASHES)]
+        );
     }
 
     /**

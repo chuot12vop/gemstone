@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Models\Category;
+use App\Models\Brand;
 use App\Models\Order;
 use App\Models\Setting;
 use App\Services\CurrencyService;
@@ -74,11 +75,25 @@ class AppServiceProvider extends ServiceProvider
                 }])
                 ->get(['id', 'name', 'slug', 'sort_order']);
 
+            $featuredBrandIds = collect(json_decode((string) Setting::query()->where('key', 'home_featured_brand_ids')->value('value'), true) ?: [])
+                ->map(fn ($id) => (int) $id)->filter()->unique()->values();
+            $brandPositions = array_flip($featuredBrandIds->all());
+            $featuredNavBrands = Brand::query()
+                ->whereIn('id', $featuredBrandIds)
+                ->whereHas('products', fn ($query) => $query->where('is_active', true))
+                ->with(['products' => fn ($query) => $query->where('is_active', true)
+                    ->orderBy('category_id')->orderBy('name')
+                    ->select('id', 'brand_id', 'category_id', 'name', 'slug', 'thumbnail', 'image'), 'products.category'])
+                ->get(['id', 'name', 'slug', 'image'])
+                ->sortBy(fn (Brand $brand) => $brandPositions[$brand->id] ?? PHP_INT_MAX)
+                ->values();
+
             $view->with('currency', app(CurrencyService::class))
                 ->with('siteSettings', $defaults)
                 ->with('shopFront', ShopFrontSettings::resolve())
                 ->with('paymentLogos', PaymentMethodLogos::all($siteLogoPath))
-                ->with('catalogNavCategories', $catalogNavCategories);
+                ->with('catalogNavCategories', $catalogNavCategories)
+                ->with('featuredNavBrands', $featuredNavBrands);
         });
 
         View::composer('admin.partials.topbar', function ($view) {

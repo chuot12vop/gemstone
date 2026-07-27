@@ -62,6 +62,19 @@
     @endif
 </section>
 
+@if($homeBrands->isNotEmpty())
+<section class="home-section home-section--brands reveal-on-scroll" aria-label="Shop by brand">
+    <div class="home-brand-rail" role="list">
+        @foreach($homeBrands as $brand)
+            <a class="home-brand-card" role="listitem" href="{{ route('shop.catalog', ['brand' => $brand->slug]) }}">
+                <span class="home-brand-card__media"><img src="{{ \App\Support\PublicAssetUrl::to($brand->image) ?: asset('assets/img/placeholder.svg') }}" alt="{{ $brand->name }}" loading="lazy"></span>
+                <span class="home-brand-card__name">{{ $brand->name }}</span>
+            </a>
+        @endforeach
+    </div>
+</section>
+@endif
+
 @if($homeCertificates->isNotEmpty())
 <section class="home-section home-section--certificates reveal-on-scroll{{ !empty($homeSectionStyles['certificates']['background_image_url']) ? ' home-section--has-bg-image' : '' }}" aria-labelledby="home-certificates-title" style="{{ \App\Support\HomeSectionSettings::inlineStyle($homeSectionStyles['certificates'] ?? []) }}">
     <h2 id="home-certificates-title" class="section__title section__title--center">As Seen In</h2>
@@ -87,7 +100,7 @@
 </section>
 @endif
 
-@if($homeBestSellers)
+@if(false && $homeBestSellers)
     <section class="home-section home-section--bestsellers reveal-on-scroll{{ !empty($homeSectionStyles['bestsellers']['background_image_url']) ? ' home-section--has-bg-image' : '' }}" aria-labelledby="home-bestsellers-title" style="{{ \App\Support\HomeSectionSettings::inlineStyle($homeSectionStyles['bestsellers'] ?? []) }}">
         @php($bestSellersUrl = isset($homeBestSellersCategory) && $homeBestSellersCategory ? route('shop.catalog.category', $homeBestSellersCategory) : route('shop.products.index'))
         <h2 id="home-bestsellers-title" class="section__title section__title--center">
@@ -170,6 +183,36 @@
     @endif
 </section>
 
+@if($homeVideoProducts->isNotEmpty())
+@php($videoCount = $homeVideoProducts->count())
+<section class="home-section home-section--videos reveal-on-scroll" aria-label="Product videos">
+    <div class="home-video-slider" data-home-video-slider aria-roledescription="carousel" aria-label="Product videos">
+        <div class="home-video-slider__viewport" data-home-video-viewport>
+            <div class="home-video-slider__track">
+                @foreach($homeVideoProducts as $i => $videoProduct)
+                    @php($homeVideo = $videoProduct->videos->first())
+                    @php($videoPrice = \App\Support\ProductPricing::display((float) $videoProduct->price_usd, null, (float) ($videoProduct->discount ?? 0)))
+                    <article class="home-video-slider__slide" data-home-video-slide aria-label="Video {{ $i + 1 }} of {{ $videoCount }}">
+                        <video data-home-product-video src="{{ \App\Support\PublicAssetUrl::to($homeVideo->path) }}" poster="{{ \App\Support\PublicAssetUrl::to($videoProduct->thumbnail ?: $videoProduct->image) }}" muted loop playsinline preload="metadata"></video>
+                        <a class="home-video-slider__product" href="{{ route('shop.product', $videoProduct) }}">
+                            <img src="{{ \App\Support\PublicAssetUrl::to($videoProduct->thumbnail ?: $videoProduct->image) }}" alt="" loading="lazy" width="72" height="72">
+                            <span class="home-video-slider__product-copy">
+                                <span class="home-video-slider__name">{{ $videoProduct->name }}</span>
+                                <span class="home-video-slider__price">{{ $currency->formatUsd($videoPrice['display']) }}</span>
+                            </span>
+                        </a>
+                    </article>
+                @endforeach
+            </div>
+        </div>
+        @if($videoCount > 1)
+            <button type="button" class="home-video-slider__nav home-video-slider__nav--prev" data-slider-prev aria-label="Previous video">&#10094;</button>
+            <button type="button" class="home-video-slider__nav home-video-slider__nav--next" data-slider-next aria-label="Next video">&#10095;</button>
+        @endif
+    </div>
+</section>
+@endif
+
 <section class="home-section home-section--reviews reveal-on-scroll{{ !empty($homeSectionStyles['reviews']['background_image_url']) ? ' home-section--has-bg-image' : '' }}" aria-labelledby="home-reviews-title" style="{{ \App\Support\HomeSectionSettings::inlineStyle($homeSectionStyles['reviews'] ?? []) }}">
     <h2 id="home-reviews-title" class="section__title section__title--center">Feedback</h2>
     @if($homeReviews->isEmpty())
@@ -213,7 +256,7 @@
                 <path d="M10 24l-6 6 6 6"/>
             </svg>
         </span>
-        <span class="home-service-band__label">60-DAY RETURNS</span>
+        <span class="home-service-band__label">30-DAY RETURNS</span>
     </div>
 </section>
 

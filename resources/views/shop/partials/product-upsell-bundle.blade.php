@@ -59,7 +59,7 @@
                         <img src="{{ $mainImage }}" alt="" width="72" height="72" loading="lazy">
                     </span>
                     <span class="product-upsell__body">
-                        <span class="product-upsell__name">{{ $product->name }}</span>
+                        <a class="product-upsell__name" href="{{ route('shop.product', $product) }}">{{ $product->name }}</a>
                             <span class="product-upsell__prices">
                                 <span class="product-upsell__price product-upsell__price--sale"
                                   data-upsell-sale>{{ $currency->formatUsd($mainDisplay) }}</span>
@@ -116,7 +116,7 @@
                             <img src="{{ $upsellImage }}" alt="" width="72" height="72" loading="lazy">
                         </span>
                         <span class="product-upsell__body">
-                            <span class="product-upsell__name">{{ $upsell->name }}</span>
+                            <a class="product-upsell__name" href="{{ route('shop.product', $upsell) }}">{{ $upsell->name }}</a>
                             <span class="product-upsell__prices">
                                 <span class="product-upsell__price product-upsell__price--sale">{{ $currency->formatUsd($displayUsd) }}</span>
                                 @if($compareUsd !== null && $compareUsd > $displayUsd + 0.001)
@@ -159,15 +159,13 @@
             }
         @endphp
         <button type="submit" class="product-upsell__claim" data-upsell-submit {{ $mainStock < 1 ? 'disabled' : '' }}>
-            <span class="product-upsell__claim-label">Claim Offer</span>
-            <span class="product-upsell__claim-prices">
-                <span class="product-upsell__claim-total" data-upsell-total-sale>{{ $currency->formatUsd($bundleSaleUsd) }}</span>
-                @if($bundleBaseUsd > $bundleSaleUsd + 0.001)
-                    <span class="product-upsell__claim-was" data-upsell-total-was>{{ $currency->formatUsd($bundleBaseUsd) }}</span>
-                @else
-                    <span class="product-upsell__claim-was" data-upsell-total-was hidden></span>
-                @endif
-            </span>
+            <span class="product-upsell__claim-label">Add to Cart -</span>
+            <span class="product-upsell__claim-total" data-upsell-total-sale>{{ $currency->formatUsd($bundleSaleUsd) }}</span>
+            @if($bundleBaseUsd > $bundleSaleUsd + 0.001)
+                <span class="product-upsell__claim-saving" data-upsell-total-saving>(save {{ $currency->formatUsd($bundleBaseUsd - $bundleSaleUsd) }})</span>
+            @else
+                <span class="product-upsell__claim-saving" data-upsell-total-saving hidden></span>
+            @endif
         </button>
     </form>
 </section>
