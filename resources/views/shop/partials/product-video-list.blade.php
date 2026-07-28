@@ -6,7 +6,7 @@
                 @foreach($product->videos as $videoIndex => $video)
                     <video class="product-video-list__video" data-product-list-video
                            src="{{ \App\Support\PublicAssetUrl::to($video->path) }}"
-                           poster="{{ $galleryImages->first() }}" muted loop playsinline preload="metadata"
+                           data-video-thumbnail {{ $loop->first ? 'autoplay' : '' }} muted playsinline preload="auto"
                            aria-label="{{ $product->name }} video {{ $videoIndex + 1 }}"></video>
                 @endforeach
             </div>

@@ -137,7 +137,7 @@
     @include('shop.partials.mobile-nav-drawer')
 
     <script src="{{ asset('assets/js/file-upload.js') }}" defer></script>
-    <script src="{{ asset('assets/js/shop.js') }}" defer></script>
+    <script src="{{ asset('assets/js/shop.js') }}?v={{ filemtime(public_path('assets/js/shop.js')) }}" defer></script>
     <script>
     document.addEventListener('click', function (event) {
         var button = event.target.closest('button[data-navigate]');

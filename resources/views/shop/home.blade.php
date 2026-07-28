@@ -193,7 +193,7 @@
                     @php($homeVideo = $videoProduct->videos->first())
                     @php($videoPrice = \App\Support\ProductPricing::display((float) $videoProduct->price_usd, null, (float) ($videoProduct->discount ?? 0)))
                     <article class="home-video-slider__slide" data-home-video-slide aria-label="Video {{ $i + 1 }} of {{ $videoCount }}">
-                        <video data-home-product-video src="{{ \App\Support\PublicAssetUrl::to($homeVideo->path) }}" poster="{{ \App\Support\PublicAssetUrl::to($videoProduct->thumbnail ?: $videoProduct->image) }}" muted loop playsinline preload="metadata"></video>
+                        <video data-home-product-video data-video-thumbnail src="{{ \App\Support\PublicAssetUrl::to($homeVideo->path) }}#t=0.1" muted loop playsinline preload="metadata"></video>
                         <a class="home-video-slider__product" href="{{ route('shop.product', $videoProduct) }}">
                             <img src="{{ \App\Support\PublicAssetUrl::to($videoProduct->thumbnail ?: $videoProduct->image) }}" alt="" loading="lazy" width="72" height="72">
                             <span class="home-video-slider__product-copy">

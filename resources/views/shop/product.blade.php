@@ -55,7 +55,11 @@
                          alt="{{ $product->name }}"
                          width="800" height="800">
                     @if($product->videos->isNotEmpty())
-                        <video class="pd-gallery__main-video" data-pd-main-video controls playsinline preload="metadata" poster="{{ $galleryImages->first() }}" hidden></video>
+                        <video class="pd-gallery__main-video"
+                               data-pd-main-video
+                               src="{{ \App\Support\PublicAssetUrl::to($product->videos->first()->path) }}"
+                               controls autoplay muted playsinline preload="auto"
+                               hidden></video>
                     @endif
                     <button type="button" class="pd-gallery__nav pd-gallery__nav--prev" data-pd-prev aria-label="Previous image">&#10094;</button>
                     <button type="button" class="pd-gallery__nav pd-gallery__nav--next" data-pd-next aria-label="Next image">&#10095;</button>
@@ -73,7 +77,7 @@
                         @endforeach
                         @foreach($product->videos as $videoIndex => $video)
                             <button type="button" class="pd-gallery__thumb pd-gallery__thumb--video" data-pd-thumb data-pd-video="{{ \App\Support\PublicAssetUrl::to($video->path) }}" aria-label="Play product video {{ $videoIndex + 1 }}">
-                                <img src="{{ $galleryImages->first() }}" alt="" loading="lazy">
+                                <video data-video-thumbnail src="{{ \App\Support\PublicAssetUrl::to($video->path) }}#t=0.1" muted playsinline preload="metadata"></video>
                                 <span class="pd-gallery__play" aria-hidden="true">&#9654;</span>
                             </button>
                         @endforeach

@@ -41,6 +41,7 @@ let pcDrawerOpenEl = null;
   initCatalogToolbar();
   initProductVariantPicker();
   initHomeSlider();
+  initVideoThumbnails();
   initHomeProductVideos();
   initProductVideoList();
   initHomeStoriesTextToggle();
@@ -59,6 +60,18 @@ let pcDrawerOpenEl = null;
   initContactForm();
   initFlashToasts();
 })();
+
+function initVideoThumbnails() {
+  document.querySelectorAll('[data-video-thumbnail]').forEach(function (video) {
+    if (!(video instanceof HTMLVideoElement)) return;
+    const showFirstFrame = function () {
+      if (!video.paused || !Number.isFinite(video.duration) || video.duration <= 0) return;
+      if (video.currentTime < 0.05) video.currentTime = Math.min(0.1, video.duration / 2);
+    };
+    if (video.readyState >= 1) showFirstFrame();
+    else video.addEventListener('loadedmetadata', showFirstFrame, { once: true });
+  });
+}
 
 function initHomeProductVideos() {
   const slider = document.querySelector('[data-home-video-slider]');
@@ -381,17 +394,35 @@ function initProductVideoList() {
   const videos = root ? Array.from(root.querySelectorAll('[data-product-list-video]')) : [];
   if (!root || !viewport || !track || !videos.length) return;
 
+  let activeIndex = 0;
+  const playVideo = (index) => {
+    activeIndex = (index + videos.length) % videos.length;
+    const active = videos[activeIndex];
+    videos.forEach((video) => {
+      if (video !== active) {
+        video.pause();
+        video.currentTime = 0;
+      }
+    });
+    active.currentTime = 0;
+    active.play().catch(() => {});
+    viewport.scrollTo({ left: active.offsetLeft, behavior: activeIndex === 0 ? 'auto' : 'smooth' });
+  };
   const pauseOthers = (active) => videos.forEach((video) => {
     if (video !== active) video.pause();
   });
-  videos.forEach((video) => video.addEventListener('click', () => {
-    if (video.paused) {
-      pauseOthers(video);
-      video.play().catch(() => {});
-    } else {
-      video.pause();
-    }
-  }));
+  videos.forEach((video, index) => {
+    video.addEventListener('click', () => {
+      activeIndex = index;
+      if (video.paused) {
+        pauseOthers(video);
+        video.play().catch(() => {});
+      } else {
+        video.pause();
+      }
+    });
+    video.addEventListener('ended', () => playVideo(videos.length > 1 ? index + 1 : index));
+  });
 
   const scrollVideos = (direction) => {
     const gap = parseFloat(getComputedStyle(track).gap || '0') || 0;
@@ -3286,6 +3317,10 @@ function initProductGallery() {
       mainVideo.pause();
       mainVideo.hidden = !isVideo;
       if (isVideo && mainVideo.getAttribute('src') !== src) mainVideo.src = src;
+      if (isVideo) {
+        stopAutoplay();
+        mainVideo.play().catch(function () {});
+      }
     }
     mainImg.hidden = isVideo;
     mainWrap.toggleAttribute('data-pd-video-active', isVideo);
@@ -3312,7 +3347,7 @@ function initProductGallery() {
       t.classList.toggle('is-active', i === index);
     });
 
-    if (!fromAutoplay) restartAutoplay();
+    if (!fromAutoplay && !isVideo) restartAutoplay();
   }
 
   function stopAutoplay() {
@@ -3337,6 +3372,21 @@ function initProductGallery() {
   thumbs.forEach(function (t, i) {
     t.addEventListener('click', function () { setActive(i, false); });
   });
+
+  if (mainVideo instanceof HTMLVideoElement) {
+    mainVideo.addEventListener('ended', function () {
+      const videoIndexes = mediaTypes.reduce(function (result, type, index) {
+        if (type === 'video') result.push(index);
+        return result;
+      }, []);
+      const position = videoIndexes.indexOf(currentIndex);
+      if (videoIndexes.length > 1) setActive(videoIndexes[(position + 1) % videoIndexes.length], true);
+      else {
+        mainVideo.currentTime = 0;
+        mainVideo.play().catch(function () {});
+      }
+    });
+  }
 
   if (prevBtn) prevBtn.addEventListener('click', function () { setActive(currentIndex - 1, false); });
   if (nextBtn) nextBtn.addEventListener('click', function () { setActive(currentIndex + 1, false); });
@@ -3582,7 +3632,9 @@ function initProductGallery() {
     }
   });
 
-  startAutoplay();
+  const firstVideoIndex = mediaTypes.indexOf('video');
+  if (firstVideoIndex >= 0) setActive(firstVideoIndex, true);
+  else startAutoplay();
 
   gallery._pdSetImages = function (urls) {
     const nextUrls = (urls || []).filter(Boolean);

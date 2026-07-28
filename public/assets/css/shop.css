@@ -1814,7 +1814,8 @@ body.site-nav-open {
   overflow: hidden;
   transition: transform 0.2s ease;
 }
-.pd-gallery__thumb img {
+.pd-gallery__thumb img,
+.pd-gallery__thumb video {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -1823,6 +1824,7 @@ body.site-nav-open {
   object-position: center;
   display: block;
 }
+.pd-gallery__thumb video { pointer-events: none; }
 .pd-gallery__thumb:hover { transform: scale(1.03); }
 
 .pd-lightbox {
