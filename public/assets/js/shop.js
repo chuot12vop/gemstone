@@ -392,36 +392,43 @@ function initProductVideoList() {
   const viewport = root?.querySelector('[data-product-video-viewport]');
   const track = root?.querySelector('.product-video-list__track');
   const videos = root ? Array.from(root.querySelectorAll('[data-product-list-video]')) : [];
+  const floating = document.querySelector('[data-product-video-float]');
+  const floatingPlayer = floating?.querySelector('[data-product-video-float-player]');
+  const floatingClose = floating?.querySelector('[data-product-video-float-close]');
   if (!root || !viewport || !track || !videos.length) return;
 
-  let activeIndex = 0;
-  const playVideo = (index) => {
-    activeIndex = (index + videos.length) % videos.length;
-    const active = videos[activeIndex];
-    videos.forEach((video) => {
-      if (video !== active) {
-        video.pause();
-        video.currentTime = 0;
-      }
-    });
-    active.currentTime = 0;
-    active.play().catch(() => {});
-    viewport.scrollTo({ left: active.offsetLeft, behavior: activeIndex === 0 ? 'auto' : 'smooth' });
+  const closeFloatingPlayer = () => {
+    if (!floating || !(floatingPlayer instanceof HTMLVideoElement)) return;
+    floatingPlayer.pause();
+    floating.hidden = true;
+    floating.setAttribute('aria-hidden', 'true');
   };
-  const pauseOthers = (active) => videos.forEach((video) => {
-    if (video !== active) video.pause();
-  });
+  const openFloatingPlayer = (video, index) => {
+    if (!floating || !(floatingPlayer instanceof HTMLVideoElement)) return;
+    videos.forEach((item) => item.pause());
+    const src = video.currentSrc || video.getAttribute('src') || '';
+    if (floatingPlayer.getAttribute('src') !== src) floatingPlayer.src = src;
+    floating.hidden = false;
+    floating.setAttribute('aria-hidden', 'false');
+    floatingPlayer.currentTime = 0;
+    floatingPlayer.play().catch(() => {});
+    floatingClose?.focus({ preventScroll: true });
+  };
   videos.forEach((video, index) => {
     video.addEventListener('click', () => {
-      activeIndex = index;
-      if (video.paused) {
-        pauseOthers(video);
-        video.play().catch(() => {});
-      } else {
-        video.pause();
+      openFloatingPlayer(video, index);
+    });
+    video.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        openFloatingPlayer(video, index);
       }
     });
-    video.addEventListener('ended', () => playVideo(videos.length > 1 ? index + 1 : index));
+  });
+
+  floatingClose?.addEventListener('click', closeFloatingPlayer);
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && floating && !floating.hidden) closeFloatingPlayer();
   });
 
   const scrollVideos = (direction) => {
